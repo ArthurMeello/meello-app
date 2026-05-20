@@ -1,33 +1,31 @@
-export type Badge = 'new' | 'founder' | 'partner'
-
 export type Profile = {
   id: string
-  username: string | null
-  full_name: string | null
+  first_name: string
+  last_name: string
+  email: string | null
   avatar_url: string | null
   bio: string | null
-  sector: string | null
+  activity: string | null
   city: string | null
-  country: string
+  country: string | null
   website: string | null
-  linkedin: string | null
   company_number: string | null
-  badge: Badge
-  profile_completion: number
-  is_approved: boolean
+  badges: string[]
+  is_active: boolean
   created_at: string
+  [key: string]: unknown
 }
 
 export type Application = {
   id: string
-  full_name: string
+  first_name: string
+  last_name: string
   email: string
   activity: string
   city: string
   country: string
-  why_join: string
+  why: string
   company_number: string | null
-  linkedin: string | null
   status: 'pending' | 'approved' | 'rejected'
   created_at: string
 }
@@ -54,6 +52,7 @@ export type ForumCategory = {
   id: string
   name: string
   description: string | null
+  slug: string
   created_at: string
 }
 
@@ -65,7 +64,6 @@ export type ForumTopic = {
   content: string
   created_at: string
   profiles?: Profile
-  forum_replies?: ForumReply[]
 }
 
 export type ForumReply = {
@@ -79,27 +77,24 @@ export type ForumReply = {
 
 export type Message = {
   id: string
+  conversation_id: string
   sender_id: string
-  receiver_id: string
   content: string
-  read: boolean
   created_at: string
-  sender?: Profile
-  receiver?: Profile
 }
 
 export type Connection = {
   id: string
   requester_id: string
   receiver_id: string
-  status: 'pending' | 'accepted' | 'rejected'
+  status: 'pending' | 'accepted'
   created_at: string
 }
 
 export type Recommendation = {
   id: string
   author_id: string
-  target_id: string
+  recommended_id: string
   content: string
   created_at: string
   author?: Profile
