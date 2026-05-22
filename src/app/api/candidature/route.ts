@@ -6,7 +6,8 @@ export async function POST(req: NextRequest) {
   const { first_name, last_name, email, activity, city, country, why_join } = body
 
   try {
-    await fetch('https://api.brevo.com/v3/smtp/email', {
+    console.log('BREVO_API_KEY présente:', !!process.env.BREVO_API_KEY)
+    const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
         'api-key': process.env.BREVO_API_KEY!,
@@ -35,6 +36,8 @@ export async function POST(req: NextRequest) {
         `,
       }),
     })
+    const brevoData = await brevoRes.json()
+    console.log('Brevo response:', brevoRes.status, JSON.stringify(brevoData))
 
     return NextResponse.json({ ok: true })
   } catch (err) {
