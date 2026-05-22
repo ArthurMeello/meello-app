@@ -38,8 +38,8 @@ export default function AppNav() {
         padding: '1.5rem 1rem',
         zIndex: 100,
       }}>
-        <Link href="/feed" style={{ textDecoration: 'none', marginBottom: '2rem', display: 'block' }}>
-          <img src="/logo-meello.webp" alt="Meello" style={{ height: '56px', width: 'auto' }} />
+        <Link href="/feed" style={{ textDecoration: 'none', marginBottom: '2rem', display: 'flex', justifyContent: 'center' }}>
+          <img src="/logo-meello.webp" alt="Meello" style={{ height: '80px', width: 'auto' }} />
         </Link>
 
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
