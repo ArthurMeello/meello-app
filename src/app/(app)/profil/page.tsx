@@ -88,6 +88,8 @@ export default function ProfilPage() {
     if (!user) return
 
     await supabase.from('profiles').update({
+      first_name: form.first_name,
+      last_name: form.last_name,
       bio: form.bio,
       activity: form.activity,
       city: form.city,
@@ -231,7 +233,17 @@ export default function ProfilPage() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label style={labelStyle}>Metier / activite</label>
+                <label style={labelStyle}>Prénom</label>
+                <input value={form.first_name || ''} onChange={e => setForm(p => ({ ...p, first_name: e.target.value }))} style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Nom</label>
+                <input value={form.last_name || ''} onChange={e => setForm(p => ({ ...p, last_name: e.target.value }))} style={inputStyle} />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label style={labelStyle}>Métier / activité</label>
                 <input value={form.activity || ''} onChange={e => setForm(p => ({ ...p, activity: e.target.value }))} style={inputStyle} />
               </div>
               <div>
