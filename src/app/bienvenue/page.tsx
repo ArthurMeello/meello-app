@@ -14,10 +14,25 @@ export default function BienvenuePage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Supabase gère automatiquement le token dans l'URL hash
     const supabase = createClient()
+
+    // Lire le token depuis le hash de l'URL et créer la session
+    const hash = window.location.hash
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1))
+      const access_token = params.get('access_token')
+      const refresh_token = params.get('refresh_token')
+      if (access_token && refresh_token) {
+        supabase.auth.setSession({ access_token, refresh_token }).then(() => {
+          setReady(true)
+        })
+        return
+      }
+    }
+
+    // Sinon écouter l'événement PASSWORD_RECOVERY
     supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || session) {
+      if (event === 'PASSWORD_RECOVERY' || (session && event === 'SIGNED_IN')) {
         setReady(true)
       }
     })
