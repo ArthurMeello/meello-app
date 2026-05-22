@@ -39,9 +39,7 @@ export default function AppNav() {
         zIndex: 100,
       }}>
         <Link href="/feed" style={{ textDecoration: 'none', marginBottom: '2rem', display: 'block' }}>
-          <span style={{ fontFamily: 'var(--font-clash)', fontSize: '2rem', color: '#E8501A' }}>
-            meello
-          </span>
+          <img src="/logo-meello.webp" alt="Meello" style={{ height: '36px' }} />
         </Link>
 
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>

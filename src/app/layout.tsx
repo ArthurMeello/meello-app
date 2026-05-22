@@ -13,6 +13,10 @@ const clashDisplay = localFont({
 export const metadata: Metadata = {
   title: "Meello — La communauté des entrepreneurs francophones",
   description: "Meello est une communauté sélective pour entrepreneurs et freelances francophones. Recommandations, entraide, mise en relation.",
+  icons: {
+    icon: "/favicon-meello.webp",
+    apple: "/favicon-meello.webp",
+  },
 };
 
 export default function RootLayout({
