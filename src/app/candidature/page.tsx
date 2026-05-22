@@ -91,10 +91,8 @@ export default function CandidaturePage() {
     <div style={{ minHeight: '100vh', backgroundColor: '#F5F0E8', padding: '2rem 1rem' }}>
       <div style={{ maxWidth: '560px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <h1 style={{ fontFamily: 'var(--font-clash)', fontSize: '2.5rem', color: '#E8501A', marginBottom: '0.5rem' }}>
-              meello
-            </h1>
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'center' }}>
+            <img src="/logo-meello.webp" alt="Meello" style={{ height: '80px', width: 'auto', display: 'block', margin: '0 auto 0.75rem' }} />
           </Link>
           <p style={{ color: '#2D2D2D', fontWeight: 600, fontSize: '1.1rem' }}>
             Dis-nous qui tu es en 2 minutes
