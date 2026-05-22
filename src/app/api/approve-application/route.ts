@@ -21,11 +21,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: authError?.message || 'Erreur création compte' }, { status: 400 })
   }
 
-  // 2. Générer un lien magique pour que le membre se connecte
+  // 2. Générer un lien de création de mot de passe (recovery)
   const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-    type: 'magiclink',
+    type: 'recovery',
     email: app.email,
-    options: { redirectTo: 'https://app.meello.fr/feed' },
+    options: { redirectTo: 'https://app.meello.fr/bienvenue' },
   })
 
   // 3. Créer le profil
