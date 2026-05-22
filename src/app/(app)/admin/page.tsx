@@ -2,7 +2,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+
+const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 
 interface Application {
   id: string
@@ -35,10 +38,22 @@ export default function AdminPage() {
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedApp, setSelectedApp] = useState<Application | null>(null)
+  const [authorized, setAuthorized] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
-    fetchApplications()
-    fetchMembers()
+    const checkAuth = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || user.id !== ADMIN_ID) {
+        router.replace('/feed')
+        return
+      }
+      setAuthorized(true)
+      fetchApplications()
+      fetchMembers()
+    }
+    checkAuth()
   }, [])
 
   const fetchApplications = async () => {
@@ -143,6 +158,8 @@ export default function AdminPage() {
 
   const pending = applications.filter(a => a.status === 'pending')
   const processed = applications.filter(a => a.status !== 'pending')
+
+  if (!authorized) return null
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
