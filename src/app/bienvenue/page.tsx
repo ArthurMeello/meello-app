@@ -109,9 +109,9 @@ export default function BienvenuePage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !ready}
               style={{
-                backgroundColor: loading ? '#ccc' : '#E8501A',
+                backgroundColor: (loading || !ready) ? '#ccc' : '#E8501A',
                 color: 'white',
                 border: 'none',
                 borderRadius: '10px',
@@ -121,7 +121,7 @@ export default function BienvenuePage() {
                 cursor: loading ? 'not-allowed' : 'pointer',
               }}
             >
-              {loading ? 'Enregistrement...' : 'Accéder à Meello →'}
+              {!ready ? 'Chargement...' : loading ? 'Enregistrement...' : 'Accéder à Meello →'}
             </button>
           </form>
         </div>
