@@ -23,19 +23,16 @@ export default function BienvenuePage() {
       const access_token = params.get('access_token')
       const refresh_token = params.get('refresh_token')
       if (access_token && refresh_token) {
-        supabase.auth.setSession({ access_token, refresh_token }).then(() => {
-          setReady(true)
+        supabase.auth.setSession({ access_token, refresh_token }).then(({ error }) => {
+          if (!error) setReady(true)
+          else setError('Lien invalide ou expiré. Demande un nouveau lien.')
         })
         return
       }
     }
 
-    // Sinon écouter l'événement PASSWORD_RECOVERY
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || (session && event === 'SIGNED_IN')) {
-        setReady(true)
-      }
-    })
+    // Pas de token dans l'URL
+    setError('Lien invalide. Utilise le lien reçu par email.')
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
