@@ -53,7 +53,7 @@ export default function FeedPage() {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Partage quelque chose avec la communaute..."
+            placeholder="Partage quelque chose avec la communauté..."
             rows={3}
             style={{
               width: '100%',
@@ -96,7 +96,7 @@ export default function FeedPage() {
         ))}
         {posts.length === 0 && (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>
-            Sois le premier a publier quelque chose !
+            Sois le premier à publier quelque chose !
           </div>
         )}
       </div>
@@ -185,7 +185,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
             <input
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Ton commentaire..."
+              placeholder="Ton commentaire…"
               style={{ flex: 1, border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 0.75rem', fontSize: '0.9rem', outline: 'none' }}
             />
             <button type="submit" style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 600 }}>

@@ -134,7 +134,7 @@ export default function MessagesPage() {
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {conversations.length === 0 && (
             <div style={{ padding: '2rem', textAlign: 'center', color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>
-              Aucune conversation pour l instant.
+              Aucune conversation pour l&apos;instant.
             </div>
           )}
           {conversations.map(conv => (

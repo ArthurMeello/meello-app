@@ -74,13 +74,13 @@ export default function ReseauPage() {
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto' }}>
       <h1 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.75rem', color: '#2D2D2D', marginBottom: '1.5rem' }}>
-        Mon Reseau
+        Mon Réseau
       </h1>
 
       {pendingReceived.length > 0 && (
         <section style={{ marginBottom: '2rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#E8501A', marginBottom: '0.75rem' }}>
-            Demandes recues ({pendingReceived.length})
+            Demandes reçues ({pendingReceived.length})
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             {pendingReceived.map(c => (
@@ -109,7 +109,7 @@ export default function ReseauPage() {
       {accepted.length > 0 && (
         <section style={{ marginBottom: '2rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#2D2D2D', marginBottom: '0.75rem' }}>
-            Mon reseau ({accepted.length})
+            Mon réseau ({accepted.length})
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
             {accepted.map(c => (
@@ -133,7 +133,7 @@ export default function ReseauPage() {
       {pendingSent.length > 0 && (
         <section>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#2D2D2D', opacity: 0.5, marginBottom: '0.75rem' }}>
-            Demandes envoyees ({pendingSent.length})
+            Demandes envoyées ({pendingSent.length})
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {pendingSent.map(c => (
@@ -153,9 +153,9 @@ export default function ReseauPage() {
       {connections.length === 0 && (
         <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#2D2D2D', opacity: 0.4 }}>
           <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🤝</div>
-          <p>Ton reseau est vide pour l instant. Explore l annuaire pour te connecter avec d autres membres !</p>
+          <p>Ton réseau est vide pour l&apos;instant. Explore l&apos;annuaire pour te connecter avec d&apos;autres membres !</p>
           <Link href="/annuaire" style={{ color: '#E8501A', fontWeight: 600 }}>
-            Voir l annuaire
+            Voir l&apos;annuaire
           </Link>
         </div>
       )}

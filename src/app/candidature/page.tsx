@@ -73,7 +73,7 @@ export default function CandidaturePage() {
             On revient vers toi sous 48h. En attendant, tu peux retourner sur la page principale.
           </p>
           <Link href="/" style={{ display: 'inline-block', marginTop: '1.5rem', color: '#E8501A', fontWeight: 600 }}>
-            Retour a l accueil
+            Retour à l&apos;accueil
           </Link>
         </div>
       </div>
