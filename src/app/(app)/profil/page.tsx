@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 
@@ -37,6 +37,8 @@ export default function ProfilPage() {
   const [saving, setSaving] = useState(false)
   const [hasReco, setHasReco] = useState(false)
   const [recos, setRecos] = useState<{ id: string; content: string; author: { first_name: string; last_name: string } }[]>([])
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadProfile()
@@ -47,7 +49,22 @@ export default function ProfilPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    let { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+
+    // Créer le profil s'il n'existe pas
+    if (!prof) {
+      await supabase.from('profiles').insert({
+        id: user.id,
+        email: user.email,
+        first_name: user.user_metadata?.first_name || '',
+        last_name: user.user_metadata?.last_name || '',
+        badges: [],
+        is_active: true,
+      })
+      const { data: newProf } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      prof = newProf
+    }
+
     if (prof) {
       setProfile(prof)
       setForm(prof)
@@ -84,6 +101,22 @@ export default function ProfilPage() {
     setSaving(false)
   }
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !profile) return
+    setUploadingAvatar(true)
+    const supabase = createClient()
+    const ext = file.name.split('.').pop()
+    const path = `avatars/${profile.id}.${ext}`
+    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    if (!error) {
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+      await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', profile.id)
+      await loadProfile()
+    }
+    setUploadingAvatar(false)
+  }
+
   if (!profile) {
     return (
       <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>
@@ -101,16 +134,25 @@ export default function ProfilPage() {
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem' }}>
-          <div style={{
-            width: '72px', height: '72px', borderRadius: '50%',
-            backgroundColor: '#E8501A', color: 'white',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: '1.4rem', flexShrink: 0, overflow: 'hidden',
-          }}>
+          <div
+            onClick={() => fileRef.current?.click()}
+            style={{
+              width: '72px', height: '72px', borderRadius: '50%',
+              backgroundColor: '#E8501A', color: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: '1.4rem', flexShrink: 0, overflow: 'hidden',
+              cursor: 'pointer', position: 'relative',
+            }}
+            title="Changer la photo"
+          >
             {profile.avatar_url
               ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}`.toUpperCase()}
+            {uploadingAvatar && (
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>...</div>
+            )}
           </div>
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.4rem', color: '#2D2D2D', fontWeight: 700 }}>
               {profile.first_name} {profile.last_name}

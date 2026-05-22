@@ -3,6 +3,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const NAV_ITEMS = [
@@ -16,6 +17,22 @@ const NAV_ITEMS = [
 export default function AppNav() {
   const pathname = usePathname()
   const router = useRouter()
+  const [profile, setProfile] = useState<{ first_name: string; last_name: string; avatar_url: string | null } | null>(null)
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('profiles').select('first_name, last_name, avatar_url').eq('id', user.id).single()
+      if (data) setProfile(data)
+    }
+    loadProfile()
+  }, [pathname])
+
+  const initials = profile
+    ? `${(profile.first_name || '')[0] || ''}${(profile.last_name || '')[0] || ''}`.toUpperCase()
+    : '?'
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -85,7 +102,16 @@ export default function AppNav() {
               fontSize: '0.95rem',
             }}
           >
-            <span>👤</span>
+            <div style={{
+              width: '28px', height: '28px', borderRadius: '50%',
+              backgroundColor: '#E8501A', color: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '0.7rem', fontWeight: 700, flexShrink: 0, overflow: 'hidden',
+            }}>
+              {profile?.avatar_url
+                ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : initials}
+            </div>
             <span>Mon profil</span>
           </Link>
           <button
