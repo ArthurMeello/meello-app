@@ -103,7 +103,7 @@ export default function FeedPage() {
   )
 }
 
-function PostCard({ post, currentUserId, onRefresh }: { post: Post & { profiles?: { first_name: string; last_name: string; avatar_url: string | null; activity: string } }, currentUserId: string | null, onRefresh: () => void }) {
+function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserId: string | null, onRefresh: () => void }) {
   const [comment, setComment] = useState('')
   const [comments, setComments] = useState<{ id: string; content: string; profiles: { first_name: string; last_name: string } }[]>([])
   const [showComments, setShowComments] = useState(false)
