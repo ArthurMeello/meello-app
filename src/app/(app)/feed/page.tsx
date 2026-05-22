@@ -119,7 +119,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
       .select('id, content, profiles(first_name, last_name)')
       .eq('post_id', post.id)
       .order('created_at', { ascending: true })
-    if (data) setComments(data as typeof comments)
+    if (data) setComments(data as unknown as typeof comments)
   }
 
   const toggleComments = () => {
