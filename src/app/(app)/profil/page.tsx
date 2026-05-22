@@ -94,6 +94,11 @@ export default function ProfilPage() {
       country: form.country,
       website: form.website,
       company_number: form.company_number,
+      instagram: form.instagram || null,
+      linkedin: form.linkedin || null,
+      facebook: form.facebook || null,
+      pinterest: form.pinterest || null,
+      tiktok: form.tiktok || null,
     }).eq('id', user.id)
 
     await loadProfile()
@@ -235,13 +240,43 @@ export default function ProfilPage() {
               </div>
             </div>
             <div>
-              <label style={labelStyle}>Site web ou LinkedIn</label>
-              <input value={form.website || ''} onChange={e => setForm(p => ({ ...p, website: e.target.value }))} placeholder="https://" style={inputStyle} />
+              <label style={labelStyle}>Site web</label>
+              <input value={form.website || ''} onChange={e => setForm(p => ({ ...p, website: e.target.value }))} placeholder="https://monsite.fr" style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Numéro d entreprise (SIRET, BCE...)</label>
               <input value={form.company_number || ''} onChange={e => setForm(p => ({ ...p, company_number: e.target.value }))} style={inputStyle} />
             </div>
+
+            {/* Réseaux sociaux */}
+            <div style={{ borderTop: '1px solid #F5F0E8', paddingTop: '1rem' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.5, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Réseaux sociaux
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1.1rem', width: '24px' }}>💼</span>
+                  <input value={form.linkedin || ''} onChange={e => setForm(p => ({ ...p, linkedin: e.target.value }))} placeholder="https://linkedin.com/in/..." style={{ ...inputStyle, flex: 1 }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1.1rem', width: '24px' }}>📸</span>
+                  <input value={form.instagram || ''} onChange={e => setForm(p => ({ ...p, instagram: e.target.value }))} placeholder="https://instagram.com/..." style={{ ...inputStyle, flex: 1 }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1.1rem', width: '24px' }}>👍</span>
+                  <input value={form.facebook || ''} onChange={e => setForm(p => ({ ...p, facebook: e.target.value }))} placeholder="https://facebook.com/..." style={{ ...inputStyle, flex: 1 }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1.1rem', width: '24px' }}>📌</span>
+                  <input value={form.pinterest || ''} onChange={e => setForm(p => ({ ...p, pinterest: e.target.value }))} placeholder="https://pinterest.com/..." style={{ ...inputStyle, flex: 1 }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1.1rem', width: '24px' }}>🎵</span>
+                  <input value={form.tiktok || ''} onChange={e => setForm(p => ({ ...p, tiktok: e.target.value }))} placeholder="https://tiktok.com/@..." style={{ ...inputStyle, flex: 1 }} />
+                </div>
+              </div>
+            </div>
+
             <button
               onClick={handleSave}
               disabled={saving}
@@ -262,11 +297,14 @@ export default function ProfilPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: 0 }}>{profile.bio}</p>}
-            {profile.website && (
-              <a href={profile.website} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', fontSize: '0.9rem' }}>
-                🔗 {profile.website}
-              </a>
-            )}
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+              {profile.website && <a href={profile.website} target="_blank" rel="noopener noreferrer" title="Site web" style={socialLinkStyle}>🔗</a>}
+              {profile.linkedin && <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" style={socialLinkStyle}>💼</a>}
+              {profile.instagram && <a href={profile.instagram} target="_blank" rel="noopener noreferrer" title="Instagram" style={socialLinkStyle}>📸</a>}
+              {profile.facebook && <a href={profile.facebook} target="_blank" rel="noopener noreferrer" title="Facebook" style={socialLinkStyle}>👍</a>}
+              {profile.pinterest && <a href={profile.pinterest} target="_blank" rel="noopener noreferrer" title="Pinterest" style={socialLinkStyle}>📌</a>}
+              {profile.tiktok && <a href={profile.tiktok} target="_blank" rel="noopener noreferrer" title="TikTok" style={socialLinkStyle}>🎵</a>}
+            </div>
           </div>
         )}
       </div>
@@ -312,4 +350,17 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
   boxSizing: 'border-box',
   fontFamily: 'inherit',
+}
+
+const socialLinkStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '36px',
+  height: '36px',
+  borderRadius: '10px',
+  backgroundColor: '#F5F0E8',
+  fontSize: '1.1rem',
+  textDecoration: 'none',
+  transition: 'background 0.15s',
 }
