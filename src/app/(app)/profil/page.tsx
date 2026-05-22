@@ -114,13 +114,16 @@ export default function ProfilPage() {
     setUploadingAvatar(true)
     const supabase = createClient()
     const ext = file.name.split('.').pop()
-    const path = `avatars/${profile.id}.${ext}`
+    const path = `${profile.id}.${ext}`
     const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
-    if (!error) {
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-      await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', profile.id)
-      await loadProfile()
+    if (error) {
+      console.error('Upload error:', error.message)
+      setUploadingAvatar(false)
+      return
     }
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+    await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', profile.id)
+    await loadProfile()
     setUploadingAvatar(false)
   }
 
