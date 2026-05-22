@@ -57,7 +57,7 @@ export default function BienvenuePage() {
       return
     }
 
-    router.push('/feed')
+    router.push('/onboarding')
   }
 
   return (
