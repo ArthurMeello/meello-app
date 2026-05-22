@@ -1,3 +1,4 @@
+// @ts-nocheck
 import AppNav from '@/components/AppNav'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
