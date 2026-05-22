@@ -76,61 +76,20 @@ export default function AdminPage() {
 
   const handleApprove = async (app: Application) => {
     setLoading(true)
-    const supabase = createClient()
 
-    // 1. Create auth user
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: app.email,
-      email_confirm: true,
-      user_metadata: { first_name: app.first_name, last_name: app.last_name },
+    const res = await fetch('/api/approve-application', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ app, memberCount: members.length }),
     })
 
-    if (authError || !authData.user) {
-      alert('Erreur lors de la creation du compte: ' + authError?.message)
+    const data = await res.json()
+
+    if (!res.ok) {
+      alert('Erreur lors de la création du compte : ' + (data.error || 'Erreur inconnue'))
       setLoading(false)
       return
     }
-
-    // 2. Create profile
-    const memberCount = members.length
-    const badges = memberCount < 200 ? ['fondateur', 'nouveau'] : ['nouveau']
-
-    await supabase.from('profiles').insert({
-      id: authData.user.id,
-      first_name: app.first_name,
-      last_name: app.last_name,
-      email: app.email,
-      activity: app.activity,
-      city: app.city,
-      country: app.country,
-      company_number: app.company_number,
-      badges,
-      is_active: true,
-    })
-
-    // 3. Update application status
-    await supabase.from('applications').update({ status: 'approved' }).eq('id', app.id)
-
-    // 4. Auto-connect with Arthur (creator)
-    // Arthur's user ID should be set as env var or fetched
-    const ARTHUR_ID = process.env.NEXT_PUBLIC_CREATOR_ID
-    if (ARTHUR_ID && ARTHUR_ID !== authData.user.id) {
-      await supabase.from('connections').insert([
-        { requester_id: ARTHUR_ID, receiver_id: authData.user.id, status: 'accepted' },
-      ])
-
-      await supabase.from('conversations').insert({
-        participant1_id: ARTHUR_ID,
-        participant2_id: authData.user.id,
-      })
-    }
-
-    // 5. Ajouter à la liste Brevo
-    await fetch('/api/approve-member', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: app.email, first_name: app.first_name, last_name: app.last_name }),
-    })
 
     await fetchApplications()
     await fetchMembers()
