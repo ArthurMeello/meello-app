@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { first_name, last_name, email, activity, city, country, why } = body
+  const { first_name, last_name, email, activity, city, country, why_join } = body
 
   try {
     await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
               <tr style="background: #f9f9f9;"><td style="padding: 8px; font-weight: bold;">Email</td><td style="padding: 8px;">${email}</td></tr>
               <tr><td style="padding: 8px; font-weight: bold;">Activité</td><td style="padding: 8px;">${activity}</td></tr>
               <tr style="background: #f9f9f9;"><td style="padding: 8px; font-weight: bold;">Ville</td><td style="padding: 8px;">${city}, ${country}</td></tr>
-              <tr><td style="padding: 8px; font-weight: bold;">Motivation</td><td style="padding: 8px;">${why}</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold;">Motivation</td><td style="padding: 8px;">${why_join}</td></tr>
             </table>
             <p style="margin-top: 24px;">
               <a href="https://app.meello.fr/admin" style="background: #E8501A; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">

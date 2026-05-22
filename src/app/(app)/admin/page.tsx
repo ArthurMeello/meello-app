@@ -12,7 +12,7 @@ interface Application {
   activity: string
   city: string
   country: string
-  why: string
+  why_join: string
   company_number: string | null
   status: 'pending' | 'approved' | 'rejected'
   created_at: string
@@ -200,7 +200,7 @@ export default function AdminPage() {
               </div>
               <div style={{ backgroundColor: '#F5F0E8', borderRadius: '10px', padding: '1rem', marginBottom: '1.5rem' }}>
                 <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5, marginBottom: '0.4rem' }}>Motivation</div>
-                <p style={{ margin: 0, lineHeight: 1.65, color: '#2D2D2D' }}>{selectedApp.why}</p>
+                <p style={{ margin: 0, lineHeight: 1.65, color: '#2D2D2D' }}>{selectedApp.why_join}</p>
               </div>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button

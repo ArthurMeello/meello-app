@@ -21,7 +21,7 @@ export default function CandidaturePage() {
     activity: '',
     city: '',
     country: 'FR',
-    why: '',
+    why_join: '',
     company_number: '',
   })
   const [submitted, setSubmitted] = useState(false)
@@ -47,7 +47,7 @@ export default function CandidaturePage() {
       activity: form.activity,
       city: form.city,
       country: form.country,
-      why: form.why,
+      why_join: form.why_join,
       company_number: form.company_number || null,
       status: 'pending',
     })
@@ -160,8 +160,8 @@ export default function CandidaturePage() {
             <div>
               <label style={labelStyle}>Pourquoi veux-tu rejoindre Meello ?</label>
               <textarea
-                name="why"
-                value={form.why}
+                name="why_join"
+                value={form.why_join}
                 onChange={handleChange}
                 required
                 rows={4}
