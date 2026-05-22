@@ -116,7 +116,13 @@ export default function ConnexionPage() {
             </button>
           </form>
 
-          <p style={{ textAlign: 'center', marginTop: '1.5rem', color: '#2D2D2D', opacity: 0.7, fontSize: '0.9rem' }}>
+          <p style={{ textAlign: 'center', marginTop: '1rem', color: '#2D2D2D', opacity: 0.6, fontSize: '0.85rem' }}>
+            <Link href="/mot-de-passe-oublie" style={{ color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>
+              Mot de passe oublié ?
+            </Link>
+          </p>
+
+          <p style={{ textAlign: 'center', marginTop: '0.75rem', color: '#2D2D2D', opacity: 0.7, fontSize: '0.9rem' }}>
             Pas encore membre ?{' '}
             <Link href="/candidature" style={{ color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>
               Candidater
