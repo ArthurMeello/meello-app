@@ -34,7 +34,7 @@ export default function ConnexionPage() {
     <div style={{ minHeight: '100vh', backgroundColor: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <div style={{ width: '100%', maxWidth: '400px' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <img src="/logo-meello.webp" alt="Meello" style={{ height: '48px', marginBottom: '0.75rem' }} />
+          <img src="/logo-meello.webp" alt="Meello" style={{ height: '80px', width: 'auto', display: 'block', margin: '0 auto 0.75rem' }} />
           <p style={{ color: '#2D2D2D', opacity: 0.7 }}>Connecte-toi à ta communauté</p>
         </div>
 

@@ -39,7 +39,7 @@ export default function AppNav() {
         zIndex: 100,
       }}>
         <Link href="/feed" style={{ textDecoration: 'none', marginBottom: '2rem', display: 'block' }}>
-          <img src="/logo-meello.webp" alt="Meello" style={{ height: '36px' }} />
+          <img src="/logo-meello.webp" alt="Meello" style={{ height: '56px', width: 'auto' }} />
         </Link>
 
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
