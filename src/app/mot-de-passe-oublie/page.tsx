@@ -3,7 +3,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 
 export default function MotDePasseOubliePage() {
   const [email, setEmail] = useState('')
@@ -16,13 +15,14 @@ export default function MotDePasseOubliePage() {
     setLoading(true)
     setError(null)
 
-    const supabase = createClient()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://app.meello.fr/bienvenue',
+    const res = await fetch('/api/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
     })
 
-    if (error) {
-      setError('Une erreur est survenue. Vérifie ton adresse email.')
+    if (!res.ok) {
+      setError('Email introuvable. Vérifie ton adresse.')
       setLoading(false)
       return
     }
