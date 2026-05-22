@@ -11,11 +11,10 @@ export async function POST(req: NextRequest) {
   // Vérifier que l'appelant est bien l'admin
   const supabase = createAdminClient()
 
-  // 1. Créer le compte auth
-  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-    email: app.email,
-    email_confirm: true,
-    user_metadata: { first_name: app.first_name, last_name: app.last_name },
+  // 1. Inviter le candidat par email (envoie automatiquement un email avec lien de connexion)
+  const { data: authData, error: authError } = await supabase.auth.admin.inviteUserByEmail(app.email, {
+    data: { first_name: app.first_name, last_name: app.last_name },
+    redirectTo: 'https://app.meello.fr/connexion',
   })
 
   if (authError || !authData.user) {
