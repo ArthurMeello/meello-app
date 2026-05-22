@@ -53,10 +53,17 @@ export default function CandidaturePage() {
     })
 
     if (error) {
-      setError("Une erreur est survenue. Verifie que tu n'as pas deja candidat.")
+      setError("Une erreur est survenue. Vérifie que tu n'as pas déjà candidaté.")
       setLoading(false)
       return
     }
+
+    // Envoyer email de notification à admin@meello.fr
+    await fetch('/api/candidature', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
 
     setSubmitted(true)
   }

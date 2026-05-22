@@ -110,11 +110,18 @@ export default function AdminPage() {
       })
     }
 
+    // 5. Ajouter à la liste Brevo
+    await fetch('/api/approve-member', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: app.email, first_name: app.first_name, last_name: app.last_name }),
+    })
+
     await fetchApplications()
     await fetchMembers()
     setSelectedApp(null)
     setLoading(false)
-    alert(`${app.first_name} ${app.last_name} a ete accepte(e) ! Un email de connexion lui a ete envoye.`)
+    alert(`${app.first_name} ${app.last_name} a été accepté(e) ! Un email de connexion lui a été envoyé.`)
   }
 
   const handleReject = async (app: Application) => {
