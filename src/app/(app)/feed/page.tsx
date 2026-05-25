@@ -35,8 +35,7 @@ function FeedPageInner() {
     })
     fetchPosts()
     // Charger tous les membres pour résoudre les mentions
-    const supabase = createClient()
-    supabase.from('profiles').select('id, first_name, last_name').eq('is_active', true).then(({ data }) => {
+    createClient().from('profiles').select('id, first_name, last_name').eq('is_active', true).then(({ data }) => {
       if (data) setAllMembers(data)
     })
   }, [])
