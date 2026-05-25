@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/types'
 
@@ -10,8 +10,11 @@ const EMOJIS = ['👍', '🔥', '❤️']
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [content, setContent] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -31,13 +34,39 @@ export default function FeedPage() {
     if (data) setPosts(data as Post[])
   }
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  const removeImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!content.trim()) return
+    if (!content.trim() && !imageFile) return
     setLoading(true)
     const supabase = createClient()
-    await supabase.from('posts').insert({ content: content.trim(), author_id: userId })
+
+    let image_url = null
+    if (imageFile) {
+      const ext = imageFile.name.split('.').pop()
+      const path = `${userId}/${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('posts').upload(path, imageFile, { upsert: true })
+      if (!error) {
+        const { data } = supabase.storage.from('posts').getPublicUrl(path)
+        image_url = data.publicUrl
+      }
+    }
+
+    await supabase.from('posts').insert({ content: content.trim(), author_id: userId, image_url })
     setContent('')
+    removeImage()
     await fetchPosts()
     setLoading(false)
   }
@@ -68,19 +97,51 @@ export default function FeedPage() {
               boxSizing: 'border-box',
             }}
           />
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+
+          {/* Prévisualisation image */}
+          {imagePreview && (
+            <div style={{ position: 'relative', marginBottom: '0.75rem', display: 'inline-block' }}>
+              <img src={imagePreview} alt="" style={{ maxHeight: '200px', borderRadius: '10px', display: 'block', objectFit: 'cover' }} />
+              <button
+                type="button"
+                onClick={removeImage}
+                style={{
+                  position: 'absolute', top: '6px', right: '6px',
+                  backgroundColor: 'rgba(0,0,0,0.5)', color: 'white',
+                  border: 'none', borderRadius: '50%', width: '24px', height: '24px',
+                  cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >✕</button>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem' }}>
+            {/* Bouton image */}
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: '#2D2D2D', opacity: 0.4, fontSize: '1.2rem', padding: 0,
+              }}
+              title="Ajouter une image"
+            >
+              🖼
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleImageSelect} style={{ display: 'none' }} />
+
             <button
               type="submit"
-              disabled={loading || !content.trim()}
+              disabled={loading || (!content.trim() && !imageFile)}
               style={{
-                backgroundColor: content.trim() ? '#E8501A' : '#E8E3D9',
-                color: content.trim() ? 'white' : '#999',
+                backgroundColor: (content.trim() || imageFile) ? '#E8501A' : '#E8E3D9',
+                color: (content.trim() || imageFile) ? 'white' : '#999',
                 border: 'none',
                 borderRadius: '8px',
                 padding: '0.5rem 1.25rem',
                 fontSize: '0.9rem',
                 fontWeight: 600,
-                cursor: content.trim() ? 'pointer' : 'not-allowed',
+                cursor: (content.trim() || imageFile) ? 'pointer' : 'not-allowed',
                 transition: 'all 0.2s',
               }}
             >
@@ -111,10 +172,12 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
   const [commentCount, setCommentCount] = useState(0)
   const [showComments, setShowComments] = useState(false)
   const [reactions, setReactions] = useState<{ emoji: string; author_id: string }[]>([])
+  const [deleting, setDeleting] = useState(false)
 
   const profile = post.profiles
   const initials = profile ? `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}` : '?'
   const formattedDate = new Date(post.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  const isOwner = currentUserId === post.author_id
 
   useEffect(() => {
     loadReactions()
@@ -144,9 +207,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
     const supabase = createClient()
     const existing = reactions.find(r => r.author_id === currentUserId)
     if (existing) {
-      // Supprimer la réaction existante
       await supabase.from('reactions').delete().eq('post_id', post.id).eq('author_id', currentUserId)
-      // Si c'était pas le même emoji, on met le nouveau
       if (existing.emoji !== emoji) {
         await supabase.from('reactions').insert({ post_id: post.id, author_id: currentUserId, emoji })
       }
@@ -154,6 +215,14 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
       await supabase.from('reactions').insert({ post_id: post.id, author_id: currentUserId, emoji })
     }
     loadReactions()
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Supprimer ce post ?')) return
+    setDeleting(true)
+    const supabase = createClient()
+    await supabase.from('posts').delete().eq('id', post.id)
+    onRefresh()
   }
 
   const loadComments = async () => {
@@ -190,7 +259,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
   const totalReactions = reactions.length
 
   return (
-    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', opacity: deleting ? 0.5 : 1 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
         <div style={{
@@ -203,7 +272,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
             ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
             : initials}
         </div>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.95rem' }}>
             {profile ? `${profile.first_name} ${profile.last_name}` : 'Membre'}
           </div>
@@ -211,16 +280,35 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
             {profile?.activity} · {formattedDate}
           </div>
         </div>
+        {isOwner && (
+          <button
+            onClick={handleDelete}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2D2D2D', opacity: 0.3, fontSize: '1rem', padding: '0.25rem' }}
+            title="Supprimer ce post"
+          >
+            🗑
+          </button>
+        )}
       </div>
 
       {/* Contenu */}
-      <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: 0, whiteSpace: 'pre-wrap' }}>
-        {post.content}
-      </p>
+      {post.content && (
+        <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem', whiteSpace: 'pre-wrap' }}>
+          {post.content}
+        </p>
+      )}
+
+      {/* Image */}
+      {post.image_url && (
+        <img
+          src={post.image_url}
+          alt=""
+          style={{ width: '100%', borderRadius: '10px', objectFit: 'cover', maxHeight: '400px', display: 'block', marginBottom: '0.75rem' }}
+        />
+      )}
 
       {/* Réactions + Commenter */}
-      <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        {/* Boutons réactions */}
+      <div style={{ marginTop: '0.25rem', paddingTop: '0.75rem', borderTop: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
         {reactionCounts.map(({ emoji, count, active }) => (
           <button
             key={emoji}
@@ -244,14 +332,12 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
           </button>
         ))}
 
-        {/* Total réactions global */}
         {totalReactions > 0 && (
-          <span style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.45, marginLeft: '0.15rem' }}>
+          <span style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.4 }}>
             {totalReactions} réaction{totalReactions > 1 ? 's' : ''}
           </span>
         )}
 
-        {/* Bouton commentaires */}
         <button
           onClick={toggleComments}
           style={{
