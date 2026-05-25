@@ -11,7 +11,7 @@ const COMPLETION_FIELDS = [
   { key: 'activity', label: 'Secteur d activite', points: 10 },
   { key: 'city', label: 'Ville', points: 5 },
   { key: 'website', label: 'Site web', points: 10 },
-  { key: 'company_number', label: 'Numéro d entreprise', points: 5 },
+  { key: 'company_number', label: 'Numéro d'entreprise', points: 5 },
 ]
 
 const SOCIAL_KEYS = ['linkedin', 'instagram', 'facebook', 'pinterest', 'tiktok']
@@ -444,7 +444,7 @@ export default function ProfilPage() {
               <input value={form.website || ''} onChange={e => setForm(p => ({ ...p, website: e.target.value }))} placeholder="https://monsite.fr" style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Numéro d entreprise (SIRET, BCE...)</label>
+              <label style={labelStyle}>Numéro d'entreprise (SIRET, BCE...)</label>
               <input value={form.company_number || ''} onChange={e => setForm(p => ({ ...p, company_number: e.target.value }))} style={inputStyle} />
             </div>
 
@@ -512,7 +512,7 @@ export default function ProfilPage() {
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
               {profile.website && <a href={profile.website} target="_blank" rel="noopener noreferrer" title="Site web" style={socialLinkStyle}>🔗</a>}
               {profile.linkedin && <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" style={socialLinkStyle}><img src="/icons/linkedin.svg" alt="LinkedIn" style={{ width: '20px', height: '20px' }} /></a>}
-              {profile.instagram && <a href={profile.instagram} target="_blank" rel="noopener noreferrer" title="Instagram" style={socialLinkStyle}>📸</a>}
+              {profile.instagram && <a href={profile.instagram} target="_blank" rel="noopener noreferrer" title="Instagram" style={socialLinkStyle}><img src="/icons/instagram.svg" alt="Instagram" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.facebook && <a href={profile.facebook} target="_blank" rel="noopener noreferrer" title="Facebook" style={socialLinkStyle}><img src="/icons/facebook.svg" alt="Facebook" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.pinterest && <a href={profile.pinterest} target="_blank" rel="noopener noreferrer" title="Pinterest" style={socialLinkStyle}><img src="/icons/pinterest.svg" alt="Pinterest" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.tiktok && <a href={profile.tiktok} target="_blank" rel="noopener noreferrer" title="TikTok" style={socialLinkStyle}><img src="/icons/tiktok.svg" alt="TikTok" style={{ width: '20px', height: '20px' }} /></a>}

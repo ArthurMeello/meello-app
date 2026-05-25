@@ -62,7 +62,7 @@ export default function MembrePublicPage() {
   const SOCIAL_LINKS = [
     { key: 'website', icon: '🔗', label: 'Site web', svg: null },
     { key: 'linkedin', icon: null, label: 'LinkedIn', svg: '/icons/linkedin.svg' },
-    { key: 'instagram', icon: '📸', label: 'Instagram', svg: null },
+    { key: 'instagram', icon: null, label: 'Instagram', svg: '/icons/instagram.svg' },
     { key: 'facebook', icon: null, label: 'Facebook', svg: '/icons/facebook.svg' },
     { key: 'pinterest', icon: null, label: 'Pinterest', svg: '/icons/pinterest.svg' },
     { key: 'tiktok', icon: null, label: 'TikTok', svg: '/icons/tiktok.svg' },
