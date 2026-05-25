@@ -1,13 +1,14 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
+import { emailTemplate } from '@/lib/emailTemplate'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const { first_name, last_name, email, activity, city, country, why_join } = body
 
   try {
-    console.log('BREVO_API_KEY présente:', !!process.env.BREVO_API_KEY)
-    const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
+    // Email à l'admin
+    await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
         'api-key': process.env.BREVO_API_KEY!,
@@ -36,8 +37,24 @@ export async function POST(req: NextRequest) {
         `,
       }),
     })
-    const brevoData = await brevoRes.json()
-    console.log('Brevo response:', brevoRes.status, JSON.stringify(brevoData))
+
+    // Email de confirmation au candidat
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY!,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: 'Meello', email: 'bonjour@meello.fr' },
+        to: [{ email, name: `${first_name} ${last_name}` }],
+        subject: 'Ta candidature Meello a bien été reçue',
+        htmlContent: emailTemplate({
+          firstName: first_name,
+          body: `Nous avons bien reçu ta candidature et nous t'en remercions.<br><br>Elle sera examinée dans les plus brefs délais. Tu seras informé(e) par email dès qu'une décision sera prise, que ta candidature soit retenue ou non.<br><br>En attendant, si tu as des questions, n'hésite pas à répondre à cet email.`,
+        }),
+      }),
+    })
 
     return NextResponse.json({ ok: true })
   } catch (err) {
