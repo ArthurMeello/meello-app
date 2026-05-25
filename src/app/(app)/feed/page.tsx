@@ -511,6 +511,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
   const initials = profile ? `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}` : '?'
   const formattedDate = new Date(post.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
   const isOwner = currentUserId === post.author_id
+  const isCurrentUserAdmin = currentUserId === ADMIN_ID
   const isAdmin = post.author_id === ADMIN_ID || post.author_id === EQUIPE_ID
 
   useEffect(() => {
@@ -891,15 +892,17 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
             ) : null
           })()}
         </div>
-        {isOwner && (
+        {(isOwner || isCurrentUserAdmin) && (
           <div style={{ display: 'flex', gap: '0.25rem' }}>
-            <button
-              onClick={() => { setEditingPost(true); setEditPostContent(post.content || '') }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
-              title="Modifier ce post"
-            >
-              <img src="/icons/edit.svg" alt="Modifier" style={{ width: '16px', height: '16px', filter: 'brightness(0) opacity(0.3)' }} />
-            </button>
+            {isOwner && (
+              <button
+                onClick={() => { setEditingPost(true); setEditPostContent(post.content || '') }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                title="Modifier ce post"
+              >
+                <img src="/icons/edit.svg" alt="Modifier" style={{ width: '16px', height: '16px', filter: 'brightness(0) opacity(0.3)' }} />
+              </button>
+            )}
             <button
               onClick={handleDelete}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
@@ -1105,11 +1108,13 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                         </button>
                       </div>
                     </div>
-                    {c.author_id === currentUserId && (
+                    {(c.author_id === currentUserId || isCurrentUserAdmin) && (
                       <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                        <button onClick={() => { setEditingCommentId(c.id); setEditCommentContent(c.content) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
-                          <img src="/icons/edit.svg" alt="Modifier" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
-                        </button>
+                        {c.author_id === currentUserId && (
+                          <button onClick={() => { setEditingCommentId(c.id); setEditCommentContent(c.content) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
+                            <img src="/icons/edit.svg" alt="Modifier" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
+                          </button>
+                        )}
                         <button onClick={() => handleDeleteComment(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
                           <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
                         </button>
@@ -1159,11 +1164,13 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                           </button>
                         </div>
                       </div>
-                      {r.author_id === currentUserId && (
+                      {(r.author_id === currentUserId || isCurrentUserAdmin) && (
                         <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                          <button onClick={() => { setEditingCommentId(r.id); setEditCommentContent(r.content) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
-                            <img src="/icons/edit.svg" alt="Modifier" style={{ width: '13px', height: '13px', filter: 'brightness(0) opacity(0.35)' }} />
-                          </button>
+                          {r.author_id === currentUserId && (
+                            <button onClick={() => { setEditingCommentId(r.id); setEditCommentContent(r.content) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
+                              <img src="/icons/edit.svg" alt="Modifier" style={{ width: '13px', height: '13px', filter: 'brightness(0) opacity(0.35)' }} />
+                            </button>
+                          )}
                           <button onClick={() => handleDeleteComment(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
                             <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '13px', height: '13px', filter: 'brightness(0) opacity(0.35)' }} />
                           </button>
