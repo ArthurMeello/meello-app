@@ -158,7 +158,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
         onClick={e => e.stopPropagation()}
         style={{
           backgroundColor: 'white', borderRadius: '16px',
-          width: '100%', maxWidth: '560px', maxHeight: '90vh',
+          width: '100%', maxWidth: '720px', height: '85vh',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}
       >
@@ -232,14 +232,20 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
 
           {/* Actions bas */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px solid #F5F0E8' }}>
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.3rem', opacity: 0.4, padding: 0 }}
-              title="Ajouter une image ou vidéo"
-            >
-              🖼
-            </button>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => { fileRef.current.accept = 'image/*'; fileRef.current?.click() }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.3rem', opacity: 0.4, padding: 0 }}
+                title="Ajouter une image"
+              >🖼</button>
+              <button
+                type="button"
+                onClick={() => { fileRef.current.accept = 'video/*'; fileRef.current?.click() }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.3rem', opacity: 0.4, padding: 0 }}
+                title="Ajouter une vidéo"
+              >🎬</button>
+            </div>
             <input
               ref={fileRef}
               type="file"
