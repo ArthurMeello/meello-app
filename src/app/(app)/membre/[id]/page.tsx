@@ -60,12 +60,12 @@ export default function MembrePublicPage() {
 
   const initials = `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}`.toUpperCase()
   const SOCIAL_LINKS = [
-    { key: 'website', icon: '🔗', label: 'Site web' },
-    { key: 'linkedin', icon: '💼', label: 'LinkedIn' },
-    { key: 'instagram', icon: '📸', label: 'Instagram' },
-    { key: 'facebook', icon: '👍', label: 'Facebook' },
-    { key: 'pinterest', icon: '📌', label: 'Pinterest' },
-    { key: 'tiktok', icon: '🎵', label: 'TikTok' },
+    { key: 'website', icon: '🔗', label: 'Site web', svg: null },
+    { key: 'linkedin', icon: null, label: 'LinkedIn', svg: '/icons/linkedin.svg' },
+    { key: 'instagram', icon: '📸', label: 'Instagram', svg: null },
+    { key: 'facebook', icon: null, label: 'Facebook', svg: '/icons/facebook.svg' },
+    { key: 'pinterest', icon: null, label: 'Pinterest', svg: '/icons/pinterest.svg' },
+    { key: 'tiktok', icon: null, label: 'TikTok', svg: '/icons/tiktok.svg' },
   ]
 
   return (
@@ -110,7 +110,9 @@ export default function MembrePublicPage() {
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           {SOCIAL_LINKS.map(s => profile[s.key] && (
             <a key={s.key} href={profile[s.key]} target="_blank" rel="noopener noreferrer" title={s.label} style={socialLinkStyle}>
-              {s.icon}
+              {s.svg
+                ? <img src={s.svg} alt={s.label} style={{ width: '20px', height: '20px' }} />
+                : s.icon}
             </a>
           ))}
         </div>

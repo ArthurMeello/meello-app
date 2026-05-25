@@ -446,23 +446,23 @@ export default function ProfilPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '1.1rem', width: '24px' }}>💼</span>
+                  <img src="/icons/linkedin.svg" alt="LinkedIn" style={{ width: '22px', height: '22px', flexShrink: 0 }} />
                   <input value={form.linkedin || ''} onChange={e => setForm(p => ({ ...p, linkedin: e.target.value }))} placeholder="https://linkedin.com/in/..." style={{ ...inputStyle, flex: 1 }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '1.1rem', width: '24px' }}>📸</span>
+                  <span style={{ fontSize: '1.1rem', width: '22px' }}>📸</span>
                   <input value={form.instagram || ''} onChange={e => setForm(p => ({ ...p, instagram: e.target.value }))} placeholder="https://instagram.com/..." style={{ ...inputStyle, flex: 1 }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '1.1rem', width: '24px' }}>👍</span>
+                  <img src="/icons/facebook.svg" alt="Facebook" style={{ width: '22px', height: '22px', flexShrink: 0 }} />
                   <input value={form.facebook || ''} onChange={e => setForm(p => ({ ...p, facebook: e.target.value }))} placeholder="https://facebook.com/..." style={{ ...inputStyle, flex: 1 }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '1.1rem', width: '24px' }}>📌</span>
+                  <img src="/icons/pinterest.svg" alt="Pinterest" style={{ width: '22px', height: '22px', flexShrink: 0 }} />
                   <input value={form.pinterest || ''} onChange={e => setForm(p => ({ ...p, pinterest: e.target.value }))} placeholder="https://pinterest.com/..." style={{ ...inputStyle, flex: 1 }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '1.1rem', width: '24px' }}>🎵</span>
+                  <img src="/icons/tiktok.svg" alt="TikTok" style={{ width: '22px', height: '22px', flexShrink: 0 }} />
                   <input value={form.tiktok || ''} onChange={e => setForm(p => ({ ...p, tiktok: e.target.value }))} placeholder="https://tiktok.com/@..." style={{ ...inputStyle, flex: 1 }} />
                 </div>
               </div>
@@ -490,11 +490,11 @@ export default function ProfilPage() {
             {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: 0 }}>{profile.bio}</p>}
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
               {profile.website && <a href={profile.website} target="_blank" rel="noopener noreferrer" title="Site web" style={socialLinkStyle}>🔗</a>}
-              {profile.linkedin && <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" style={socialLinkStyle}>💼</a>}
+              {profile.linkedin && <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" style={socialLinkStyle}><img src="/icons/linkedin.svg" alt="LinkedIn" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.instagram && <a href={profile.instagram} target="_blank" rel="noopener noreferrer" title="Instagram" style={socialLinkStyle}>📸</a>}
-              {profile.facebook && <a href={profile.facebook} target="_blank" rel="noopener noreferrer" title="Facebook" style={socialLinkStyle}>👍</a>}
-              {profile.pinterest && <a href={profile.pinterest} target="_blank" rel="noopener noreferrer" title="Pinterest" style={socialLinkStyle}>📌</a>}
-              {profile.tiktok && <a href={profile.tiktok} target="_blank" rel="noopener noreferrer" title="TikTok" style={socialLinkStyle}>🎵</a>}
+              {profile.facebook && <a href={profile.facebook} target="_blank" rel="noopener noreferrer" title="Facebook" style={socialLinkStyle}><img src="/icons/facebook.svg" alt="Facebook" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.pinterest && <a href={profile.pinterest} target="_blank" rel="noopener noreferrer" title="Pinterest" style={socialLinkStyle}><img src="/icons/pinterest.svg" alt="Pinterest" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.tiktok && <a href={profile.tiktok} target="_blank" rel="noopener noreferrer" title="TikTok" style={socialLinkStyle}><img src="/icons/tiktok.svg" alt="TikTok" style={{ width: '20px', height: '20px' }} /></a>}
             </div>
           </div>
         )}
