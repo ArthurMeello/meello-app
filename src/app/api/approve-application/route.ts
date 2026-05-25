@@ -46,33 +46,7 @@ export async function POST(req: NextRequest) {
     member_since: new Date().toISOString(),
   })
 
-  // 4. Publier un post de bienvenue dans le feed (par L'équipe Meello)
-  const newMemberProfileUrl = `https://app.meello.fr/membre/${authData.user.id}`
-  const cityLine = app.city ? ` — depuis ${app.city}${app.country && app.country !== 'France' ? `, ${app.country}` : ''}` : ''
-  const welcomeContent = [
-    `🎉 Nouvelle tête dans la communauté ! Bienvenue à @${app.first_name}${app.last_name} !`,
-    ``,
-    `${app.first_name} est ${app.activity}${cityLine}.`,
-    ``,
-    `N'hésite pas à lui souhaiter la bienvenue 👋`,
-    ``,
-    `[→ Voir le profil de ${app.first_name}](${newMemberProfileUrl})`,
-  ].join('\n')
-  await supabase.from('posts').insert({
-    author_id: EQUIPE_MEELLO_ID,
-    content: welcomeContent,
-  })
-
-  // Notifier le nouveau membre
-  await supabase.from('notifications').insert({
-    user_id: authData.user.id,
-    type: 'mention',
-    content: `vous a souhaité la bienvenue dans le fil d'actualité !`,
-    link: `/feed`,
-    from_user_id: EQUIPE_MEELLO_ID,
-  })
-
-  // 5. Mettre à jour le statut de la candidature
+  // 4. Mettre à jour le statut de la candidature
   await supabase.from('applications').update({ status: 'approved' }).eq('id', app.id)
 
   // 6. Auto-connexion avec Arthur
