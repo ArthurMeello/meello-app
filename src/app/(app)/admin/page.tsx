@@ -134,6 +134,24 @@ export default function AdminPage() {
     setSelectedApp(null)
   }
 
+  const deleteMember = async (member: Member) => {
+    if (!confirm(`Supprimer définitivement le compte de ${member.first_name} ${member.last_name} ?\n\nCette action est irréversible.`)) return
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const res = await fetch('/api/delete-member', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: member.id, requesterId: user?.id }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      alert('Erreur : ' + (data.error || 'Erreur inconnue'))
+      return
+    }
+    await fetchMembers()
+    alert(`Compte de ${member.first_name} ${member.last_name} supprimé.`)
+  }
+
   const toggleBadge = async (member: Member, badge: string) => {
     const supabase = createClient()
     const current = member.badges || []
@@ -399,7 +417,7 @@ export default function AdminPage() {
                 <div style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.9rem' }}>{member.first_name} {member.last_name}</div>
                 <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5 }}>{member.email} · {member.activity} · {member.city}</div>
               </div>
-              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
                 {['fondateur', 'partenaire', 'nouveau', 'profil_complet'].map(badge => {
                   const active = (member.badges || []).includes(badge)
                   return (
@@ -418,6 +436,17 @@ export default function AdminPage() {
                     </button>
                   )
                 })}
+                <button
+                  onClick={() => deleteMember(member)}
+                  title="Supprimer ce compte"
+                  style={{
+                    marginLeft: '0.25rem', background: 'none', border: '1px solid #ffcccc',
+                    borderRadius: '8px', padding: '0.2rem 0.5rem', cursor: 'pointer',
+                    color: '#cc3333', fontSize: '0.75rem', fontWeight: 600,
+                  }}
+                >
+                  🗑 Supprimer
+                </button>
               </div>
             </div>
           ))}
