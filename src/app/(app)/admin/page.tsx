@@ -418,21 +418,25 @@ export default function AdminPage() {
                 <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5 }}>{member.email} · {member.activity} · {member.city}</div>
               </div>
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                {['fondateur', 'partenaire', 'membre_fondateur'].map(badge => {
-                  const active = (member.badges || []).includes(badge)
+                {[
+                  { key: 'fondateur', label: 'Fondateur' },
+                  { key: 'partenaire', label: 'Partenaire' },
+                  { key: 'membre_fondateur', label: 'Membre fondateur' },
+                ].map(({ key, label }) => {
+                  const active = (member.badges || []).includes(key)
                   return (
                     <button
-                      key={badge}
-                      onClick={() => toggleBadge(member, badge)}
+                      key={key}
+                      onClick={() => toggleBadge(member, key)}
                       style={{
                         fontSize: '0.7rem', fontWeight: 600, padding: '0.2rem 0.55rem', borderRadius: '20px',
                         border: 'none', cursor: 'pointer',
-                        backgroundColor: active ? '#E8501A' : '#F5F0E8',
+                        backgroundColor: active ? (key === 'membre_fondateur' ? '#6B4FA0' : '#E8501A') : '#F5F0E8',
                         color: active ? 'white' : '#2D2D2D',
                         opacity: active ? 1 : 0.5,
                       }}
                     >
-                      {badge}
+                      {label}
                     </button>
                   )
                 })}
