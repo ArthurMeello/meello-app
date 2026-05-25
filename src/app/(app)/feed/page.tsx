@@ -797,7 +797,16 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
           )}
           {postBody && (
             <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {postBody.split(/(https?:\/\/[^\s]+|@[^\s]+)/g).map((part, i) => {
+              {postBody.split(/(https?:\/\/[^\s]+|@[^\s]+|\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
+                // Lien markdown [texte](url)
+                const mdLink = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
+                if (mdLink) {
+                  return (
+                    <a key={i} href={mdLink[2]} style={{ color: '#E8501A', fontWeight: 700, textDecoration: 'none' }}>
+                      {mdLink[1]}
+                    </a>
+                  )
+                }
                 if (/^https?:\/\//.test(part)) {
                   return <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
                 }
@@ -810,7 +819,6 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                   if (member) {
                     return <a key={i} href={`/membre/${member.id}`} style={{ color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>{part}</a>
                   }
-                  // @all ou tag non résolu
                   return <span key={i} style={{ color: '#E8501A', fontWeight: 600 }}>{part}</span>
                 }
                 return part

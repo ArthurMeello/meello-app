@@ -48,9 +48,19 @@ export async function POST(req: NextRequest) {
 
   // 4. Publier un post de bienvenue dans le feed (par L'équipe Meello)
   const newMemberProfileUrl = `https://app.meello.fr/membre/${authData.user.id}`
+  const cityLine = app.city ? ` — depuis ${app.city}${app.country && app.country !== 'France' ? `, ${app.country}` : ''}` : ''
+  const welcomeContent = [
+    `🎉 Nouvelle tête dans la communauté ! Bienvenue à @${app.first_name}${app.last_name} !`,
+    ``,
+    `${app.first_name} est ${app.activity}${cityLine}.`,
+    ``,
+    `N'hésite pas à lui souhaiter la bienvenue 👋`,
+    ``,
+    `[→ Voir le profil de ${app.first_name}](${newMemberProfileUrl})`,
+  ].join('\n')
   await supabase.from('posts').insert({
     author_id: EQUIPE_MEELLO_ID,
-    content: `🎉 Bienvenue à @${app.first_name}${app.last_name} qui rejoint la communauté Meello !\n\n${app.first_name} est ${app.activity}${app.city ? ` basé·e à ${app.city}` : ''}. Souhaite lui la bienvenue ! 👋\n\n👉 ${newMemberProfileUrl}`,
+    content: welcomeContent,
   })
 
   // Notifier le nouveau membre
