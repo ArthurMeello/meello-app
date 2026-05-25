@@ -154,8 +154,8 @@ export default function AppNav() {
               width: '100%',
             }}
           >
-            <span>🚪</span>
-            <span>Deconnexion</span>
+            <img src="/icons/logout.svg" alt="Déconnexion" style={{ width: '20px', height: '20px', filter: 'brightness(0) invert(1)', flexShrink: 0 }} />
+            <span>Déconnexion</span>
           </button>
         </div>
       </aside>
