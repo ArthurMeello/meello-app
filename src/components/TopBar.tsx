@@ -49,11 +49,29 @@ export default function TopBar() {
     const supabase = createClient()
     const { data } = await supabase
       .from('notifications')
-      .select('*, from_profile:profiles!notifications_from_user_id_fkey(first_name, last_name, avatar_url)')
+      .select('*')
       .eq('user_id', uid)
       .order('created_at', { ascending: false })
       .limit(20)
-    if (data) setNotifications(data)
+    if (!data) return
+
+    // Charger les profils des auteurs séparément
+    const fromIds = [...new Set(data.map(n => n.from_user_id).filter(Boolean))]
+    let profilesMap: Record<string, { first_name: string; last_name: string; avatar_url: string | null }> = {}
+    if (fromIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url')
+        .in('id', fromIds)
+      if (profiles) {
+        profiles.forEach(p => { profilesMap[p.id] = p })
+      }
+    }
+
+    setNotifications(data.map(n => ({
+      ...n,
+      from_profile: n.from_user_id ? profilesMap[n.from_user_id] || null : null,
+    })))
   }
 
   const loadUnreadMessages = async (uid: string) => {
