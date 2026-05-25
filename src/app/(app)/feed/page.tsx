@@ -293,8 +293,12 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
 
       {/* Contenu */}
       {post.content && (
-        <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem', whiteSpace: 'pre-wrap' }}>
-          {post.content}
+        <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {post.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+            /^https?:\/\//.test(part)
+              ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
+              : part
+          )}
         </p>
       )}
 
