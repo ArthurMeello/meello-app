@@ -59,6 +59,7 @@ function FeedPageInner() {
     const { data } = await supabase
       .from('posts')
       .select('*, profiles(first_name, last_name, avatar_url, activity, badges, member_since, hide_new_badge)')
+      .order('pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(50)
     if (data) setPosts(data as Post[])
@@ -581,6 +582,12 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     onRefresh()
   }
 
+  const togglePin = async () => {
+    const supabase = createClient()
+    await supabase.from('posts').update({ pinned: !post.pinned }).eq('id', post.id)
+    onRefresh()
+  }
+
   const handleEditPost = async () => {
     if (!editPostContent.trim()) return
     const supabase = createClient()
@@ -892,27 +899,52 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
             ) : null
           })()}
         </div>
-        {(isOwner || isCurrentUserAdmin) && (
-          <div style={{ display: 'flex', gap: '0.25rem' }}>
-            {isOwner && (
-              <button
-                onClick={() => { setEditingPost(true); setEditPostContent(post.content || '') }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
-                title="Modifier ce post"
-              >
-                <img src="/icons/edit.svg" alt="Modifier" style={{ width: '16px', height: '16px', filter: 'brightness(0) opacity(0.3)' }} />
-              </button>
-            )}
+        <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+          {isCurrentUserAdmin && (
             <button
-              onClick={handleDelete}
+              onClick={togglePin}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
-              title="Supprimer ce post"
+              title={post.pinned ? 'Désépingler ce post' : 'Épingler ce post'}
             >
-              <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '16px', height: '16px', filter: 'brightness(0) opacity(0.3)' }} />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={post.pinned ? '#E8501A' : 'none'} stroke={post.pinned ? '#E8501A' : '#2D2D2D'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: post.pinned ? 1 : 0.3 }}>
+                <line x1="12" y1="17" x2="12" y2="22"/>
+                <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
+              </svg>
             </button>
-          </div>
-        )}
+          )}
+          {(isOwner || isCurrentUserAdmin) && (
+            <>
+              {isOwner && (
+                <button
+                  onClick={() => { setEditingPost(true); setEditPostContent(post.content || '') }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                  title="Modifier ce post"
+                >
+                  <img src="/icons/edit.svg" alt="Modifier" style={{ width: '16px', height: '16px', filter: 'brightness(0) opacity(0.3)' }} />
+                </button>
+              )}
+              <button
+                onClick={handleDelete}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+                title="Supprimer ce post"
+              >
+                <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '16px', height: '16px', filter: 'brightness(0) opacity(0.3)' }} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Badge épinglé */}
+      {post.pinned && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.5rem' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#E8501A" stroke="#E8501A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="17" x2="12" y2="22"/>
+            <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
+          </svg>
+          <span style={{ fontSize: '0.72rem', color: '#E8501A', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Épinglé</span>
+        </div>
+      )}
 
       {/* Contenu ou mode édition */}
       {editingPost ? (
