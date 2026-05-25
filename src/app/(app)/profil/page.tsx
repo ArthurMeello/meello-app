@@ -141,6 +141,9 @@ export default function ProfilPage() {
       facebook: form.facebook || null,
       pinterest: form.pinterest || null,
       tiktok: form.tiktok || null,
+      x: form.x || null,
+      youtube: form.youtube || null,
+      whatsapp: form.whatsapp || null,
     }).eq('id', user.id)
 
     await loadProfile()
@@ -465,6 +468,18 @@ export default function ProfilPage() {
                   <img src="/icons/tiktok.svg" alt="TikTok" style={{ width: '22px', height: '22px', flexShrink: 0 }} />
                   <input value={form.tiktok || ''} onChange={e => setForm(p => ({ ...p, tiktok: e.target.value }))} placeholder="https://tiktok.com/@..." style={{ ...inputStyle, flex: 1 }} />
                 </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <img src="/icons/x.svg" alt="X" style={{ width: '22px', height: '22px', flexShrink: 0 }} />
+                  <input value={form.x || ''} onChange={e => setForm(p => ({ ...p, x: e.target.value }))} placeholder="https://x.com/..." style={{ ...inputStyle, flex: 1 }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <img src="/icons/youtube.svg" alt="YouTube" style={{ width: '22px', height: '22px', flexShrink: 0 }} />
+                  <input value={form.youtube || ''} onChange={e => setForm(p => ({ ...p, youtube: e.target.value }))} placeholder="https://youtube.com/@..." style={{ ...inputStyle, flex: 1 }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <img src="/icons/whatsapp.svg" alt="WhatsApp" style={{ width: '22px', height: '22px', flexShrink: 0 }} />
+                  <input value={form.whatsapp || ''} onChange={e => setForm(p => ({ ...p, whatsapp: e.target.value }))} placeholder="Numéro WhatsApp (ex: +33612345678)" style={{ ...inputStyle, flex: 1 }} />
+                </div>
               </div>
             </div>
 
@@ -495,6 +510,9 @@ export default function ProfilPage() {
               {profile.facebook && <a href={profile.facebook} target="_blank" rel="noopener noreferrer" title="Facebook" style={socialLinkStyle}><img src="/icons/facebook.svg" alt="Facebook" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.pinterest && <a href={profile.pinterest} target="_blank" rel="noopener noreferrer" title="Pinterest" style={socialLinkStyle}><img src="/icons/pinterest.svg" alt="Pinterest" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.tiktok && <a href={profile.tiktok} target="_blank" rel="noopener noreferrer" title="TikTok" style={socialLinkStyle}><img src="/icons/tiktok.svg" alt="TikTok" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.x && <a href={profile.x} target="_blank" rel="noopener noreferrer" title="X" style={socialLinkStyle}><img src="/icons/x.svg" alt="X" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.youtube && <a href={profile.youtube} target="_blank" rel="noopener noreferrer" title="YouTube" style={socialLinkStyle}><img src="/icons/youtube.svg" alt="YouTube" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.whatsapp && <a href={`https://wa.me/${profile.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp" style={socialLinkStyle}><img src="/icons/whatsapp.svg" alt="WhatsApp" style={{ width: '20px', height: '20px' }} /></a>}
             </div>
           </div>
         )}

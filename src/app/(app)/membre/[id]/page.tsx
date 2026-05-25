@@ -66,6 +66,9 @@ export default function MembrePublicPage() {
     { key: 'facebook', icon: null, label: 'Facebook', svg: '/icons/facebook.svg' },
     { key: 'pinterest', icon: null, label: 'Pinterest', svg: '/icons/pinterest.svg' },
     { key: 'tiktok', icon: null, label: 'TikTok', svg: '/icons/tiktok.svg' },
+    { key: 'x', icon: null, label: 'X', svg: '/icons/x.svg' },
+    { key: 'youtube', icon: null, label: 'YouTube', svg: '/icons/youtube.svg' },
+    { key: 'whatsapp', icon: null, label: 'WhatsApp', svg: '/icons/whatsapp.svg' },
   ]
 
   return (
@@ -109,7 +112,14 @@ export default function MembrePublicPage() {
         {/* Réseaux sociaux */}
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           {SOCIAL_LINKS.map(s => profile[s.key] && (
-            <a key={s.key} href={profile[s.key]} target="_blank" rel="noopener noreferrer" title={s.label} style={socialLinkStyle}>
+            <a
+              key={s.key}
+              href={s.key === 'whatsapp' ? `https://wa.me/${profile[s.key].replace(/\D/g, '')}` : profile[s.key]}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={s.label}
+              style={socialLinkStyle}
+            >
               {s.svg
                 ? <img src={s.svg} alt={s.label} style={{ width: '20px', height: '20px' }} />
                 : s.icon}
