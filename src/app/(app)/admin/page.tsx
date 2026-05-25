@@ -39,7 +39,14 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false)
   const [selectedApp, setSelectedApp] = useState<Application | null>(null)
   const [authorized, setAuthorized] = useState(false)
+  const [motif, setMotif] = useState('info')
   const router = useRouter()
+
+  const MOTIFS = [
+    { value: 'info', label: 'Informations insuffisantes', preview: `Les informations fournies sur ton activité sont insuffisantes pour évaluer ta candidature. N'hésite pas à soumettre une nouvelle candidature en détaillant davantage ton projet.` },
+    { value: 'profil', label: 'Profil non compatible', preview: `Ton profil ne correspond pas aux critères de la communauté Meello à ce stade. Meello s'adresse avant tout aux entrepreneurs, freelances et indépendants ayant une activité lancée.` },
+    { value: 'activite', label: 'Activité exclue (MLM / mandataire...)', preview: `Meello n'accueille pas les activités de type vente directe, réseau de mandataires, ou marketing de réseau (MLM). Cette décision est définitive.` },
+  ]
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -99,10 +106,22 @@ export default function AdminPage() {
   }
 
   const handleReject = async (app: Application) => {
-    const supabase = createClient()
-    await supabase.from('applications').update({ status: 'rejected' }).eq('id', app.id)
+    setLoading(true)
+    const res = await fetch('/api/reject-application', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ app, motif }),
+    })
+    if (!res.ok) {
+      alert('Erreur lors du refus')
+      setLoading(false)
+      return
+    }
     await fetchApplications()
     setSelectedApp(null)
+    setMotif('info')
+    setLoading(false)
+    alert(`Candidature de ${app.first_name} refusée et email envoyé.`)
   }
 
   const handleDelete = async (id: string) => {
@@ -186,6 +205,29 @@ export default function AdminPage() {
                 <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5, marginBottom: '0.4rem' }}>Motivation</div>
                 <p style={{ margin: 0, lineHeight: 1.65, color: '#2D2D2D' }}>{selectedApp.why_join}</p>
               </div>
+              {selectedApp.status === 'pending' && (
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5, marginBottom: '0.4rem' }}>Motif de refus</div>
+                  <select
+                    value={motif}
+                    onChange={e => setMotif(e.target.value)}
+                    style={{
+                      width: '100%', padding: '0.7rem 1rem', border: '2px solid #E8E3D9',
+                      borderRadius: '10px', fontSize: '0.9rem', marginBottom: '0.75rem',
+                      fontFamily: 'inherit', backgroundColor: 'white', cursor: 'pointer',
+                    }}
+                  >
+                    {MOTIFS.map(m => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                  <div style={{ backgroundColor: '#F5F0E8', borderRadius: '10px', padding: '0.85rem 1rem', fontSize: '0.85rem', color: '#2D2D2D', lineHeight: 1.6, opacity: 0.8 }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.75rem', opacity: 0.5, display: 'block', marginBottom: '0.35rem' }}>APERÇU DU MAIL</span>
+                    Bonjour {selectedApp.first_name}, {MOTIFS.find(m => m.value === motif)?.preview}
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                 {selectedApp.status === 'pending' && (
                   <>
