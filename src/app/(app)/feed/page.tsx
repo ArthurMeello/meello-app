@@ -21,6 +21,7 @@ function FeedPageInner() {
   const [showModal, setShowModal] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [userProfile, setUserProfile] = useState<{ first_name: string; avatar_url: string | null } | null>(null)
+  const [allMembers, setAllMembers] = useState<{ id: string; first_name: string; last_name: string }[]>([])
   const searchParams = useSearchParams()
   const highlightPostId = searchParams.get('post')
 
@@ -33,6 +34,11 @@ function FeedPageInner() {
       if (prof) setUserProfile(prof)
     })
     fetchPosts()
+    // Charger tous les membres pour résoudre les mentions
+    const supabase = createClient()
+    supabase.from('profiles').select('id, first_name, last_name').eq('is_active', true).then(({ data }) => {
+      if (data) setAllMembers(data)
+    })
   }, [])
 
   // Scroller vers le post mentionné après chargement
@@ -108,7 +114,7 @@ function FeedPageInner() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {posts.map(post => (
           <div key={post.id} id={`post-${post.id}`}>
-            <PostCard post={post} currentUserId={userId} onRefresh={fetchPosts} />
+            <PostCard post={post} currentUserId={userId} onRefresh={fetchPosts} allMembers={allMembers} />
           </div>
         ))}
         {posts.length === 0 && (
@@ -476,7 +482,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
   )
 }
 
-function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserId: string | null, onRefresh: () => void }) {
+function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: Post, currentUserId: string | null, onRefresh: () => void, allMembers?: { id: string; first_name: string; last_name: string }[] }) {
   const [comment, setComment] = useState('')
   const [comments, setComments] = useState<{ id: string; content: string; author_id: string; profiles: { first_name: string; last_name: string } }[]>([])
   const [commentCount, setCommentCount] = useState(0)
@@ -792,11 +798,24 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
           )}
           {postBody && (
             <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {postBody.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
-                /^https?:\/\//.test(part)
-                  ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
-                  : part
-              )}
+              {postBody.split(/(https?:\/\/[^\s]+|@\w+)/g).map((part, i) => {
+                if (/^https?:\/\//.test(part)) {
+                  return <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
+                }
+                if (/^@\w+/.test(part)) {
+                  const tag = part.slice(1).toLowerCase()
+                  const member = allMembers.find(m =>
+                    `${m.first_name}${m.last_name}`.toLowerCase() === tag ||
+                    m.first_name.toLowerCase() === tag
+                  )
+                  if (member) {
+                    return <a key={i} href={`/membre/${member.id}`} style={{ color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>{part}</a>
+                  }
+                  // @all ou tag non résolu
+                  return <span key={i} style={{ color: '#E8501A', fontWeight: 600 }}>{part}</span>
+                }
+                return part
+              })}
             </p>
           )}
         </>
