@@ -158,7 +158,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
         onClick={e => e.stopPropagation()}
         style={{
           backgroundColor: 'white', borderRadius: '16px',
-          width: '100%', maxWidth: '720px', height: '85vh',
+          width: '100%', maxWidth: '620px', maxHeight: '90vh',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}
       >
@@ -169,7 +169,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
         </div>
 
         {/* Corps */}
-        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleSubmit} style={{ overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Auteur */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{
@@ -200,13 +200,18 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
           {/* Contenu */}
           <textarea
             value={content}
-            onChange={e => setContent(e.target.value)}
+            onChange={e => {
+              setContent(e.target.value)
+              e.target.style.height = 'auto'
+              e.target.style.height = e.target.scrollHeight + 'px'
+            }}
             placeholder="Rédigez quelque chose..."
-            rows={5}
+            rows={3}
             style={{
               border: 'none', outline: 'none', resize: 'none',
               fontSize: '1rem', color: '#2D2D2D', fontFamily: 'inherit',
-              backgroundColor: 'transparent', width: '100%',
+              backgroundColor: 'transparent', width: '100%', overflow: 'hidden',
+              minHeight: '80px',
             }}
           />
 
