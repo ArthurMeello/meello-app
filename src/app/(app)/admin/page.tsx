@@ -29,6 +29,8 @@ interface Member {
   activity: string | null
   city: string | null
   badges: string[]
+  member_since: string | null
+  hide_new_badge: boolean
   created_at: string
 }
 
@@ -78,7 +80,7 @@ export default function AdminPage() {
     const supabase = createClient()
     const { data } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name, email, activity, city, badges, created_at')
+      .select('id, first_name, last_name, email, activity, city, badges, member_since, hide_new_badge, created_at')
       .order('created_at', { ascending: true })
     if (data) setMembers(data)
   }
@@ -434,6 +436,32 @@ export default function AdminPage() {
                     </button>
                   )
                 })}
+                {/* Badge nouveau membre — visible si dans la période OU forcé affiché */}
+                {(() => {
+                  const isInPeriod = member.member_since
+                    ? (Date.now() - new Date(member.member_since).getTime()) < 30 * 24 * 60 * 60 * 1000
+                    : false
+                  const active = isInPeriod && !member.hide_new_badge
+                  return (
+                    <button
+                      onClick={async () => {
+                        const supabase = createClient()
+                        await supabase.from('profiles').update({ hide_new_badge: !member.hide_new_badge }).eq('id', member.id)
+                        await fetchMembers()
+                      }}
+                      style={{
+                        fontSize: '0.7rem', fontWeight: 600, padding: '0.2rem 0.55rem', borderRadius: '20px',
+                        border: 'none', cursor: 'pointer',
+                        backgroundColor: active ? '#4A90D9' : '#F5F0E8',
+                        color: active ? 'white' : '#2D2D2D',
+                        opacity: active ? 1 : 0.5,
+                      }}
+                      title={active ? 'Retirer le badge Nouveau membre' : 'Badge Nouveau membre masqué ou hors période'}
+                    >
+                      nouveau membre
+                    </button>
+                  )
+                })()}
                 <button
                   onClick={() => deleteMember(member)}
                   title="Supprimer ce compte"

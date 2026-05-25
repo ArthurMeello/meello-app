@@ -279,7 +279,7 @@ export default function ProfilPage() {
   const completionTip = completion < 100 ? getCompletionTip(profile, hasReco, portfolio.length > 0, services.length > 0) : null
 
   // Badge "nouveau" dynamique : affiché pendant 30 jours après l'inscription
-  const isNew = profile.member_since
+  const isNew = profile.member_since && !profile.hide_new_badge
     ? (Date.now() - new Date(profile.member_since).getTime()) < 30 * 24 * 60 * 60 * 1000
     : false
   const badges = (profile.badges || []).filter((b: string) => b !== 'nouveau' && b !== 'profil_complet')

@@ -105,7 +105,7 @@ export default function MembrePublicPage() {
 
         {/* Badges */}
         {(() => {
-          const isNew = profile.member_since
+          const isNew = profile.member_since && !profile.hide_new_badge
             ? (Date.now() - new Date(profile.member_since).getTime()) < 30 * 24 * 60 * 60 * 1000
             : false
           const badges = (profile.badges || []).filter((b: string) => b !== 'nouveau' && b !== 'profil_complet')

@@ -96,7 +96,11 @@ export default function AnnuairePage() {
 
 function MemberCard({ profile }: { profile: Profile }) {
   const initials = `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}`.toUpperCase()
-  const badges = (profile.badges || []).filter((b: string) => b !== 'profil_complet')
+  const isNew = profile.member_since && !profile.hide_new_badge
+    ? (Date.now() - new Date(profile.member_since).getTime()) < 30 * 24 * 60 * 60 * 1000
+    : false
+  const baseBadges = (profile.badges || []).filter((b: string) => b !== 'profil_complet' && b !== 'nouveau')
+  const badges = isNew ? ['nouveau', ...baseBadges] : baseBadges
 
   return (
     <Link href={`/profil/${profile.id}`} style={{ textDecoration: 'none' }}>

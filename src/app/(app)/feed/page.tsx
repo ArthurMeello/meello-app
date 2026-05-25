@@ -58,7 +58,7 @@ function FeedPageInner() {
     const supabase = createClient()
     const { data } = await supabase
       .from('posts')
-      .select('*, profiles(first_name, last_name, avatar_url, activity, badges, member_since)')
+      .select('*, profiles(first_name, last_name, avatar_url, activity, badges, member_since, hide_new_badge)')
       .order('created_at', { ascending: false })
       .limit(50)
     if (data) setPosts(data as Post[])
@@ -871,7 +871,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
             {profile?.activity} · {formattedDate}
           </div>
           {(() => {
-            const isNew = profile?.member_since
+            const isNew = profile?.member_since && !profile?.hide_new_badge
               ? (Date.now() - new Date(profile.member_since).getTime()) < 30 * 24 * 60 * 60 * 1000
               : false
             const badges = (profile?.badges || []).filter((b: string) => b !== 'nouveau' && b !== 'profil_complet')
