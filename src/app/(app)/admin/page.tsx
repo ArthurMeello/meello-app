@@ -418,7 +418,7 @@ export default function AdminPage() {
                 <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5 }}>{member.email} · {member.activity} · {member.city}</div>
               </div>
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                {['fondateur', 'partenaire'].map(badge => {
+                {['fondateur', 'partenaire', 'membre_fondateur'].map(badge => {
                   const active = (member.badges || []).includes(badge)
                   return (
                     <button

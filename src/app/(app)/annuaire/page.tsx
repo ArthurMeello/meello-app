@@ -11,12 +11,14 @@ const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 const BADGE_COLORS: Record<string, string> = {
   fondateur: '#E8501A',
   partenaire: '#7A9E7E',
+  membre_fondateur: '#6B4FA0',
   nouveau: '#4A90D9',
 }
 
 const BADGE_LABELS: Record<string, string> = {
   fondateur: 'Fondateur',
   partenaire: 'Partenaire',
+  membre_fondateur: 'Membre fondateur',
   nouveau: 'Nouveau membre',
 }
 

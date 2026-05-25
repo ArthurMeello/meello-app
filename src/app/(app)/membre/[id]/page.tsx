@@ -114,11 +114,11 @@ export default function MembrePublicPage() {
             <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
               {allBadges.map((b: string) => (
                 <span key={b} style={{
-                  backgroundColor: b === 'nouveau' ? '#F5A623' : '#E8501A',
+                  backgroundColor: b === 'nouveau' ? '#F5A623' : b === 'membre_fondateur' ? '#6B4FA0' : '#E8501A',
                   color: 'white', fontSize: '0.72rem', fontWeight: 600,
                   padding: '0.2rem 0.6rem', borderRadius: '20px',
                 }}>
-                  {b === 'fondateur' ? 'Fondateur' : b === 'partenaire' ? 'Partenaire' : 'Nouveau membre'}
+                  {b === 'fondateur' ? 'Fondateur' : b === 'partenaire' ? 'Partenaire' : b === 'membre_fondateur' ? 'Membre fondateur' : 'Nouveau membre'}
                 </span>
               ))}
             </div>
