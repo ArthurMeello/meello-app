@@ -9,17 +9,17 @@ const EMOJIS = ['👍', '🔥', '❤️']
 
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([])
-  const [content, setContent] = useState('')
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const [userProfile, setUserProfile] = useState<{ first_name: string; avatar_url: string | null } | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUserId(data.user.id)
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return
+      setUserId(data.user.id)
+      const { data: prof } = await supabase.from('profiles').select('first_name, avatar_url').eq('id', data.user.id).single()
+      if (prof) setUserProfile(prof)
     })
     fetchPosts()
   }, [])
@@ -34,42 +34,7 @@ export default function FeedPage() {
     if (data) setPosts(data as Post[])
   }
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
-  }
-
-  const removeImage = () => {
-    setImageFile(null)
-    setImagePreview(null)
-    if (fileRef.current) fileRef.current.value = ''
-  }
-
-  const handlePost = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!content.trim() && !imageFile) return
-    setLoading(true)
-    const supabase = createClient()
-
-    let image_url = null
-    if (imageFile) {
-      const ext = imageFile.name.split('.').pop()
-      const path = `${userId}/${Date.now()}.${ext}`
-      const { error } = await supabase.storage.from('posts').upload(path, imageFile, { upsert: true })
-      if (!error) {
-        const { data } = supabase.storage.from('posts').getPublicUrl(path)
-        image_url = data.publicUrl
-      }
-    }
-
-    await supabase.from('posts').insert({ content: content.trim(), author_id: userId, image_url })
-    setContent('')
-    removeImage()
-    await fetchPosts()
-    setLoading(false)
-  }
+  const initials = userProfile?.first_name?.[0]?.toUpperCase() || '?'
 
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto' }}>
@@ -77,79 +42,42 @@ export default function FeedPage() {
         Fil d'actualité
       </h1>
 
-      {/* Composer */}
-      <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', marginBottom: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-        <form onSubmit={handlePost}>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Partage quelque chose avec la communauté..."
-            rows={3}
-            style={{
-              width: '100%',
-              border: 'none',
-              outline: 'none',
-              resize: 'none',
-              fontSize: '1rem',
-              color: '#2D2D2D',
-              fontFamily: 'inherit',
-              backgroundColor: 'transparent',
-              boxSizing: 'border-box',
-            }}
-          />
-
-          {/* Prévisualisation image */}
-          {imagePreview && (
-            <div style={{ position: 'relative', marginBottom: '0.75rem', display: 'inline-block' }}>
-              <img src={imagePreview} alt="" style={{ maxHeight: '200px', borderRadius: '10px', display: 'block', objectFit: 'cover' }} />
-              <button
-                type="button"
-                onClick={removeImage}
-                style={{
-                  position: 'absolute', top: '6px', right: '6px',
-                  backgroundColor: 'rgba(0,0,0,0.5)', color: 'white',
-                  border: 'none', borderRadius: '50%', width: '24px', height: '24px',
-                  cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              >✕</button>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem' }}>
-            {/* Bouton image */}
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: '#2D2D2D', opacity: 0.4, fontSize: '1.2rem', padding: 0,
-              }}
-              title="Ajouter une image"
-            >
-              🖼
-            </button>
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleImageSelect} style={{ display: 'none' }} />
-
-            <button
-              type="submit"
-              disabled={loading || (!content.trim() && !imageFile)}
-              style={{
-                backgroundColor: (content.trim() || imageFile) ? '#E8501A' : '#E8E3D9',
-                color: (content.trim() || imageFile) ? 'white' : '#999',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '0.5rem 1.25rem',
-                fontSize: '0.9rem',
-                fontWeight: 600,
-                cursor: (content.trim() || imageFile) ? 'pointer' : 'not-allowed',
-                transition: 'all 0.2s',
-              }}
-            >
-              {loading ? '...' : 'Publier'}
-            </button>
-          </div>
-        </form>
+      {/* Barre "Créer une publication" */}
+      <div
+        onClick={() => setShowModal(true)}
+        style={{
+          backgroundColor: 'white', borderRadius: '50px', padding: '0.75rem 1rem',
+          marginBottom: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+          display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer',
+        }}
+      >
+        <div style={{
+          width: '36px', height: '36px', borderRadius: '50%',
+          backgroundColor: '#E8501A', color: 'white', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 700, fontSize: '0.8rem', overflow: 'hidden',
+        }}>
+          {userProfile?.avatar_url
+            ? <img src={userProfile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : initials}
+        </div>
+        <span style={{ flex: 1, color: '#2D2D2D', opacity: 0.4, fontSize: '0.95rem' }}>Créer une publication</span>
+        <div style={{
+          width: '32px', height: '32px', borderRadius: '50%',
+          backgroundColor: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '1.2rem', color: '#2D2D2D', fontWeight: 300,
+        }}>+</div>
       </div>
+
+      {/* Modale */}
+      {showModal && (
+        <PostModal
+          userId={userId}
+          userProfile={userProfile}
+          onClose={() => setShowModal(false)}
+          onSuccess={() => { setShowModal(false); fetchPosts() }}
+        />
+      )}
 
       {/* Posts */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -161,6 +89,182 @@ export default function FeedPage() {
             Sois le premier à publier quelque chose !
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function PostModal({ userId, userProfile, onClose, onSuccess }: {
+  userId: string | null
+  userProfile: { first_name: string; avatar_url: string | null } | null
+  onClose: () => void
+  onSuccess: () => void
+}) {
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [mediaFile, setMediaFile] = useState<File | null>(null)
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null)
+  const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null)
+  const [loading, setLoading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const initials = userProfile?.first_name?.[0]?.toUpperCase() || '?'
+
+  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setMediaFile(file)
+    setMediaPreview(URL.createObjectURL(file))
+    setMediaType(file.type.startsWith('video') ? 'video' : 'image')
+  }
+
+  const removeMedia = () => {
+    setMediaFile(null)
+    setMediaPreview(null)
+    setMediaType(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!content.trim() && !title.trim() && !mediaFile) return
+    setLoading(true)
+    const supabase = createClient()
+
+    let image_url = null
+    if (mediaFile) {
+      const ext = mediaFile.name.split('.').pop()
+      const path = `${userId}/${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('posts').upload(path, mediaFile, { upsert: true })
+      if (!error) {
+        const { data } = supabase.storage.from('posts').getPublicUrl(path)
+        image_url = data.publicUrl
+      }
+    }
+
+    const fullContent = title.trim() ? `**${title.trim()}**\n${content.trim()}` : content.trim()
+    await supabase.from('posts').insert({ content: fullContent, author_id: userId, image_url })
+    setLoading(false)
+    onSuccess()
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '1rem',
+    }} onClick={onClose}>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          backgroundColor: 'white', borderRadius: '16px',
+          width: '100%', maxWidth: '560px', maxHeight: '90vh',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        }}
+      >
+        {/* Header modale */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.5rem', borderBottom: '1px solid #F5F0E8' }}>
+          <span style={{ fontFamily: 'var(--font-clash)', fontWeight: 700, fontSize: '1.1rem', color: '#2D2D2D' }}>Créer une publication</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#2D2D2D', opacity: 0.5 }}>✕</button>
+        </div>
+
+        {/* Corps */}
+        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Auteur */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: '40px', height: '40px', borderRadius: '50%',
+              backgroundColor: '#E8501A', color: 'white', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: '0.85rem', overflow: 'hidden',
+            }}>
+              {userProfile?.avatar_url
+                ? <img src={userProfile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : initials}
+            </div>
+            <span style={{ fontWeight: 600, color: '#2D2D2D' }}>{userProfile?.first_name}</span>
+          </div>
+
+          {/* Titre facultatif */}
+          <input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Titre (facultatif)"
+            style={{
+              border: 'none', outline: 'none', fontSize: '1.3rem',
+              fontWeight: 700, color: '#2D2D2D', fontFamily: 'var(--font-clash)',
+              width: '100%', backgroundColor: 'transparent',
+            }}
+          />
+
+          {/* Contenu */}
+          <textarea
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            placeholder="Rédigez quelque chose..."
+            rows={5}
+            style={{
+              border: 'none', outline: 'none', resize: 'none',
+              fontSize: '1rem', color: '#2D2D2D', fontFamily: 'inherit',
+              backgroundColor: 'transparent', width: '100%',
+            }}
+          />
+
+          {/* Prévisualisation média */}
+          {mediaPreview && (
+            <div style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', aspectRatio: '4/5', backgroundColor: '#F5F0E8' }}>
+              {mediaType === 'video'
+                ? <video src={mediaPreview} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <img src={mediaPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              }
+              <button
+                type="button"
+                onClick={removeMedia}
+                style={{
+                  position: 'absolute', top: '8px', right: '8px',
+                  backgroundColor: 'rgba(0,0,0,0.5)', color: 'white',
+                  border: 'none', borderRadius: '50%', width: '28px', height: '28px',
+                  cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >✕</button>
+            </div>
+          )}
+
+          {/* Actions bas */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px solid #F5F0E8' }}>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.3rem', opacity: 0.4, padding: 0 }}
+              title="Ajouter une image ou vidéo"
+            >
+              🖼
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*,video/*"
+              onChange={handleMediaSelect}
+              style={{ display: 'none' }}
+            />
+
+            <button
+              type="submit"
+              disabled={loading || (!content.trim() && !title.trim() && !mediaFile)}
+              style={{
+                backgroundColor: (content.trim() || title.trim() || mediaFile) ? '#E8501A' : '#E8E3D9',
+                color: (content.trim() || title.trim() || mediaFile) ? 'white' : '#999',
+                border: 'none', borderRadius: '8px',
+                padding: '0.5rem 1.5rem',
+                fontSize: '0.9rem', fontWeight: 600,
+                cursor: (content.trim() || title.trim() || mediaFile) ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s',
+              }}
+            >
+              {loading ? '...' : 'Publier'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
@@ -258,6 +362,23 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
 
   const totalReactions = reactions.length
 
+  // Rendu du contenu avec titre en gras et liens cliquables
+  const renderContent = (text: string) => {
+    return text.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+      /^https?:\/\//.test(part)
+        ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
+        : part.startsWith('**') && part.endsWith('**')
+          ? <strong key={i}>{part.slice(2, -2)}</strong>
+          : part
+    )
+  }
+
+  // Séparer titre et contenu si le post a un titre
+  const lines = post.content?.split('\n') || []
+  const hasTitle = lines[0]?.startsWith('**') && lines[0]?.endsWith('**')
+  const postTitle = hasTitle ? lines[0].slice(2, -2) : null
+  const postBody = hasTitle ? lines.slice(1).join('\n') : post.content
+
   return (
     <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', opacity: deleting ? 0.5 : 1 }}>
       {/* Header */}
@@ -285,16 +406,21 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
             onClick={handleDelete}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2D2D2D', opacity: 0.3, fontSize: '1rem', padding: '0.25rem' }}
             title="Supprimer ce post"
-          >
-            🗑
-          </button>
+          >🗑</button>
         )}
       </div>
 
+      {/* Titre si présent */}
+      {postTitle && (
+        <div style={{ fontFamily: 'var(--font-clash)', fontWeight: 700, fontSize: '1.15rem', color: '#2D2D2D', marginBottom: '0.4rem' }}>
+          {postTitle}
+        </div>
+      )}
+
       {/* Contenu */}
-      {post.content && (
+      {postBody && (
         <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {post.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+          {postBody.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
             /^https?:\/\//.test(part)
               ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
               : part
@@ -302,36 +428,29 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
         </p>
       )}
 
-      {/* Image */}
+      {/* Image ou vidéo */}
       {post.image_url && (
-        <div style={{ borderRadius: '10px', overflow: 'hidden', marginBottom: '0.75rem', backgroundColor: '#F5F0E8', aspectRatio: '4/5', position: 'relative' }}>
-          <img
-            src={post.image_url}
-            alt=""
-            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
-          />
+        <div style={{ borderRadius: '10px', overflow: 'hidden', marginBottom: '0.75rem', backgroundColor: '#F5F0E8', aspectRatio: '4/5' }}>
+          {post.image_url.match(/\.(mp4|mov|webm)$/i)
+            ? <video src={post.image_url} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <img src={post.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+          }
         </div>
       )}
 
       {/* Réactions + Commenter */}
-      <div style={{ marginTop: '0.25rem', paddingTop: '0.75rem', borderTop: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div style={{ paddingTop: '0.75rem', borderTop: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
         {reactionCounts.map(({ emoji, count, active }) => (
           <button
             key={emoji}
             onClick={() => handleReaction(emoji)}
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              padding: '0.3rem 0.65rem',
-              borderRadius: '20px',
+              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+              padding: '0.3rem 0.65rem', borderRadius: '20px',
               border: active ? '1.5px solid #E8501A' : '1.5px solid #E8E3D9',
               backgroundColor: active ? 'rgba(232,80,26,0.08)' : 'transparent',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              color: active ? '#E8501A' : '#2D2D2D',
-              transition: 'all 0.15s',
+              cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
+              color: active ? '#E8501A' : '#2D2D2D', transition: 'all 0.15s',
             }}
           >
             {emoji} {count > 0 && <span style={{ fontSize: '0.8rem' }}>{count}</span>}
@@ -347,18 +466,11 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
         <button
           onClick={toggleComments}
           style={{
-            marginLeft: 'auto',
-            background: 'none',
-            border: 'none',
+            marginLeft: 'auto', background: 'none', border: 'none',
             color: showComments ? '#E8501A' : '#2D2D2D',
             opacity: showComments ? 1 : 0.5,
-            fontWeight: 600,
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            padding: 0,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.3rem',
+            fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', padding: 0,
+            display: 'flex', alignItems: 'center', gap: '0.3rem',
           }}
         >
           💬 {commentCount > 0 ? `${commentCount} commentaire${commentCount > 1 ? 's' : ''}` : 'Commenter'}
