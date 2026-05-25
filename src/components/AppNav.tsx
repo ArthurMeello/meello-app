@@ -14,16 +14,20 @@ const NAV_ITEMS = [
   { href: '/reseau', label: 'Mon Réseau', icon: '🤝' },
 ]
 
+const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+
 export default function AppNav() {
   const pathname = usePathname()
   const router = useRouter()
   const [profile, setProfile] = useState<{ first_name: string; last_name: string; avatar_url: string | null } | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
     const loadProfile = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      setUserId(user.id)
       const { data } = await supabase.from('profiles').select('first_name, last_name, avatar_url').eq('id', user.id).single()
       if (data) setProfile(data)
     }
@@ -88,6 +92,25 @@ export default function AppNav() {
         </nav>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {userId === ADMIN_ID && (
+            <Link
+              href="/admin"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.65rem 0.75rem',
+                borderRadius: '10px',
+                textDecoration: 'none',
+                color: pathname.startsWith('/admin') ? '#E8501A' : 'rgba(245,240,232,0.5)',
+                backgroundColor: pathname.startsWith('/admin') ? 'rgba(232,80,26,0.12)' : 'transparent',
+                fontSize: '0.95rem',
+              }}
+            >
+              <span>⚙️</span>
+              <span>Admin</span>
+            </Link>
+          )}
           <Link
             href="/profil"
             style={{
