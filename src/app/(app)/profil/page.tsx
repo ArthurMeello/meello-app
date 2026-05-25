@@ -28,10 +28,17 @@ function getCompletion(profile: Profile, hasReco: boolean, hasPortfolio: boolean
   return Math.min(total, 100)
 }
 
-function getCompletionMessage(pct: number) {
-  if (pct <= 40) return 'Ton profil est en cours de creation'
-  if (pct <= 70) return 'Tu y es presque, complete ton profil'
-  if (pct <= 99) return 'Plus qu un effort pour etre au top'
+function getCompletionTip(profile: Profile, hasReco: boolean, hasPortfolio: boolean, hasServices: boolean): string | null {
+  if (!profile.bio) return '✍️ Rédige ta bio pour booster ton profil de 20 points — c\'est ce que les membres lisent en premier.'
+  if (!hasPortfolio) return '🖼 Ajoute un projet à ton portfolio pour gagner 15 points et montrer concrètement ce que tu fais.'
+  if (!hasServices) return '💼 Présente tes services pour gagner 15 points — c\'est ton vitrine commerciale dans l\'annuaire.'
+  if (!profile.website) return '🔗 Ajoute ton site web ou LinkedIn pour gagner 10 points et renvoyer du trafic vers toi.'
+  if (!profile.activity) return '🏷 Précise ton activité pour gagner 10 points — les membres cherchent des prestataires par métier.'
+  if (!hasReco) return '⭐️ Demande une recommandation à un membre pour gagner 10 points — rien ne vaut la preuve sociale.'
+  if (!SOCIAL_KEYS.some(k => profile[k as keyof Profile])) return '📲 Ajoute au moins un réseau social pour gagner 5 points et faciliter les prises de contact.'
+  if (!profile.city) return '📍 Indique ta ville pour gagner 5 points — les membres aiment collaborer en local.'
+  if (!profile.avatar_url) return '📸 Ajoute une photo de profil pour gagner 5 points — un visage inspire confiance.'
+  if (!profile.company_number) return '🏢 Renseigne ton numéro d\'entreprise pour gagner 5 points et rassurer tes futurs clients.'
   return null
 }
 
@@ -267,6 +274,7 @@ export default function ProfilPage() {
 
   const completion = getCompletion(profile, hasReco, portfolio.length > 0, services.length > 0)
   const completionMsg = getCompletionMessage(completion)
+  const completionTip = completion < 100 ? getCompletionTip(profile, hasReco, portfolio.length > 0, services.length > 0) : null
   const badges = profile.badges || []
 
   return (
@@ -373,6 +381,20 @@ export default function ProfilPage() {
               transition: 'width 0.6s ease',
             }} />
           </div>
+          {completionTip && (
+            <div style={{
+              marginTop: '0.75rem',
+              backgroundColor: '#FFF8F6',
+              border: '1px solid rgba(232,80,26,0.15)',
+              borderRadius: '10px',
+              padding: '0.65rem 0.9rem',
+              fontSize: '0.83rem',
+              color: '#2D2D2D',
+              lineHeight: 1.5,
+            }}>
+              {completionTip}
+            </div>
+          )}
         </div>
 
         {/* Form edition */}
