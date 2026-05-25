@@ -28,7 +28,7 @@ export default function FeedPage() {
     const supabase = createClient()
     const { data } = await supabase
       .from('posts')
-      .select('*, profiles(first_name, last_name, avatar_url, activity)')
+      .select('*, profiles(first_name, last_name, avatar_url, activity, badges, member_since)')
       .order('created_at', { ascending: false })
       .limit(50)
     if (data) setPosts(data as Post[])
@@ -287,11 +287,15 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
 
 function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserId: string | null, onRefresh: () => void }) {
   const [comment, setComment] = useState('')
-  const [comments, setComments] = useState<{ id: string; content: string; profiles: { first_name: string; last_name: string } }[]>([])
+  const [comments, setComments] = useState<{ id: string; content: string; author_id: string; profiles: { first_name: string; last_name: string } }[]>([])
   const [commentCount, setCommentCount] = useState(0)
   const [showComments, setShowComments] = useState(false)
   const [reactions, setReactions] = useState<{ emoji: string; author_id: string }[]>([])
   const [deleting, setDeleting] = useState(false)
+  const [editingPost, setEditingPost] = useState(false)
+  const [editPostContent, setEditPostContent] = useState(post.content || '')
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editCommentContent, setEditCommentContent] = useState('')
 
   const profile = post.profiles
   const initials = profile ? `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}` : '?'
@@ -344,11 +348,35 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
     onRefresh()
   }
 
+  const handleEditPost = async () => {
+    if (!editPostContent.trim()) return
+    const supabase = createClient()
+    await supabase.from('posts').update({ content: editPostContent.trim() }).eq('id', post.id)
+    setEditingPost(false)
+    onRefresh()
+  }
+
+  const handleEditComment = async (commentId: string) => {
+    if (!editCommentContent.trim()) return
+    const supabase = createClient()
+    await supabase.from('comments').update({ content: editCommentContent.trim() }).eq('id', commentId)
+    setEditingCommentId(null)
+    loadComments()
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Supprimer ce commentaire ?')) return
+    const supabase = createClient()
+    await supabase.from('comments').delete().eq('id', commentId)
+    setCommentCount(c => c - 1)
+    loadComments()
+  }
+
   const loadComments = async () => {
     const supabase = createClient()
     const { data } = await supabase
       .from('comments')
-      .select('id, content, profiles(first_name, last_name)')
+      .select('id, content, author_id, profiles(first_name, last_name)')
       .eq('post_id', post.id)
       .order('created_at', { ascending: true })
     if (data) setComments(data as unknown as typeof comments)
@@ -415,32 +443,74 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
           <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5 }}>
             {profile?.activity} · {formattedDate}
           </div>
+          {(() => {
+            const isNew = profile?.member_since
+              ? (Date.now() - new Date(profile.member_since).getTime()) < 30 * 24 * 60 * 60 * 1000
+              : false
+            const badges = (profile?.badges || []).filter((b: string) => b !== 'nouveau')
+            const allBadges = isNew ? ['nouveau', ...badges] : badges
+            return allBadges.length > 0 ? (
+              <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                {allBadges.map((b: string) => (
+                  <span key={b} style={{
+                    backgroundColor: b === 'nouveau' ? '#F5A623' : '#E8501A',
+                    color: 'white', fontSize: '0.65rem', fontWeight: 600,
+                    padding: '0.1rem 0.45rem', borderRadius: '20px',
+                  }}>
+                    {b === 'fondateur' ? 'Fondateur' : b === 'partenaire' ? 'Partenaire' : b === 'nouveau' ? 'Nouveau membre' : 'Profil complet'}
+                  </span>
+                ))}
+              </div>
+            ) : null
+          })()}
         </div>
         {isOwner && (
-          <button
-            onClick={handleDelete}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2D2D2D', opacity: 0.3, fontSize: '1rem', padding: '0.25rem' }}
-            title="Supprimer ce post"
-          >🗑</button>
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            <button
+              onClick={() => { setEditingPost(true); setEditPostContent(post.content || '') }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2D2D2D', opacity: 0.3, fontSize: '0.95rem', padding: '0.25rem' }}
+              title="Modifier ce post"
+            >✏️</button>
+            <button
+              onClick={handleDelete}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2D2D2D', opacity: 0.3, fontSize: '0.95rem', padding: '0.25rem' }}
+              title="Supprimer ce post"
+            >🗑</button>
+          </div>
         )}
       </div>
 
-      {/* Titre si présent */}
-      {postTitle && (
-        <div style={{ fontFamily: 'var(--font-clash)', fontWeight: 700, fontSize: '1.15rem', color: '#2D2D2D', marginBottom: '0.4rem' }}>
-          {postTitle}
+      {/* Contenu ou mode édition */}
+      {editingPost ? (
+        <div style={{ marginBottom: '0.75rem' }}>
+          <textarea
+            value={editPostContent}
+            onChange={e => setEditPostContent(e.target.value)}
+            rows={4}
+            style={{ width: '100%', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 0.75rem', fontSize: '0.95rem', outline: 'none', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }}
+          />
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <button onClick={handleEditPost} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.4rem 1rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Enregistrer</button>
+            <button onClick={() => setEditingPost(false)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 1rem', cursor: 'pointer', fontSize: '0.85rem', color: '#2D2D2D' }}>Annuler</button>
+          </div>
         </div>
-      )}
-
-      {/* Contenu */}
-      {postBody && (
-        <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {postBody.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
-            /^https?:\/\//.test(part)
-              ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
-              : part
+      ) : (
+        <>
+          {postTitle && (
+            <div style={{ fontFamily: 'var(--font-clash)', fontWeight: 700, fontSize: '1.15rem', color: '#2D2D2D', marginBottom: '0.4rem' }}>
+              {postTitle}
+            </div>
           )}
-        </p>
+          {postBody && (
+            <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {postBody.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+                /^https?:\/\//.test(part)
+                  ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
+                  : part
+              )}
+            </p>
+          )}
+        </>
       )}
 
       {/* Image ou vidéo */}
@@ -497,8 +567,32 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
         <div style={{ marginTop: '0.75rem' }}>
           {comments.map(c => (
             <div key={c.id} style={{ padding: '0.5rem 0', borderBottom: '1px solid #F5F0E8', fontSize: '0.9rem', color: '#2D2D2D' }}>
-              <span style={{ fontWeight: 600 }}>{c.profiles?.first_name} {c.profiles?.last_name} </span>
-              {c.content}
+              {editingCommentId === c.id ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <input
+                    value={editCommentContent}
+                    onChange={e => setEditCommentContent(e.target.value)}
+                    style={{ border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 0.75rem', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+                  />
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button onClick={() => handleEditComment(c.id)} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.75rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>Enregistrer</button>
+                    <button onClick={() => setEditingCommentId(null)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '6px', padding: '0.3rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem' }}>Annuler</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+                  <span>
+                    <span style={{ fontWeight: 600 }}>{c.profiles?.first_name} {c.profiles?.last_name} </span>
+                    {c.content}
+                  </span>
+                  {c.author_id === currentUserId && (
+                    <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                      <button onClick={() => { setEditingCommentId(c.id); setEditCommentContent(c.content) }} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.35, fontSize: '0.85rem', padding: '0 0.1rem' }}>✏️</button>
+                      <button onClick={() => handleDeleteComment(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.35, fontSize: '0.85rem', padding: '0 0.1rem' }}>🗑</button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           <form onSubmit={handleComment} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
