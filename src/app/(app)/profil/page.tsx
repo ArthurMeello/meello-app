@@ -6,20 +6,24 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 
 const COMPLETION_FIELDS = [
-  { key: 'avatar_url', label: 'Photo de profil', points: 15 },
-  { key: 'bio', label: 'Bio complète', points: 15 },
+  { key: 'avatar_url', label: 'Photo de profil', points: 5 },
+  { key: 'bio', label: 'Bio complète', points: 20 },
   { key: 'activity', label: 'Secteur d activite', points: 10 },
   { key: 'city', label: 'Ville', points: 10 },
-  { key: 'website', label: 'Site web ou LinkedIn', points: 15 },
-  { key: 'company_number', label: 'Numéro d entreprise', points: 20 },
+  { key: 'website', label: 'Site web', points: 10 },
+  { key: 'company_number', label: 'Numéro d entreprise', points: 10 },
 ]
 
-function getCompletion(profile: Profile, hasReco: boolean) {
+const SOCIAL_KEYS = ['linkedin', 'instagram', 'facebook', 'pinterest', 'tiktok']
+
+function getCompletion(profile: Profile, hasReco: boolean, hasPortfolio: boolean) {
   let total = 0
   for (const f of COMPLETION_FIELDS) {
     if (profile[f.key as keyof Profile]) total += f.points
   }
-  if (hasReco) total += 15
+  if (SOCIAL_KEYS.some(k => profile[k as keyof Profile])) total += 5
+  if (hasReco) total += 10
+  if (hasPortfolio) total += 20
   return Math.min(total, 100)
 }
 
@@ -38,7 +42,14 @@ export default function ProfilPage() {
   const [hasReco, setHasReco] = useState(false)
   const [recos, setRecos] = useState<{ id: string; content: string; author: { first_name: string; last_name: string } }[]>([])
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [portfolio, setPortfolio] = useState<{ id: string; title: string; description: string | null; media_url: string; link: string | null }[]>([])
+  const [showPortfolioForm, setShowPortfolioForm] = useState(false)
+  const [portfolioForm, setPortfolioForm] = useState({ title: '', description: '', link: '' })
+  const [portfolioFile, setPortfolioFile] = useState<File | null>(null)
+  const [portfolioPreview, setPortfolioPreview] = useState<string | null>(null)
+  const [savingPortfolio, setSavingPortfolio] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const portfolioFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadProfile()
@@ -79,6 +90,13 @@ export default function ProfilPage() {
       .eq('recommended_id', user.id)
       .order('created_at', { ascending: false })
     if (recoData) setRecos(recoData as typeof recos)
+
+    const { data: portfolioData } = await supabase
+      .from('portfolio_items')
+      .select('id, title, description, media_url, link')
+      .eq('profile_id', user.id)
+      .order('created_at', { ascending: false })
+    if (portfolioData) setPortfolio(portfolioData)
   }
 
   const handleSave = async () => {
@@ -108,6 +126,52 @@ export default function ProfilPage() {
     setSaving(false)
   }
 
+  const handlePortfolioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPortfolioFile(file)
+    setPortfolioPreview(URL.createObjectURL(file))
+  }
+
+  const handleAddPortfolio = async () => {
+    if (!portfolioForm.title || !portfolioFile || !profile) return
+    setSavingPortfolio(true)
+    const supabase = createClient()
+    const ext = portfolioFile.name.split('.').pop()
+    const path = `${profile.id}/${Date.now()}.${ext}`
+    const { error: uploadError } = await supabase.storage.from('portfolio').upload(path, portfolioFile, { upsert: true })
+    if (uploadError) {
+      console.error('Portfolio upload error:', uploadError.message)
+      setSavingPortfolio(false)
+      return
+    }
+    const { data: urlData } = supabase.storage.from('portfolio').getPublicUrl(path)
+    await supabase.from('portfolio_items').insert({
+      profile_id: profile.id,
+      title: portfolioForm.title,
+      description: portfolioForm.description || null,
+      media_url: urlData.publicUrl,
+      link: portfolioForm.link || null,
+    })
+    setPortfolioForm({ title: '', description: '', link: '' })
+    setPortfolioFile(null)
+    setPortfolioPreview(null)
+    setShowPortfolioForm(false)
+    setSavingPortfolio(false)
+    await loadProfile()
+  }
+
+  const handleDeletePortfolio = async (id: string, mediaUrl: string) => {
+    const supabase = createClient()
+    // Extraire le path depuis l'URL publique
+    const urlParts = mediaUrl.split('/portfolio/')
+    if (urlParts[1]) {
+      await supabase.storage.from('portfolio').remove([urlParts[1]])
+    }
+    await supabase.from('portfolio_items').delete().eq('id', id)
+    await loadProfile()
+  }
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !profile) return
@@ -135,7 +199,7 @@ export default function ProfilPage() {
     )
   }
 
-  const completion = getCompletion(profile, hasReco)
+  const completion = getCompletion(profile, hasReco, portfolio.length > 0)
   const completionMsg = getCompletionMessage(completion)
   const badges = profile.badges || []
 
@@ -322,6 +386,115 @@ export default function ProfilPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Portfolio */}
+      <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>
+            Portfolio
+          </h2>
+          <button
+            onClick={() => { setShowPortfolioForm(!showPortfolioForm); setPortfolioPreview(null); setPortfolioForm({ title: '', description: '', link: '' }) }}
+            style={{
+              backgroundColor: showPortfolioForm ? '#2D2D2D' : '#E8501A',
+              color: 'white', border: 'none', borderRadius: '10px',
+              padding: '0.45rem 1rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+            }}
+          >
+            {showPortfolioForm ? 'Annuler' : '+ Ajouter un projet'}
+          </button>
+        </div>
+
+        {/* Formulaire ajout */}
+        {showPortfolioForm && (
+          <div style={{ backgroundColor: '#F5F0E8', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {/* Upload média */}
+            <div
+              onClick={() => portfolioFileRef.current?.click()}
+              style={{
+                border: '2px dashed #E8E3D9', borderRadius: '10px',
+                height: portfolioPreview ? 'auto' : '120px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', overflow: 'hidden', backgroundColor: 'white',
+              }}
+            >
+              {portfolioPreview ? (
+                portfolioFile?.type.startsWith('video/')
+                  ? <video src={portfolioPreview} controls style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }} />
+                  : <img src={portfolioPreview} alt="" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>📁 Cliquer pour ajouter une image ou vidéo</span>
+              )}
+            </div>
+            <input ref={portfolioFileRef} type="file" accept="image/*,video/*" onChange={handlePortfolioFileChange} style={{ display: 'none' }} />
+
+            <input
+              value={portfolioForm.title}
+              onChange={e => setPortfolioForm(p => ({ ...p, title: e.target.value }))}
+              placeholder="Titre du projet *"
+              style={inputStyle}
+            />
+            <textarea
+              value={portfolioForm.description}
+              onChange={e => setPortfolioForm(p => ({ ...p, description: e.target.value }))}
+              placeholder="Description (facultatif)"
+              rows={2}
+              style={{ ...inputStyle, resize: 'vertical' }}
+            />
+            <input
+              value={portfolioForm.link}
+              onChange={e => setPortfolioForm(p => ({ ...p, link: e.target.value }))}
+              placeholder="Lien externe (facultatif)"
+              style={inputStyle}
+            />
+            <button
+              onClick={handleAddPortfolio}
+              disabled={savingPortfolio || !portfolioForm.title || !portfolioFile}
+              style={{
+                backgroundColor: savingPortfolio || !portfolioForm.title || !portfolioFile ? '#ccc' : '#E8501A',
+                color: 'white', border: 'none', borderRadius: '10px',
+                padding: '0.7rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer',
+              }}
+            >
+              {savingPortfolio ? 'Enregistrement...' : 'Ajouter au portfolio'}
+            </button>
+          </div>
+        )}
+
+        {/* Cartes portfolio */}
+        {portfolio.length === 0 && !showPortfolioForm && (
+          <p style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem', textAlign: 'center', margin: '1rem 0' }}>
+            Aucun projet pour l'instant — ajoutes-en un !
+          </p>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+          {portfolio.map(item => (
+            <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', position: 'relative' }}>
+              {item.media_url.match(/\.(mp4|mov|webm)$/i)
+                ? <video src={item.media_url} controls style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
+                : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
+              }
+              <div style={{ padding: '0.75rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D', marginBottom: '0.25rem' }}>{item.title}</div>
+                {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.5rem', lineHeight: 1.5 }}>{item.description}</p>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {item.link
+                    ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a>
+                    : <span />
+                  }
+                  <button
+                    onClick={() => handleDeletePortfolio(item.id, item.media_url)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.3 }}
+                    title="Supprimer"
+                  >
+                    🗑
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Recommandations */}
