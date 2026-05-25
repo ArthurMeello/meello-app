@@ -108,6 +108,7 @@ export default function FeedPage() {
 function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserId: string | null, onRefresh: () => void }) {
   const [comment, setComment] = useState('')
   const [comments, setComments] = useState<{ id: string; content: string; profiles: { first_name: string; last_name: string } }[]>([])
+  const [commentCount, setCommentCount] = useState(0)
   const [showComments, setShowComments] = useState(false)
   const [reactions, setReactions] = useState<{ emoji: string; author_id: string }[]>([])
 
@@ -117,7 +118,17 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
 
   useEffect(() => {
     loadReactions()
+    loadCommentCount()
   }, [post.id])
+
+  const loadCommentCount = async () => {
+    const supabase = createClient()
+    const { count } = await supabase
+      .from('comments')
+      .select('id', { count: 'exact', head: true })
+      .eq('post_id', post.id)
+    setCommentCount(count || 0)
+  }
 
   const loadReactions = async () => {
     const supabase = createClient()
@@ -161,6 +172,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
     const supabase = createClient()
     await supabase.from('comments').insert({ post_id: post.id, content: comment.trim(), author_id: currentUserId })
     setComment('')
+    setCommentCount(c => c + 1)
     loadComments()
   }
 
@@ -170,7 +182,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
     active: reactions.some(r => r.emoji === emoji && r.author_id === currentUserId),
   }))
 
-  const totalComments = post.comments_count || 0
+  const totalReactions = reactions.length
 
   return (
     <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
@@ -203,6 +215,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
 
       {/* Réactions + Commenter */}
       <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {/* Boutons réactions */}
         {reactionCounts.map(({ emoji, count, active }) => (
           <button
             key={emoji}
@@ -217,7 +230,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
               backgroundColor: active ? 'rgba(232,80,26,0.08)' : 'transparent',
               cursor: 'pointer',
               fontSize: '0.9rem',
-              fontWeight: count > 0 ? 600 : 400,
+              fontWeight: 600,
               color: active ? '#E8501A' : '#2D2D2D',
               transition: 'all 0.15s',
             }}
@@ -226,6 +239,14 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
           </button>
         ))}
 
+        {/* Total réactions global */}
+        {totalReactions > 0 && (
+          <span style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.45, marginLeft: '0.15rem' }}>
+            {totalReactions} réaction{totalReactions > 1 ? 's' : ''}
+          </span>
+        )}
+
+        {/* Bouton commentaires */}
         <button
           onClick={toggleComments}
           style={{
@@ -243,7 +264,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
             gap: '0.3rem',
           }}
         >
-          💬 {comments.length > 0 ? comments.length : 'Commenter'}
+          💬 {commentCount > 0 ? `${commentCount} commentaire${commentCount > 1 ? 's' : ''}` : 'Commenter'}
         </button>
       </div>
 
