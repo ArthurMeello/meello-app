@@ -8,11 +8,10 @@ import { createClient } from '@/lib/supabase/client'
 interface Notification {
   id: string
   type: string
-  message: string
+  content: string
   read: boolean
   created_at: string
-  post_id: string | null
-  from_user_id: string | null
+  link: string | null
 }
 
 export default function TopBar() {
@@ -76,7 +75,7 @@ export default function TopBar() {
     const supabase = createClient()
     await supabase.from('notifications').update({ read: true }).eq('id', notif.id)
     setNotifications(n => n.map(x => x.id === notif.id ? { ...x, read: true } : x))
-    if (notif.post_id) router.push('/feed')
+    if (notif.link) router.push(notif.link)
     else if (notif.type === 'recommendation') router.push('/profil')
     setShowNotifs(false)
   }
@@ -206,7 +205,7 @@ export default function TopBar() {
                 >
                   <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: '0.1rem' }}>{typeIcon(n.type)}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.88rem', color: '#2D2D2D', lineHeight: 1.5 }}>{n.message}</div>
+                    <div style={{ fontSize: '0.88rem', color: '#2D2D2D', lineHeight: 1.5 }}>{n.content}</div>
                     <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.4, marginTop: '0.2rem' }}>{formatDate(n.created_at)}</div>
                   </div>
                   {!n.read && (

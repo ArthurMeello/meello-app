@@ -207,9 +207,8 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
           .map(p => ({
             user_id: p.id,
             type: 'mention',
-            message: `${authorName} a publié un message pour toute la communauté`,
-            post_id: postId,
-            from_user_id: userId,
+            content: `${authorName} a publié un message pour toute la communauté`,
+            link: `/feed`,
           }))
         if (notifs.length > 0) await supabase.from('notifications').insert(notifs)
       }
@@ -230,8 +229,8 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
         await supabase.from('notifications').insert({
           user_id: member.id,
           type: 'mention',
-          message: `${authorName} t'a mentionné dans une publication`,
-          post_id: postId,
+          content: `${authorName} t'a mentionné dans une publication`,
+          link: `/feed`,
           from_user_id: userId,
         })
       }
@@ -505,8 +504,8 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
           await supabase.from('notifications').insert({
             user_id: post.author_id,
             type: 'reaction',
-            message: `${post.profiles?.first_name || 'Quelqu\'un'} a réagi à ton post avec ${emoji}`,
-            post_id: post.id,
+            content: `${post.profiles?.first_name || 'Quelqu\'un'} a réagi à ton post avec ${emoji}`,
+            link: `/feed`,
             from_user_id: currentUserId,
           })
         }
@@ -519,9 +518,8 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
         await supabase.from('notifications').insert({
           user_id: post.author_id,
           type: 'reaction',
-          message: `${reactor?.first_name || 'Quelqu\'un'} a réagi à ton post avec ${emoji}`,
-          post_id: post.id,
-          from_user_id: currentUserId,
+          content: `${reactor?.first_name || 'Quelqu\'un'} a réagi à ton post avec ${emoji}`,
+          link: `/feed`,
         })
       }
     }
@@ -586,9 +584,8 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
       await supabase.from('notifications').insert({
         user_id: post.author_id,
         type: 'comment',
-        message: `${commenter?.first_name || 'Quelqu\'un'} a commenté ton post`,
-        post_id: post.id,
-        from_user_id: currentUserId,
+        content: `${commenter?.first_name || 'Quelqu\'un'} a commenté ton post`,
+        link: `/feed`,
       })
     }
     setComment('')
