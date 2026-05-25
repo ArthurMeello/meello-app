@@ -94,6 +94,8 @@ export default function FeedPage() {
   )
 }
 
+const ADMIN_ID_MODAL = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+
 function PostModal({ userId, userProfile, onClose, onSuccess }: {
   userId: string | null
   userProfile: { first_name: string; avatar_url: string | null } | null
@@ -106,8 +108,24 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
   const [mediaPreview, setMediaPreview] = useState<string | null>(null)
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null)
   const [loading, setLoading] = useState(false)
+  // Mentions
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
+  const [mentionSuggestions, setMentionSuggestions] = useState<{ id: string; first_name: string; last_name: string }[]>([])
+  const [allMembers, setAllMembers] = useState<{ id: string; first_name: string; last_name: string }[]>([])
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const initials = userProfile?.first_name?.[0]?.toUpperCase() || '?'
+  const isAdmin = userId === ADMIN_ID_MODAL
+
+  // Charger tous les membres une seule fois
+  useEffect(() => {
+    const load = async () => {
+      const supabase = createClient()
+      const { data } = await supabase.from('profiles').select('id, first_name, last_name').eq('is_active', true)
+      if (data) setAllMembers(data.filter(m => m.id !== userId))
+    }
+    load()
+  }, [userId])
 
   const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -122,6 +140,102 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
     setMediaPreview(null)
     setMediaType(null)
     if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value
+    setContent(val)
+    e.target.style.height = 'auto'
+    e.target.style.height = e.target.scrollHeight + 'px'
+
+    // Détecter @mention en cours de frappe
+    const cursor = e.target.selectionStart
+    const textBefore = val.slice(0, cursor)
+    const match = textBefore.match(/@(\w*)$/)
+    if (match) {
+      const q = match[1].toLowerCase()
+      setMentionQuery(q)
+      if (isAdmin && q === 'all') {
+        setMentionSuggestions([{ id: '__all__', first_name: 'Tous', last_name: 'les membres' }])
+      } else {
+        const filtered = allMembers.filter(m =>
+          `${m.first_name} ${m.last_name}`.toLowerCase().includes(q)
+        ).slice(0, 6)
+        // Admin voit @all en tête si la query colle
+        if (isAdmin && 'all'.startsWith(q)) {
+          setMentionSuggestions([{ id: '__all__', first_name: '@all', last_name: '— notifier tous les membres' }, ...filtered])
+        } else {
+          setMentionSuggestions(filtered)
+        }
+      }
+    } else {
+      setMentionQuery(null)
+      setMentionSuggestions([])
+    }
+  }
+
+  const insertMention = (member: { id: string; first_name: string; last_name: string }) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    const cursor = textarea.selectionStart
+    const textBefore = content.slice(0, cursor)
+    const textAfter = content.slice(cursor)
+    const atIndex = textBefore.lastIndexOf('@')
+    const tag = member.id === '__all__' ? '@all' : `@${member.first_name}${member.last_name}`
+    const newContent = textBefore.slice(0, atIndex) + tag + ' ' + textAfter
+    setContent(newContent)
+    setMentionQuery(null)
+    setMentionSuggestions([])
+    // Remettre le focus
+    setTimeout(() => {
+      textarea.focus()
+      const pos = atIndex + tag.length + 1
+      textarea.setSelectionRange(pos, pos)
+    }, 0)
+  }
+
+  const sendMentionNotifications = async (postId: string, postContent: string) => {
+    const supabase = createClient()
+    const authorName = userProfile?.first_name || 'Quelqu\'un'
+
+    // @all — admin seulement
+    if (isAdmin && postContent.includes('@all')) {
+      const { data: allProfiles } = await supabase.from('profiles').select('id').eq('is_active', true)
+      if (allProfiles) {
+        const notifs = allProfiles
+          .filter(p => p.id !== userId)
+          .map(p => ({
+            user_id: p.id,
+            type: 'mention',
+            message: `${authorName} a publié un message pour toute la communauté`,
+            post_id: postId,
+            from_user_id: userId,
+          }))
+        if (notifs.length > 0) await supabase.from('notifications').insert(notifs)
+      }
+      return
+    }
+
+    // Mentions individuelles @PrénomNom
+    const mentionRegex = /@(\w+)/g
+    const matches = [...postContent.matchAll(mentionRegex)]
+    const mentionedNames = [...new Set(matches.map(m => m[1].toLowerCase()))]
+
+    for (const tag of mentionedNames) {
+      const member = allMembers.find(m =>
+        `${m.first_name}${m.last_name}`.toLowerCase() === tag ||
+        m.first_name.toLowerCase() === tag
+      )
+      if (member && member.id !== userId) {
+        await supabase.from('notifications').insert({
+          user_id: member.id,
+          type: 'mention',
+          message: `${authorName} t'a mentionné dans une publication`,
+          post_id: postId,
+          from_user_id: userId,
+        })
+      }
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,7 +256,16 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
     }
 
     const fullContent = title.trim() ? `**${title.trim()}**\n${content.trim()}` : content.trim()
-    await supabase.from('posts').insert({ content: fullContent, author_id: userId, image_url })
+    const { data: newPost } = await supabase
+      .from('posts')
+      .insert({ content: fullContent, author_id: userId, image_url })
+      .select('id')
+      .single()
+
+    if (newPost?.id) {
+      await sendMentionNotifications(newPost.id, fullContent)
+    }
+
     setLoading(false)
     onSuccess()
   }
@@ -197,23 +320,65 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
             }}
           />
 
-          {/* Contenu */}
-          <textarea
-            value={content}
-            onChange={e => {
-              setContent(e.target.value)
-              e.target.style.height = 'auto'
-              e.target.style.height = e.target.scrollHeight + 'px'
-            }}
-            placeholder="Rédigez quelque chose..."
-            rows={3}
-            style={{
-              border: 'none', outline: 'none', resize: 'none',
-              fontSize: '1rem', color: '#2D2D2D', fontFamily: 'inherit',
-              backgroundColor: 'transparent', width: '100%', overflow: 'hidden',
-              minHeight: '80px',
-            }}
-          />
+          {/* Contenu + autocomplete mentions */}
+          <div style={{ position: 'relative' }}>
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={handleContentChange}
+              placeholder={isAdmin ? "Rédigez quelque chose… Tapez @ pour mentionner ou @all pour tout le monde" : "Rédigez quelque chose… Tapez @ pour mentionner quelqu'un"}
+              rows={3}
+              style={{
+                border: 'none', outline: 'none', resize: 'none',
+                fontSize: '1rem', color: '#2D2D2D', fontFamily: 'inherit',
+                backgroundColor: 'transparent', width: '100%', overflow: 'hidden',
+                minHeight: '80px',
+              }}
+            />
+            {/* Dropdown suggestions mentions */}
+            {mentionSuggestions.length > 0 && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0,
+                backgroundColor: 'white', borderRadius: '10px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                zIndex: 10, width: '100%', overflow: 'hidden',
+              }}>
+                {mentionSuggestions.map(m => (
+                  <div
+                    key={m.id}
+                    onMouseDown={e => { e.preventDefault(); insertMention(m) }}
+                    style={{
+                      padding: '0.6rem 1rem', cursor: 'pointer',
+                      fontSize: '0.9rem', color: '#2D2D2D',
+                      display: 'flex', alignItems: 'center', gap: '0.5rem',
+                      transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    {m.id === '__all__' ? (
+                      <>
+                        <span style={{ fontSize: '1rem' }}>📢</span>
+                        <span><strong>@all</strong> — notifier tous les membres</span>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{
+                          width: '26px', height: '26px', borderRadius: '50%',
+                          backgroundColor: '#E8501A', color: 'white',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.7rem', fontWeight: 700, flexShrink: 0,
+                        }}>
+                          {m.first_name[0]}{m.last_name[0]}
+                        </div>
+                        <span><strong>{m.first_name}</strong> {m.last_name}</span>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Prévisualisation média */}
           {mediaPreview && (
@@ -590,12 +755,21 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
           style={{
             marginLeft: 'auto', background: 'none', border: 'none',
             color: showComments ? '#E8501A' : '#2D2D2D',
-            opacity: showComments ? 1 : 0.5,
             fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', padding: 0,
-            display: 'flex', alignItems: 'center', gap: '0.3rem',
+            display: 'flex', alignItems: 'center', gap: '0.35rem',
           }}
         >
-          💬 {commentCount > 0 ? `${commentCount} commentaire${commentCount > 1 ? 's' : ''}` : 'Commenter'}
+          <img
+            src="/icons/comment.svg"
+            alt="Commenter"
+            style={{
+              width: '16px', height: '16px',
+              filter: showComments
+                ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)'
+                : 'brightness(0) opacity(0.4)',
+            }}
+          />
+          {commentCount > 0 ? `${commentCount} commentaire${commentCount > 1 ? 's' : ''}` : 'Commenter'}
         </button>
       </div>
 
