@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/types'
 
+const EMOJIS = ['👍', '🔥', '❤️']
+
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [content, setContent] = useState('')
@@ -33,7 +35,6 @@ export default function FeedPage() {
     e.preventDefault()
     if (!content.trim()) return
     setLoading(true)
-
     const supabase = createClient()
     await supabase.from('posts').insert({ content: content.trim(), author_id: userId })
     setContent('')
@@ -108,10 +109,36 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
   const [comment, setComment] = useState('')
   const [comments, setComments] = useState<{ id: string; content: string; profiles: { first_name: string; last_name: string } }[]>([])
   const [showComments, setShowComments] = useState(false)
+  const [reactions, setReactions] = useState<{ emoji: string; author_id: string }[]>([])
 
   const profile = post.profiles
-  const initials = profile ? `${profile.first_name[0]}${profile.last_name[0]}` : '?'
+  const initials = profile ? `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}` : '?'
   const formattedDate = new Date(post.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+
+  useEffect(() => {
+    loadReactions()
+  }, [post.id])
+
+  const loadReactions = async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('reactions')
+      .select('emoji, author_id')
+      .eq('post_id', post.id)
+    if (data) setReactions(data)
+  }
+
+  const handleReaction = async (emoji: string) => {
+    if (!currentUserId) return
+    const supabase = createClient()
+    const already = reactions.find(r => r.emoji === emoji && r.author_id === currentUserId)
+    if (already) {
+      await supabase.from('reactions').delete().eq('post_id', post.id).eq('author_id', currentUserId).eq('emoji', emoji)
+    } else {
+      await supabase.from('reactions').insert({ post_id: post.id, author_id: currentUserId, emoji })
+    }
+    loadReactions()
+  }
 
   const loadComments = async () => {
     const supabase = createClient()
@@ -137,18 +164,27 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
     loadComments()
   }
 
+  const reactionCounts = EMOJIS.map(emoji => ({
+    emoji,
+    count: reactions.filter(r => r.emoji === emoji).length,
+    active: reactions.some(r => r.emoji === emoji && r.author_id === currentUserId),
+  }))
+
+  const totalComments = post.comments_count || 0
+
   return (
     <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
         <div style={{
           width: '40px', height: '40px', borderRadius: '50%',
           backgroundColor: '#E8501A', color: 'white',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: 700, fontSize: '0.85rem', flexShrink: 0,
+          fontWeight: 700, fontSize: '0.85rem', flexShrink: 0, overflow: 'hidden',
         }}>
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-          ) : initials}
+          {profile?.avatar_url
+            ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+            : initials}
         </div>
         <div>
           <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.95rem' }}>
@@ -160,35 +196,78 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
         </div>
       </div>
 
+      {/* Contenu */}
       <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: 0, whiteSpace: 'pre-wrap' }}>
         {post.content}
       </p>
 
-      <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #F5F0E8' }}>
+      {/* Réactions + Commenter */}
+      <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {reactionCounts.map(({ emoji, count, active }) => (
+          <button
+            key={emoji}
+            onClick={() => handleReaction(emoji)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              padding: '0.3rem 0.65rem',
+              borderRadius: '20px',
+              border: active ? '1.5px solid #E8501A' : '1.5px solid #E8E3D9',
+              backgroundColor: active ? 'rgba(232,80,26,0.08)' : 'transparent',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: count > 0 ? 600 : 400,
+              color: active ? '#E8501A' : '#2D2D2D',
+              transition: 'all 0.15s',
+            }}
+          >
+            {emoji} {count > 0 && <span style={{ fontSize: '0.8rem' }}>{count}</span>}
+          </button>
+        ))}
+
         <button
           onClick={toggleComments}
-          style={{ background: 'none', border: 'none', color: '#E8501A', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}
+          style={{
+            marginLeft: 'auto',
+            background: 'none',
+            border: 'none',
+            color: showComments ? '#E8501A' : '#2D2D2D',
+            opacity: showComments ? 1 : 0.5,
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            cursor: 'pointer',
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+          }}
         >
-          💬 Commenter
+          💬 {comments.length > 0 ? comments.length : 'Commenter'}
         </button>
       </div>
 
+      {/* Commentaires */}
       {showComments && (
         <div style={{ marginTop: '0.75rem' }}>
           {comments.map(c => (
             <div key={c.id} style={{ padding: '0.5rem 0', borderBottom: '1px solid #F5F0E8', fontSize: '0.9rem', color: '#2D2D2D' }}>
-              <span style={{ fontWeight: 600 }}>{c.profiles?.first_name} </span>
+              <span style={{ fontWeight: 600 }}>{c.profiles?.first_name} {c.profiles?.last_name} </span>
               {c.content}
             </div>
           ))}
-          <form onSubmit={handleComment} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+          <form onSubmit={handleComment} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
             <input
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Ton commentaire…"
-              style={{ flex: 1, border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 0.75rem', fontSize: '0.9rem', outline: 'none' }}
+              style={{ flex: 1, border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 0.75rem', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
             />
-            <button type="submit" style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 600 }}>
+            <button
+              type="submit"
+              disabled={!comment.trim()}
+              style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 600 }}
+            >
               OK
             </button>
           </form>
