@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { href: '/annuaire', label: 'Annuaire', icon: '👥' },
   { href: '/forum', label: 'Forum', icon: '💬' },
   { href: '/messages', label: 'Messages', icon: '✉️' },
-  { href: '/reseau', label: 'Mon Réseau', icon: '🤝' },
+  { href: '/reseau', label: 'Mon Réseau', icon: null, svg: '/icons/network.svg' },
 ]
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
@@ -191,7 +191,9 @@ export default function AppNav() {
                 padding: '0.25rem 0.5rem',
               }}
             >
-              <span style={{ fontSize: '1.3rem' }}>{item.icon}</span>
+              {item.svg
+                ? <img src={item.svg} alt={item.label} style={{ width: '22px', height: '22px', filter: active ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(0.6)' }} />
+                : <span style={{ fontSize: '1.3rem' }}>{item.icon}</span>}
               <span>{item.label}</span>
             </Link>
           )

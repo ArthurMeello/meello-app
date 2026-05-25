@@ -485,7 +485,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
 
 function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: Post, currentUserId: string | null, onRefresh: () => void, allMembers?: { id: string; first_name: string; last_name: string }[] }) {
   const [comment, setComment] = useState('')
-  const [comments, setComments] = useState<{ id: string; content: string; author_id: string; profiles: { first_name: string; last_name: string } }[]>([])
+  const [comments, setComments] = useState<{ id: string; content: string; author_id: string; profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null } }[]>([])
   const [commentCount, setCommentCount] = useState(0)
   const [showComments, setShowComments] = useState(false)
   const [reactions, setReactions] = useState<{ emoji: string; author_id: string }[]>([])
@@ -617,7 +617,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     const supabase = createClient()
     const { data } = await supabase
       .from('comments')
-      .select('id, content, author_id, profiles(first_name, last_name)')
+      .select('id, content, author_id, profiles(first_name, last_name, avatar_url, activity)')
       .eq('post_id', post.id)
       .order('created_at', { ascending: true })
     if (data) setComments(data as unknown as typeof comments)
@@ -690,7 +690,12 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            {profile ? `${profile.first_name} ${profile.last_name}` : 'Membre'}
+            <a href={`/membre/${post.author_id}`} style={{ color: '#2D2D2D', textDecoration: 'none', fontWeight: 600 }}
+              onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+              onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+            >
+              {profile ? `${profile.first_name} ${profile.last_name}` : 'Membre'}
+            </a>
             {isAdmin && (
               <img src="/icons/badge-check.svg" alt="Admin" title="Fondateur Meello" style={{ width: '16px', height: '16px', flexShrink: 0 }} />
             )}
@@ -910,10 +915,32 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                 </div>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
-                  <span>
-                    <span style={{ fontWeight: 600 }}>{c.profiles?.first_name} {c.profiles?.last_name} </span>
-                    {c.content}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', flex: 1 }}>
+                    {/* Avatar */}
+                    <a href={`/membre/${c.author_id}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
+                      <div style={{
+                        width: '32px', height: '32px', borderRadius: '50%',
+                        backgroundColor: '#E8501A', color: 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.65rem', fontWeight: 700, overflow: 'hidden', flexShrink: 0,
+                      }}>
+                        {c.profiles?.avatar_url
+                          ? <img src={c.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : `${(c.profiles?.first_name || '?')[0]}${(c.profiles?.last_name || '')[0] || ''}`}
+                      </div>
+                    </a>
+                    {/* Nom + activité + contenu */}
+                    <div style={{ flex: 1 }}>
+                      <a href={`/membre/${c.author_id}`} style={{ fontWeight: 600, color: '#2D2D2D', textDecoration: 'none', fontSize: '0.9rem' }}
+                        onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                        onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                      >{c.profiles?.first_name} {c.profiles?.last_name}</a>
+                      {c.profiles?.activity && (
+                        <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.5 }}>{c.profiles.activity}</div>
+                      )}
+                      <div style={{ fontSize: '0.9rem', color: '#2D2D2D', marginTop: '0.2rem', lineHeight: 1.5 }}>{c.content}</div>
+                    </div>
+                  </div>
                   {c.author_id === currentUserId && (
                     <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
                       <button onClick={() => { setEditingCommentId(c.id); setEditCommentContent(c.content) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
