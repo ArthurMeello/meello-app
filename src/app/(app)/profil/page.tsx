@@ -276,7 +276,6 @@ export default function ProfilPage() {
   }
 
   const completion = getCompletion(profile, hasReco, portfolio.length > 0, services.length > 0)
-  const completionMsg = getCompletionMessage(completion)
   const completionTip = completion < 100 ? getCompletionTip(profile, hasReco, portfolio.length > 0, services.length > 0) : null
 
   // Badge "nouveau" dynamique : affiché pendant 30 jours après l'inscription
@@ -378,7 +377,7 @@ export default function ProfilPage() {
         <div style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
             <span style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.6 }}>
-              {completionMsg || 'Badge Profil complet'}
+              {completion === 100 ? 'Badge Profil complet' : 'Complétion du profil'}
             </span>
             <span style={{ fontWeight: 700, color: '#E8501A', fontSize: '0.9rem' }}>{completion}%</span>
           </div>
