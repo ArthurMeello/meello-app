@@ -45,7 +45,7 @@ export function emailTemplate({ firstName, body, cta }: {
               ` : ''}
 
               <p style="margin:0;font-size:15px;color:#2D2D2D;line-height:1.7;">
-                L'équipe Meello
+                L'équipe <span style="color:#E8501A;font-weight:700;">meello</span>
               </p>
 
             </td>
