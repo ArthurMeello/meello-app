@@ -459,7 +459,7 @@ export default function ProfilPage() {
                   <input value={form.linkedin || ''} onChange={e => setForm(p => ({ ...p, linkedin: e.target.value }))} placeholder="https://linkedin.com/in/..." style={{ ...inputStyle, flex: 1 }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '1.1rem', width: '22px' }}>📸</span>
+                  <img src="/icons/instagram.svg" alt="Instagram" style={{ width: '22px', height: '22px', flexShrink: 0 }} />
                   <input value={form.instagram || ''} onChange={e => setForm(p => ({ ...p, instagram: e.target.value }))} placeholder="https://instagram.com/..." style={{ ...inputStyle, flex: 1 }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
