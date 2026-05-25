@@ -9,21 +9,22 @@ const COMPLETION_FIELDS = [
   { key: 'avatar_url', label: 'Photo de profil', points: 5 },
   { key: 'bio', label: 'Bio complète', points: 20 },
   { key: 'activity', label: 'Secteur d activite', points: 10 },
-  { key: 'city', label: 'Ville', points: 10 },
+  { key: 'city', label: 'Ville', points: 5 },
   { key: 'website', label: 'Site web', points: 10 },
-  { key: 'company_number', label: 'Numéro d entreprise', points: 10 },
+  { key: 'company_number', label: 'Numéro d entreprise', points: 5 },
 ]
 
 const SOCIAL_KEYS = ['linkedin', 'instagram', 'facebook', 'pinterest', 'tiktok']
 
-function getCompletion(profile: Profile, hasReco: boolean, hasPortfolio: boolean) {
+function getCompletion(profile: Profile, hasReco: boolean, hasPortfolio: boolean, hasServices: boolean) {
   let total = 0
   for (const f of COMPLETION_FIELDS) {
     if (profile[f.key as keyof Profile]) total += f.points
   }
   if (SOCIAL_KEYS.some(k => profile[k as keyof Profile])) total += 5
   if (hasReco) total += 10
-  if (hasPortfolio) total += 20
+  if (hasPortfolio) total += 15
+  if (hasServices) total += 15
   return Math.min(total, 100)
 }
 
@@ -48,8 +49,15 @@ export default function ProfilPage() {
   const [portfolioFile, setPortfolioFile] = useState<File | null>(null)
   const [portfolioPreview, setPortfolioPreview] = useState<string | null>(null)
   const [savingPortfolio, setSavingPortfolio] = useState(false)
+  const [services, setServices] = useState<{ id: string; title: string; description: string | null; image_url: string | null; price: string | null; link: string | null; link_label: string | null }[]>([])
+  const [showServiceForm, setShowServiceForm] = useState(false)
+  const [serviceForm, setServiceForm] = useState({ title: '', description: '', price: '', link: '', link_label: 'En savoir plus' })
+  const [serviceFile, setServiceFile] = useState<File | null>(null)
+  const [servicePreview, setServicePreview] = useState<string | null>(null)
+  const [savingService, setSavingService] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const portfolioFileRef = useRef<HTMLInputElement>(null)
+  const serviceFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadProfile()
@@ -97,6 +105,13 @@ export default function ProfilPage() {
       .eq('profile_id', user.id)
       .order('created_at', { ascending: false })
     if (portfolioData) setPortfolio(portfolioData)
+
+    const { data: servicesData } = await supabase
+      .from('service_items')
+      .select('id, title, description, image_url, price, link, link_label')
+      .eq('profile_id', user.id)
+      .order('created_at', { ascending: false })
+    if (servicesData) setServices(servicesData)
   }
 
   const handleSave = async () => {
@@ -172,6 +187,57 @@ export default function ProfilPage() {
     await loadProfile()
   }
 
+  const handleServiceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setServiceFile(file)
+    setServicePreview(URL.createObjectURL(file))
+  }
+
+  const handleAddService = async () => {
+    if (!serviceForm.title || !profile) return
+    setSavingService(true)
+    const supabase = createClient()
+    let image_url = null
+
+    if (serviceFile) {
+      const ext = serviceFile.name.split('.').pop()
+      const path = `${profile.id}/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage.from('services').upload(path, serviceFile, { upsert: true })
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage.from('services').getPublicUrl(path)
+        image_url = urlData.publicUrl
+      }
+    }
+
+    await supabase.from('service_items').insert({
+      profile_id: profile.id,
+      title: serviceForm.title,
+      description: serviceForm.description || null,
+      image_url,
+      price: serviceForm.price || null,
+      link: serviceForm.link || null,
+      link_label: serviceForm.link ? (serviceForm.link_label || 'En savoir plus') : null,
+    })
+
+    setServiceForm({ title: '', description: '', price: '', link: '', link_label: 'En savoir plus' })
+    setServiceFile(null)
+    setServicePreview(null)
+    setShowServiceForm(false)
+    setSavingService(false)
+    await loadProfile()
+  }
+
+  const handleDeleteService = async (id: string, imageUrl: string | null) => {
+    const supabase = createClient()
+    if (imageUrl) {
+      const urlParts = imageUrl.split('/services/')
+      if (urlParts[1]) await supabase.storage.from('services').remove([urlParts[1]])
+    }
+    await supabase.from('service_items').delete().eq('id', id)
+    await loadProfile()
+  }
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !profile) return
@@ -199,7 +265,7 @@ export default function ProfilPage() {
     )
   }
 
-  const completion = getCompletion(profile, hasReco, portfolio.length > 0)
+  const completion = getCompletion(profile, hasReco, portfolio.length > 0, services.length > 0)
   const completionMsg = getCompletionMessage(completion)
   const badges = profile.badges || []
 
@@ -485,6 +551,132 @@ export default function ProfilPage() {
                   }
                   <button
                     onClick={() => handleDeletePortfolio(item.id, item.media_url)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.3 }}
+                    title="Supprimer"
+                  >
+                    🗑
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Produits & Services */}
+      <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>
+            Produits & Services
+          </h2>
+          <button
+            onClick={() => { setShowServiceForm(!showServiceForm); setServicePreview(null); setServiceForm({ title: '', description: '', price: '', link: '', link_label: 'En savoir plus' }) }}
+            style={{
+              backgroundColor: showServiceForm ? '#2D2D2D' : '#E8501A',
+              color: 'white', border: 'none', borderRadius: '10px',
+              padding: '0.45rem 1rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+            }}
+          >
+            {showServiceForm ? 'Annuler' : '+ Ajouter'}
+          </button>
+        </div>
+
+        {/* Formulaire ajout */}
+        {showServiceForm && (
+          <div style={{ backgroundColor: '#F5F0E8', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {/* Image facultative */}
+            <div
+              onClick={() => serviceFileRef.current?.click()}
+              style={{
+                border: '2px dashed #E8E3D9', borderRadius: '10px',
+                height: servicePreview ? 'auto' : '100px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', overflow: 'hidden', backgroundColor: 'white',
+              }}
+            >
+              {servicePreview
+                ? <img src={servicePreview} alt="" style={{ width: '100%', maxHeight: '180px', objectFit: 'cover' }} />
+                : <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>🖼 Image du produit/service (facultatif)</span>
+              }
+            </div>
+            <input ref={serviceFileRef} type="file" accept="image/*" onChange={handleServiceFileChange} style={{ display: 'none' }} />
+
+            <input
+              value={serviceForm.title}
+              onChange={e => setServiceForm(p => ({ ...p, title: e.target.value }))}
+              placeholder="Titre du produit / service *"
+              style={inputStyle}
+            />
+            <textarea
+              value={serviceForm.description}
+              onChange={e => setServiceForm(p => ({ ...p, description: e.target.value }))}
+              placeholder="Description (facultatif)"
+              rows={2}
+              style={{ ...inputStyle, resize: 'vertical' }}
+            />
+            <input
+              value={serviceForm.price}
+              onChange={e => setServiceForm(p => ({ ...p, price: e.target.value }))}
+              placeholder="Prix (ex: 150€, À partir de 500€, Sur devis...)"
+              style={inputStyle}
+            />
+            <input
+              value={serviceForm.link}
+              onChange={e => setServiceForm(p => ({ ...p, link: e.target.value }))}
+              placeholder="Lien (facultatif)"
+              style={inputStyle}
+            />
+            {serviceForm.link && (
+              <input
+                value={serviceForm.link_label}
+                onChange={e => setServiceForm(p => ({ ...p, link_label: e.target.value }))}
+                placeholder="Texte du bouton (ex: En savoir plus, Commander, Réserver...)"
+                style={inputStyle}
+              />
+            )}
+            <button
+              onClick={handleAddService}
+              disabled={savingService || !serviceForm.title}
+              style={{
+                backgroundColor: savingService || !serviceForm.title ? '#ccc' : '#E8501A',
+                color: 'white', border: 'none', borderRadius: '10px',
+                padding: '0.7rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer',
+              }}
+            >
+              {savingService ? 'Enregistrement...' : 'Ajouter'}
+            </button>
+          </div>
+        )}
+
+        {/* Cartes services */}
+        {services.length === 0 && !showServiceForm && (
+          <p style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem', textAlign: 'center', margin: '1rem 0' }}>
+            Aucun produit ou service pour l'instant.
+          </p>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+          {services.map(item => (
+            <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
+              {item.image_url && (
+                <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
+              )}
+              <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D' }}>{item.title}</div>
+                {item.price && (
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#E8501A' }}>{item.price}</div>
+                )}
+                {item.description && (
+                  <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.5 }}>{item.description}</p>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem' }}>
+                  {item.link
+                    ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: 'white', backgroundColor: '#E8501A', fontWeight: 600, textDecoration: 'none', padding: '0.3rem 0.7rem', borderRadius: '6px' }}>
+                        {item.link_label || 'En savoir plus'}
+                      </a>
+                    : <span />
+                  }
+                  <button
+                    onClick={() => handleDeleteService(item.id, item.image_url)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.3 }}
                     title="Supprimer"
                   >
