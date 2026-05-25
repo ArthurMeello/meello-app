@@ -184,7 +184,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
     // Détecter @mention en cours de frappe
     const cursor = e.target.selectionStart
     const textBefore = val.slice(0, cursor)
-    const match = textBefore.match(/@(\w*)$/)
+    const match = textBefore.match(/@([^\s]*)$/)
     if (match) {
       const q = match[1].toLowerCase()
       setMentionQuery(q)
@@ -249,7 +249,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
     }
 
     // Mentions individuelles @PrénomNom
-    const mentionRegex = /@(\w+)/g
+    const mentionRegex = /@([^\s]+)/g
     const matches = [...postContent.matchAll(mentionRegex)]
     const mentionedNames = [...new Set(matches.map(m => m[1].toLowerCase()))]
 
@@ -798,11 +798,11 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
           )}
           {postBody && (
             <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {postBody.split(/(https?:\/\/[^\s]+|@\w+)/g).map((part, i) => {
+              {postBody.split(/(https?:\/\/[^\s]+|@[^\s]+)/g).map((part, i) => {
                 if (/^https?:\/\//.test(part)) {
                   return <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
                 }
-                if (/^@\w+/.test(part)) {
+                if (/^@/.test(part)) {
                   const tag = part.slice(1).toLowerCase()
                   const member = allMembers.find(m =>
                     `${m.first_name}${m.last_name}`.toLowerCase() === tag ||
