@@ -2,8 +2,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+
+const socialLinkStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '28px',
+  height: '28px',
+  textDecoration: 'none',
+}
 
 export default function MembrePublicPage() {
   const { id } = useParams()
@@ -12,10 +21,20 @@ export default function MembrePublicPage() {
   const [services, setServices] = useState([])
   const [recos, setRecos] = useState([])
   const [loading, setLoading] = useState(true)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending_sent' | 'pending_received' | 'accepted'>('none')
+  const [connectionId, setConnectionId] = useState<string | null>(null)
+  const [recoModal, setRecoModal] = useState(false)
+  const [recoText, setRecoText] = useState('')
+  const [recoLoading, setRecoLoading] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     const load = async () => {
       const supabase = createClient()
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setCurrentUserId(user.id)
 
       const { data: prof } = await supabase
         .from('profiles')
@@ -45,10 +64,72 @@ export default function MembrePublicPage() {
         .order('created_at', { ascending: false })
       if (recoData) setRecos(recoData)
 
+      // Vérifier la connexion
+      if (user && user.id !== id) {
+        const { data: conn } = await supabase
+          .from('connections')
+          .select('id, status, requester_id')
+          .or(`and(requester_id.eq.${user.id},receiver_id.eq.${id}),and(requester_id.eq.${id},receiver_id.eq.${user.id})`)
+          .single()
+        if (conn) {
+          setConnectionId(conn.id)
+          if (conn.status === 'accepted') setConnectionStatus('accepted')
+          else if (conn.requester_id === user.id) setConnectionStatus('pending_sent')
+          else setConnectionStatus('pending_received')
+        }
+      }
+
       setLoading(false)
     }
     load()
   }, [id])
+
+  const sendConnectionRequest = async () => {
+    const supabase = createClient()
+    const { data } = await supabase.from('connections').insert({
+      requester_id: currentUserId,
+      receiver_id: id,
+      status: 'pending',
+    }).select('id').single()
+    if (data) { setConnectionId(data.id); setConnectionStatus('pending_sent') }
+  }
+
+  const acceptConnection = async () => {
+    const supabase = createClient()
+    await supabase.from('connections').update({ status: 'accepted' }).eq('id', connectionId)
+    // Créer la conversation
+    const { data: existing } = await supabase.from('conversations').select('id')
+      .or(`and(participant1_id.eq.${currentUserId},participant2_id.eq.${id}),and(participant1_id.eq.${id},participant2_id.eq.${currentUserId})`)
+      .single()
+    if (!existing) await supabase.from('conversations').insert({ participant1_id: currentUserId, participant2_id: id })
+    setConnectionStatus('accepted')
+  }
+
+  const openMessage = async () => {
+    const supabase = createClient()
+    const { data } = await supabase.from('conversations').select('id')
+      .or(`and(participant1_id.eq.${currentUserId},participant2_id.eq.${id}),and(participant1_id.eq.${id},participant2_id.eq.${currentUserId})`)
+      .single()
+    if (data) router.push(`/messages?conv=${data.id}`)
+    else router.push('/messages')
+  }
+
+  const sendReco = async () => {
+    if (!recoText.trim()) return
+    setRecoLoading(true)
+    const supabase = createClient()
+    await supabase.from('recommendations').insert({ recommended_id: id, author_id: currentUserId, content: recoText.trim() })
+    await supabase.from('notifications').insert({
+      user_id: id, type: 'recommendation', content: `t'a laissé une recommandation`,
+      link: `/membre/${id}`, from_user_id: currentUserId,
+    })
+    // Recharger les recos
+    const { data: recoData } = await supabase.from('recommendations')
+      .select('id, content, profiles!recommendations_author_id_fkey(first_name, last_name)')
+      .eq('recommended_id', id).order('created_at', { ascending: false })
+    if (recoData) setRecos(recoData)
+    setRecoText(''); setRecoModal(false); setRecoLoading(false)
+  }
 
   if (loading) return (
     <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>Chargement...</div>
@@ -102,6 +183,35 @@ export default function MembrePublicPage() {
             {profile.city && <div style={{ color: '#2D2D2D', opacity: 0.45, fontSize: '0.82rem' }}>📍 {profile.city}</div>}
           </div>
         </div>
+
+        {/* Actions connexion/message — masquées sur son propre profil */}
+        {currentUserId && currentUserId !== id && (
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            {connectionStatus === 'none' && (
+              <button onClick={sendConnectionRequest} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>
+                + Se connecter
+              </button>
+            )}
+            {connectionStatus === 'pending_sent' && (
+              <span style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.5, padding: '0.5rem 0' }}>Demande envoyée…</span>
+            )}
+            {connectionStatus === 'pending_received' && (
+              <button onClick={acceptConnection} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>
+                Accepter la demande
+              </button>
+            )}
+            {connectionStatus === 'accepted' && (
+              <>
+                <button onClick={openMessage} style={{ background: 'none', border: '1.5px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', color: '#2D2D2D' }}>
+                  ✉️ Message
+                </button>
+                <button onClick={() => setRecoModal(true)} style={{ background: 'none', border: '1.5px solid #E8501A', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', color: '#E8501A' }}>
+                  ⭐️ Recommander
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Badges */}
         {(() => {
@@ -210,22 +320,41 @@ export default function MembrePublicPage() {
               <div key={r.id} style={{ borderLeft: '3px solid #E8501A', paddingLeft: '1rem' }}>
                 <p style={{ margin: '0 0 0.35rem', color: '#2D2D2D', lineHeight: 1.6, fontSize: '0.95rem' }}>{r.content}</p>
                 <span style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.5, fontWeight: 600 }}>
-                  {r.author?.first_name} {r.author?.last_name}
+                  {r.profiles?.first_name} {r.profiles?.last_name}
                 </span>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* Modal recommandation */}
+      {recoModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={() => setRecoModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '480px' }}>
+            <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.1rem', color: '#2D2D2D', marginBottom: '0.5rem' }}>
+              Recommander {profile?.first_name}
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.5, marginBottom: '1rem' }}>
+              Ta recommandation apparaîtra sur son profil.
+            </p>
+            <textarea
+              value={recoText}
+              onChange={e => setRecoText(e.target.value)}
+              placeholder={`Décris ton expérience avec ${profile?.first_name}…`}
+              rows={4}
+              style={{ width: '100%', border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.75rem', fontSize: '0.95rem', fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setRecoModal(false)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem' }}>Annuler</button>
+              <button onClick={sendReco} disabled={!recoText.trim() || recoLoading} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}>
+                {recoLoading ? '...' : 'Envoyer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
-}
-
-const socialLinkStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '28px',
-  height: '28px',
-  textDecoration: 'none',
 }

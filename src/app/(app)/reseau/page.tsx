@@ -2,8 +2,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+
+const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 
 interface Connection {
   id: string
@@ -23,6 +25,10 @@ export default function ReseauPage() {
   const [connections, setConnections] = useState<Connection[]>([])
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [recoModal, setRecoModal] = useState<Connection['other_user'] | null>(null)
+  const [recoText, setRecoText] = useState('')
+  const [recoLoading, setRecoLoading] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     const supabase = createClient()
@@ -60,16 +66,64 @@ export default function ReseauPage() {
   const acceptConnection = async (id: string) => {
     const supabase = createClient()
     await supabase.from('connections').update({ status: 'accepted' }).eq('id', id)
+    // Créer la conversation si elle n'existe pas
+    const conn = connections.find(c => c.id === id)
+    if (conn && userId) {
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`and(participant1_id.eq.${userId},participant2_id.eq.${conn.other_user.id}),and(participant1_id.eq.${conn.other_user.id},participant2_id.eq.${userId})`)
+        .single()
+      if (!existing) {
+        await supabase.from('conversations').insert({
+          participant1_id: userId,
+          participant2_id: conn.other_user.id,
+        })
+      }
+    }
     if (userId) fetchConnections(userId)
+  }
+
+  const openMessage = async (otherUserId: string) => {
+    const supabase = createClient()
+    const { data: existing } = await supabase
+      .from('conversations')
+      .select('id')
+      .or(`and(participant1_id.eq.${userId},participant2_id.eq.${otherUserId}),and(participant1_id.eq.${otherUserId},participant2_id.eq.${userId})`)
+      .single()
+    if (existing) {
+      router.push(`/messages?conv=${existing.id}`)
+    } else {
+      router.push('/messages')
+    }
+  }
+
+  const sendReco = async () => {
+    if (!recoText.trim() || !recoModal) return
+    setRecoLoading(true)
+    const supabase = createClient()
+    await supabase.from('recommendations').insert({
+      recommended_id: recoModal.id,
+      author_id: userId,
+      content: recoText.trim(),
+    })
+    await supabase.from('notifications').insert({
+      user_id: recoModal.id,
+      type: 'recommendation',
+      content: `t'a laissé une recommandation`,
+      link: `/membre/${recoModal.id}`,
+      from_user_id: userId,
+    })
+    setRecoText('')
+    setRecoModal(null)
+    setRecoLoading(false)
   }
 
   const accepted = connections.filter(c => c.status === 'accepted')
   const pendingReceived = connections.filter(c => c.status === 'pending' && c.direction === 'received')
   const pendingSent = connections.filter(c => c.status === 'pending' && c.direction === 'sent')
 
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>Chargement...</div>
-  }
+  if (loading) return <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>Chargement...</div>
 
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto' }}>
@@ -77,6 +131,7 @@ export default function ReseauPage() {
         Mon Réseau
       </h1>
 
+      {/* Demandes reçues */}
       {pendingReceived.length > 0 && (
         <section style={{ marginBottom: '2rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#E8501A', marginBottom: '0.75rem' }}>
@@ -92,11 +147,7 @@ export default function ReseauPage() {
                 <MemberInfo user={c.other_user} />
                 <button
                   onClick={() => acceptConnection(c.id)}
-                  style={{
-                    backgroundColor: '#E8501A', color: 'white', border: 'none',
-                    borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600,
-                    cursor: 'pointer', fontSize: '0.85rem', flexShrink: 0,
-                  }}
+                  style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', flexShrink: 0 }}
                 >
                   Accepter
                 </button>
@@ -106,30 +157,43 @@ export default function ReseauPage() {
         </section>
       )}
 
+      {/* Membres du réseau */}
       {accepted.length > 0 && (
         <section style={{ marginBottom: '2rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#2D2D2D', marginBottom: '0.75rem' }}>
             Mon réseau ({accepted.length})
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {accepted.map(c => (
-              <Link key={c.id} href={`/profil/${c.other_user.id}`} style={{ textDecoration: 'none' }}>
-                <div style={{
-                  backgroundColor: 'white', borderRadius: '14px', padding: '1rem',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)', cursor: 'pointer',
-                  transition: 'transform 0.15s',
-                }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = ''}
-                >
+              <div key={c.id} style={{
+                backgroundColor: 'white', borderRadius: '14px', padding: '1rem 1.25rem',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap',
+              }}>
+                <a href={`/membre/${c.other_user.id}`} style={{ textDecoration: 'none', flex: 1 }}>
                   <MemberInfo user={c.other_user} />
+                </a>
+                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                  <button
+                    onClick={() => openMessage(c.other_user.id)}
+                    style={{ background: 'none', border: '1.5px solid #E8E3D9', borderRadius: '8px', padding: '0.45rem 0.85rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem', color: '#2D2D2D' }}
+                  >
+                    ✉️ Message
+                  </button>
+                  <button
+                    onClick={() => { setRecoModal(c.other_user); setRecoText('') }}
+                    style={{ background: 'none', border: '1.5px solid #E8501A', borderRadius: '8px', padding: '0.45rem 0.85rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem', color: '#E8501A' }}
+                  >
+                    ⭐️ Recommander
+                  </button>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </section>
       )}
 
+      {/* Demandes envoyées */}
       {pendingSent.length > 0 && (
         <section>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#2D2D2D', opacity: 0.5, marginBottom: '0.75rem' }}>
@@ -154,9 +218,35 @@ export default function ReseauPage() {
         <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#2D2D2D', opacity: 0.4 }}>
           <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🤝</div>
           <p>Ton réseau est vide pour l&apos;instant. Explore l&apos;annuaire pour te connecter avec d&apos;autres membres !</p>
-          <Link href="/annuaire" style={{ color: '#E8501A', fontWeight: 600 }}>
-            Voir l&apos;annuaire
-          </Link>
+          <a href="/annuaire" style={{ color: '#E8501A', fontWeight: 600 }}>Voir l&apos;annuaire</a>
+        </div>
+      )}
+
+      {/* Modal recommandation */}
+      {recoModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={() => setRecoModal(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '480px' }}>
+            <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.1rem', color: '#2D2D2D', marginBottom: '0.5rem' }}>
+              Recommander {recoModal.first_name}
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.5, marginBottom: '1rem' }}>
+              Ta recommandation apparaîtra sur son profil.
+            </p>
+            <textarea
+              value={recoText}
+              onChange={e => setRecoText(e.target.value)}
+              placeholder={`Décris ton expérience avec ${recoModal.first_name}…`}
+              rows={4}
+              style={{ width: '100%', border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.75rem', fontSize: '0.95rem', fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setRecoModal(null)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem' }}>Annuler</button>
+              <button onClick={sendReco} disabled={!recoText.trim() || recoLoading} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}>
+                {recoLoading ? '...' : 'Envoyer'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -167,25 +257,12 @@ function MemberInfo({ user }: { user: Connection['other_user'] }) {
   const initials = `${(user.first_name || '?')[0]}${(user.last_name || '')[0] || ''}`.toUpperCase()
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-      <div style={{
-        width: '40px', height: '40px', borderRadius: '50%',
-        backgroundColor: '#E8501A', color: 'white',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontWeight: 700, fontSize: '0.85rem', flexShrink: 0, overflow: 'hidden',
-      }}>
-        {user.avatar_url
-          ? <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : initials}
+      <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0, overflow: 'hidden' }}>
+        {user.avatar_url ? <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
       </div>
       <div>
-        <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.9rem' }}>
-          {user.first_name} {user.last_name}
-        </div>
-        {user.activity && (
-          <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5 }}>
-            {user.activity}{user.city ? ` · ${user.city}` : ''}
-          </div>
-        )}
+        <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.9rem' }}>{user.first_name} {user.last_name}</div>
+        {user.activity && <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5 }}>{user.activity}{user.city ? ` · ${user.city}` : ''}</div>}
       </div>
     </div>
   )
