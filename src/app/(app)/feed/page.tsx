@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/types'
@@ -9,6 +9,14 @@ import type { Post } from '@/types'
 const EMOJIS = ['👍', '🔥', '❤️']
 
 export default function FeedPage() {
+  return (
+    <Suspense>
+      <FeedPageInner />
+    </Suspense>
+  )
+}
+
+function FeedPageInner() {
   const [posts, setPosts] = useState<Post[]>([])
   const [showModal, setShowModal] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
