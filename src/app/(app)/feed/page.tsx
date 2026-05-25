@@ -304,11 +304,11 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
 
       {/* Image */}
       {post.image_url && (
-        <div style={{ borderRadius: '10px', overflow: 'hidden', maxHeight: '400px', marginBottom: '0.75rem', backgroundColor: '#F5F0E8' }}>
+        <div style={{ borderRadius: '10px', overflow: 'hidden', marginBottom: '0.75rem', backgroundColor: '#F5F0E8', aspectRatio: '4/5', position: 'relative' }}>
           <img
             src={post.image_url}
             alt=""
-            style={{ width: '100%', height: '400px', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
           />
         </div>
       )}
