@@ -11,7 +11,7 @@ const COMPLETION_FIELDS = [
   { key: 'activity', label: 'Secteur d activite', points: 10 },
   { key: 'city', label: 'Ville', points: 5 },
   { key: 'website', label: 'Site web', points: 10 },
-  { key: 'company_number', label: 'Numéro d'entreprise', points: 5 },
+  { key: 'company_number', label: "Numéro d'entreprise", points: 5 },
 ]
 
 const SOCIAL_KEYS = ['linkedin', 'instagram', 'facebook', 'pinterest', 'tiktok']
