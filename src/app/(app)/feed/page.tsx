@@ -458,6 +458,10 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
   const [deleting, setDeleting] = useState(false)
   const [editingPost, setEditingPost] = useState(false)
   const [editPostContent, setEditPostContent] = useState(post.content || '')
+  const [editImageUrl, setEditImageUrl] = useState<string | null>(post.image_url || null)
+  const [editImageFile, setEditImageFile] = useState<File | null>(null)
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null)
+  const editFileRef = useRef<HTMLInputElement>(null)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editCommentContent, setEditCommentContent] = useState('')
 
@@ -538,8 +542,23 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
   const handleEditPost = async () => {
     if (!editPostContent.trim()) return
     const supabase = createClient()
-    await supabase.from('posts').update({ content: editPostContent.trim() }).eq('id', post.id)
+    let finalImageUrl = editImageUrl
+
+    // Nouveau fichier uploadé
+    if (editImageFile) {
+      const ext = editImageFile.name.split('.').pop()
+      const path = `${post.author_id}/${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('posts').upload(path, editImageFile, { upsert: true })
+      if (!error) {
+        const { data } = supabase.storage.from('posts').getPublicUrl(path)
+        finalImageUrl = data.publicUrl
+      }
+    }
+
+    await supabase.from('posts').update({ content: editPostContent.trim(), image_url: finalImageUrl }).eq('id', post.id)
     setEditingPost(false)
+    setEditImageFile(null)
+    setEditImagePreview(null)
     onRefresh()
   }
 
@@ -693,9 +712,49 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
             rows={4}
             style={{ width: '100%', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 0.75rem', fontSize: '0.95rem', outline: 'none', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }}
           />
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+
+          {/* Aperçu image en mode édition */}
+          {(editImagePreview || editImageUrl) && (
+            <div style={{ position: 'relative', marginTop: '0.75rem', borderRadius: '10px', overflow: 'hidden', aspectRatio: '4/5', backgroundColor: '#F5F0E8' }}>
+              {(() => {
+                const src = editImagePreview || editImageUrl!
+                return src.match(/\.(mp4|mov|webm)$/i)
+                  ? <video src={src} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              })()}
+              <button
+                type="button"
+                onClick={() => { setEditImageUrl(null); setEditImageFile(null); setEditImagePreview(null) }}
+                style={{
+                  position: 'absolute', top: '8px', right: '8px',
+                  backgroundColor: 'rgba(0,0,0,0.55)', color: 'white',
+                  border: 'none', borderRadius: '50%', width: '28px', height: '28px',
+                  cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >✕</button>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => editFileRef.current?.click()}
+              style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.82rem', color: '#2D2D2D', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            >
+              <img src="/icons/image.svg" alt="" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.6)' }} />
+              {editImageUrl || editImagePreview ? 'Changer' : 'Ajouter une image'}
+            </button>
+            <input ref={editFileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }}
+              onChange={e => {
+                const f = e.target.files?.[0]
+                if (!f) return
+                setEditImageFile(f)
+                setEditImagePreview(URL.createObjectURL(f))
+                setEditImageUrl(null)
+              }}
+            />
             <button onClick={handleEditPost} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.4rem 1rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Enregistrer</button>
-            <button onClick={() => setEditingPost(false)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 1rem', cursor: 'pointer', fontSize: '0.85rem', color: '#2D2D2D' }}>Annuler</button>
+            <button onClick={() => { setEditingPost(false); setEditImageFile(null); setEditImagePreview(null); setEditImageUrl(post.image_url || null) }} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 1rem', cursor: 'pointer', fontSize: '0.85rem', color: '#2D2D2D' }}>Annuler</button>
           </div>
         </div>
       ) : (
@@ -717,8 +776,8 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
         </>
       )}
 
-      {/* Image ou vidéo */}
-      {post.image_url && (
+      {/* Image ou vidéo (masquée en mode édition, gérée dans le bloc édition) */}
+      {!editingPost && post.image_url && (
         <div style={{ borderRadius: '10px', overflow: 'hidden', marginBottom: '0.75rem', backgroundColor: '#F5F0E8', aspectRatio: '4/5' }}>
           {post.image_url.match(/\.(mp4|mov|webm)$/i)
             ? <video src={post.image_url} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
