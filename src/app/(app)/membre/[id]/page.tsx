@@ -73,6 +73,10 @@ export default function MembrePublicPage() {
 
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+      <style>{`
+        .social-icon img { filter: brightness(0); transition: filter 0.15s; }
+        .social-icon:hover img { filter: brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg); }
+      `}</style>
 
       {/* Carte profil */}
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
@@ -129,6 +133,7 @@ export default function MembrePublicPage() {
               target="_blank"
               rel="noopener noreferrer"
               title={s.label}
+              className="social-icon"
               style={socialLinkStyle}
             >
               {s.svg
@@ -217,10 +222,7 @@ const socialLinkStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  width: '36px',
-  height: '36px',
-  borderRadius: '10px',
-  backgroundColor: '#F5F0E8',
-  fontSize: '1.1rem',
+  width: '28px',
+  height: '28px',
   textDecoration: 'none',
 }

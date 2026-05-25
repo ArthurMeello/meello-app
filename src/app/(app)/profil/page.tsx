@@ -287,6 +287,10 @@ export default function ProfilPage() {
 
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+      <style>{`
+        .social-icon img { filter: brightness(0); transition: filter 0.15s; }
+        .social-icon:hover img { filter: brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg); }
+      `}</style>
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem' }}>
@@ -510,15 +514,15 @@ export default function ProfilPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: 0 }}>{profile.bio}</p>}
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-              {profile.website && <a href={profile.website} target="_blank" rel="noopener noreferrer" title="Site web" style={socialLinkStyle}><img src="/icons/website.svg" alt="Site web" style={{ width: '20px', height: '20px' }} /></a>}
-              {profile.linkedin && <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" style={socialLinkStyle}><img src="/icons/linkedin.svg" alt="LinkedIn" style={{ width: '20px', height: '20px' }} /></a>}
-              {profile.instagram && <a href={profile.instagram} target="_blank" rel="noopener noreferrer" title="Instagram" style={socialLinkStyle}><img src="/icons/instagram.svg" alt="Instagram" style={{ width: '20px', height: '20px' }} /></a>}
-              {profile.facebook && <a href={profile.facebook} target="_blank" rel="noopener noreferrer" title="Facebook" style={socialLinkStyle}><img src="/icons/facebook.svg" alt="Facebook" style={{ width: '20px', height: '20px' }} /></a>}
-              {profile.pinterest && <a href={profile.pinterest} target="_blank" rel="noopener noreferrer" title="Pinterest" style={socialLinkStyle}><img src="/icons/pinterest.svg" alt="Pinterest" style={{ width: '20px', height: '20px' }} /></a>}
-              {profile.tiktok && <a href={profile.tiktok} target="_blank" rel="noopener noreferrer" title="TikTok" style={socialLinkStyle}><img src="/icons/tiktok.svg" alt="TikTok" style={{ width: '20px', height: '20px' }} /></a>}
-              {profile.x && <a href={profile.x} target="_blank" rel="noopener noreferrer" title="X" style={socialLinkStyle}><img src="/icons/x.svg" alt="X" style={{ width: '20px', height: '20px' }} /></a>}
-              {profile.youtube && <a href={profile.youtube} target="_blank" rel="noopener noreferrer" title="YouTube" style={socialLinkStyle}><img src="/icons/youtube.svg" alt="YouTube" style={{ width: '20px', height: '20px' }} /></a>}
-              {profile.whatsapp && <a href={`https://wa.me/${profile.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp" style={socialLinkStyle}><img src="/icons/whatsapp.svg" alt="WhatsApp" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.website && <a href={profile.website} target="_blank" rel="noopener noreferrer" title="Site web" className="social-icon" style={socialLinkStyle}><img src="/icons/website.svg" alt="Site web" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.linkedin && <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" className="social-icon" style={socialLinkStyle}><img src="/icons/linkedin.svg" alt="LinkedIn" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.instagram && <a href={profile.instagram} target="_blank" rel="noopener noreferrer" title="Instagram" className="social-icon" style={socialLinkStyle}><img src="/icons/instagram.svg" alt="Instagram" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.facebook && <a href={profile.facebook} target="_blank" rel="noopener noreferrer" title="Facebook" className="social-icon" style={socialLinkStyle}><img src="/icons/facebook.svg" alt="Facebook" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.pinterest && <a href={profile.pinterest} target="_blank" rel="noopener noreferrer" title="Pinterest" className="social-icon" style={socialLinkStyle}><img src="/icons/pinterest.svg" alt="Pinterest" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.tiktok && <a href={profile.tiktok} target="_blank" rel="noopener noreferrer" title="TikTok" className="social-icon" style={socialLinkStyle}><img src="/icons/tiktok.svg" alt="TikTok" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.x && <a href={profile.x} target="_blank" rel="noopener noreferrer" title="X" className="social-icon" style={socialLinkStyle}><img src="/icons/x.svg" alt="X" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.youtube && <a href={profile.youtube} target="_blank" rel="noopener noreferrer" title="YouTube" className="social-icon" style={socialLinkStyle}><img src="/icons/youtube.svg" alt="YouTube" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.whatsapp && <a href={`https://wa.me/${profile.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp" className="social-icon" style={socialLinkStyle}><img src="/icons/whatsapp.svg" alt="WhatsApp" style={{ width: '20px', height: '20px' }} /></a>}
             </div>
           </div>
         )}
@@ -806,11 +810,8 @@ const socialLinkStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  width: '36px',
-  height: '36px',
-  borderRadius: '10px',
-  backgroundColor: '#F5F0E8',
-  fontSize: '1.1rem',
+  width: '28px',
+  height: '28px',
   textDecoration: 'none',
-  transition: 'background 0.15s',
+  opacity: 1,
 }
