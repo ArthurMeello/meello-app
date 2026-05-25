@@ -226,13 +226,13 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
         m.first_name.toLowerCase() === tag
       )
       if (member && member.id !== userId) {
-        await supabase.from('notifications').insert({
+        const { error: notifError } = await supabase.from('notifications').insert({
           user_id: member.id,
           type: 'mention',
           content: `${authorName} t'a mentionné dans une publication`,
-          link: `/feed`,
-          from_user_id: userId,
+          link: `/membre/${member.id}`,
         })
+        if (notifError) console.error('Notif mention error:', notifError)
       }
     }
   }
