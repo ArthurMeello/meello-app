@@ -462,11 +462,12 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
   const [editCommentContent, setEditCommentContent] = useState('')
 
   const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+  const EQUIPE_ID = '00000000-0000-0000-0000-000000000001'
   const profile = post.profiles
   const initials = profile ? `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}` : '?'
   const formattedDate = new Date(post.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
   const isOwner = currentUserId === post.author_id
-  const isAdmin = post.author_id === ADMIN_ID
+  const isAdmin = post.author_id === ADMIN_ID || post.author_id === EQUIPE_ID
 
   useEffect(() => {
     loadReactions()
