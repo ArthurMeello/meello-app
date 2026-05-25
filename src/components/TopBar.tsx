@@ -12,6 +12,8 @@ interface Notification {
   read: boolean
   created_at: string
   link: string | null
+  from_user_id: string | null
+  from_profile?: { first_name: string; last_name: string; avatar_url: string | null } | null
 }
 
 export default function TopBar() {
@@ -47,7 +49,7 @@ export default function TopBar() {
     const supabase = createClient()
     const { data } = await supabase
       .from('notifications')
-      .select('*')
+      .select('*, from_profile:profiles!notifications_from_user_id_fkey(first_name, last_name, avatar_url)')
       .eq('user_id', uid)
       .order('created_at', { ascending: false })
       .limit(20)
@@ -203,10 +205,28 @@ export default function TopBar() {
                     transition: 'background 0.15s',
                   }}
                 >
-                  <span style={{ fontSize: '1.1rem', flexShrink: 0, marginTop: '0.1rem' }}>{typeIcon(n.type)}</span>
+                  {/* Avatar de l'auteur */}
+                  <div style={{
+                    width: '36px', height: '36px', borderRadius: '50%',
+                    backgroundColor: '#E8501A', color: 'white', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, fontSize: '0.75rem', overflow: 'hidden',
+                  }}>
+                    {n.from_profile?.avatar_url
+                      ? <img src={n.from_profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : n.from_profile
+                        ? `${n.from_profile.first_name[0]}${n.from_profile.last_name[0]}`
+                        : '?'
+                    }
+                  </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.88rem', color: '#2D2D2D', lineHeight: 1.5 }}>{n.content}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.4, marginTop: '0.2rem' }}>{formatDate(n.created_at)}</div>
+                    {n.from_profile && (
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#2D2D2D', marginBottom: '0.1rem' }}>
+                        {n.from_profile.first_name} {n.from_profile.last_name}
+                      </div>
+                    )}
+                    <div style={{ fontSize: '0.85rem', color: '#2D2D2D', lineHeight: 1.45, opacity: 0.75 }}>{n.content}</div>
+                    <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, marginTop: '0.2rem' }}>{formatDate(n.created_at)}</div>
                   </div>
                   {!n.read && (
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#E8501A', flexShrink: 0, marginTop: '0.35rem' }} />

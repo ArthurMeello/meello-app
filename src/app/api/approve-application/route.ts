@@ -67,8 +67,9 @@ export async function POST(req: NextRequest) {
   await supabase.from('notifications').insert({
     user_id: authData.user.id,
     type: 'mention',
-    content: `L'équipe Meello vous a souhaité la bienvenue dans le fil d'actualité !`,
+    content: `vous a souhaité la bienvenue dans le fil d'actualité !`,
     link: `/feed`,
+    from_user_id: EQUIPE_MEELLO_ID,
   })
 
   // 5. Mettre à jour le statut de la candidature

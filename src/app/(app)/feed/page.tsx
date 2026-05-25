@@ -239,8 +239,9 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
           .map(p => ({
             user_id: p.id,
             type: 'mention',
-            content: `${authorName} a publié un message pour toute la communauté`,
+            content: `a publié un message pour toute la communauté`,
             link: `/feed`,
+            from_user_id: userId,
           }))
         if (notifs.length > 0) await supabase.from('notifications').insert(notifs)
       }
@@ -261,8 +262,9 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
         const { error: notifError } = await supabase.from('notifications').insert({
           user_id: member.id,
           type: 'mention',
-          content: `${authorName} t'a mentionné dans une publication`,
+          content: `t'a mentionné dans une publication`,
           link: `/feed?post=${postId}`,
+          from_user_id: userId,
         })
         if (notifError) console.error('Notif mention error:', notifError)
       }
@@ -541,8 +543,9 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
           await supabase.from('notifications').insert({
             user_id: post.author_id,
             type: 'reaction',
-            content: `${post.profiles?.first_name || 'Quelqu\'un'} a réagi à ton post avec ${emoji}`,
+            content: `a réagi à ton post avec ${emoji}`,
             link: `/feed?post=${post.id}`,
+            from_user_id: currentUserId,
           })
         }
       }
@@ -554,8 +557,9 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
         await supabase.from('notifications').insert({
           user_id: post.author_id,
           type: 'reaction',
-          content: `${reactor?.first_name || 'Quelqu\'un'} a réagi à ton post avec ${emoji}`,
+          content: `a réagi à ton post avec ${emoji}`,
           link: `/feed?post=${post.id}`,
+          from_user_id: currentUserId,
         })
       }
     }
@@ -635,8 +639,9 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
       await supabase.from('notifications').insert({
         user_id: post.author_id,
         type: 'comment',
-        content: `${commenter?.first_name || 'Quelqu\'un'} a commenté ton post`,
+        content: `a commenté ton post`,
         link: `/feed?post=${post.id}`,
+        from_user_id: currentUserId,
       })
     }
     setComment('')
