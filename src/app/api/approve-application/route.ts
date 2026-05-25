@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { emailTemplate } from '@/lib/emailTemplate'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+const EQUIPE_MEELLO_ID = '00000000-0000-0000-0000-000000000001'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -45,10 +46,19 @@ export async function POST(req: NextRequest) {
     member_since: new Date().toISOString(),
   })
 
-  // 4. Publier un post de bienvenue dans le feed
+  // 4. Publier un post de bienvenue dans le feed (par L'équipe Meello)
+  const newMemberProfileUrl = `https://app.meello.fr/membre/${authData.user.id}`
   await supabase.from('posts').insert({
-    author_id: ADMIN_ID,
-    content: `Bienvenue à ${app.first_name} ${app.last_name}, nouveau membre de la communauté Meello ! 🎉`,
+    author_id: EQUIPE_MEELLO_ID,
+    content: `🎉 Bienvenue à @${app.first_name}${app.last_name} qui rejoint la communauté Meello !\n\n${app.first_name} est ${app.activity}${app.city ? ` basé·e à ${app.city}` : ''}. Souhaite lui la bienvenue ! 👋\n\n👉 ${newMemberProfileUrl}`,
+  })
+
+  // Notifier le nouveau membre
+  await supabase.from('notifications').insert({
+    user_id: authData.user.id,
+    type: 'mention',
+    message: `L'équipe Meello vous a souhaité la bienvenue dans le fil d'actualité !`,
+    from_user_id: EQUIPE_MEELLO_ID,
   })
 
   // 5. Mettre à jour le statut de la candidature
