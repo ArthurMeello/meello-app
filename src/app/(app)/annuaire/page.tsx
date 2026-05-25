@@ -12,14 +12,12 @@ const BADGE_COLORS: Record<string, string> = {
   fondateur: '#E8501A',
   partenaire: '#7A9E7E',
   nouveau: '#4A90D9',
-  profil_complet: '#F5A623',
 }
 
 const BADGE_LABELS: Record<string, string> = {
   fondateur: 'Fondateur',
   partenaire: 'Partenaire',
-  nouveau: 'Nouveau',
-  profil_complet: 'Profil complet',
+  nouveau: 'Nouveau membre',
 }
 
 export default function AnnuairePage() {
@@ -98,7 +96,7 @@ export default function AnnuairePage() {
 
 function MemberCard({ profile }: { profile: Profile }) {
   const initials = `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}`.toUpperCase()
-  const badges = profile.badges || []
+  const badges = (profile.badges || []).filter((b: string) => b !== 'profil_complet')
 
   return (
     <Link href={`/profil/${profile.id}`} style={{ textDecoration: 'none' }}>

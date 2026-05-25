@@ -282,7 +282,7 @@ export default function ProfilPage() {
   const isNew = profile.member_since
     ? (Date.now() - new Date(profile.member_since).getTime()) < 30 * 24 * 60 * 60 * 1000
     : false
-  const badges = (profile.badges || []).filter((b: string) => b !== 'nouveau')
+  const badges = (profile.badges || []).filter((b: string) => b !== 'nouveau' && b !== 'profil_complet')
   const allBadges = isNew ? ['nouveau', ...badges] : badges
 
   return (
@@ -371,7 +371,7 @@ export default function ProfilPage() {
                 fontSize: '0.72rem', fontWeight: 600,
                 padding: '0.2rem 0.6rem', borderRadius: '20px',
               }}>
-                {b === 'fondateur' ? 'Fondateur' : b === 'partenaire' ? 'Partenaire' : b === 'nouveau' ? 'Nouveau membre' : 'Profil complet'}
+                {b === 'fondateur' ? 'Fondateur' : b === 'partenaire' ? 'Partenaire' : 'Nouveau membre'}
               </span>
             ))}
           </div>

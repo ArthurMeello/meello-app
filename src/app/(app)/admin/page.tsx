@@ -388,8 +388,6 @@ export default function AdminPage() {
               <option value="">Tous les badges</option>
               <option value="fondateur">Fondateur</option>
               <option value="partenaire">Partenaire</option>
-              <option value="nouveau">Nouveau</option>
-              <option value="profil_complet">Profil complet</option>
             </select>
           </div>
 
@@ -418,7 +416,7 @@ export default function AdminPage() {
                 <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5 }}>{member.email} · {member.activity} · {member.city}</div>
               </div>
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                {['fondateur', 'partenaire', 'nouveau', 'profil_complet'].map(badge => {
+                {['fondateur', 'partenaire'].map(badge => {
                   const active = (member.badges || []).includes(badge)
                   return (
                     <button
