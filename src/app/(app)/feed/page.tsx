@@ -485,7 +485,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
 
 function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: Post, currentUserId: string | null, onRefresh: () => void, allMembers?: { id: string; first_name: string; last_name: string }[] }) {
   const [comment, setComment] = useState('')
-  const [comments, setComments] = useState<{ id: string; content: string; author_id: string; profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null } }[]>([])
+  const [comments, setComments] = useState<{ id: string; content: string; author_id: string; parent_id: string | null; profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null } }[]>([])
   const [commentCount, setCommentCount] = useState(0)
   const [showComments, setShowComments] = useState(false)
   const [reactions, setReactions] = useState<{ emoji: string; author_id: string }[]>([])
@@ -498,6 +498,12 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
   const editFileRef = useRef<HTMLInputElement>(null)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editCommentContent, setEditCommentContent] = useState('')
+  const [commentMentionSuggestions, setCommentMentionSuggestions] = useState<{ id: string; first_name: string; last_name: string }[]>([])
+  const commentInputRef = useRef<HTMLTextAreaElement>(null)
+  const [replyingTo, setReplyingTo] = useState<{ id: string; first_name: string } | null>(null)
+  const [replyContent, setReplyContent] = useState('')
+  const [replyMentionSuggestions, setReplyMentionSuggestions] = useState<{ id: string; first_name: string; last_name: string }[]>([])
+  const replyInputRef = useRef<HTMLTextAreaElement>(null)
 
   const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
   const EQUIPE_ID = '00000000-0000-0000-0000-000000000001'
@@ -617,7 +623,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     const supabase = createClient()
     const { data } = await supabase
       .from('comments')
-      .select('id, content, author_id, profiles(first_name, last_name, avatar_url, activity)')
+      .select('id, content, author_id, parent_id, profiles(first_name, last_name, avatar_url, activity)')
       .eq('post_id', post.id)
       .order('created_at', { ascending: true })
     if (data) setComments(data as unknown as typeof comments)
@@ -628,14 +634,53 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     setShowComments(v => !v)
   }
 
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value
+    setComment(val)
+    e.target.style.height = 'auto'
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+
+    const cursor = e.target.selectionStart
+    const textBefore = val.slice(0, cursor)
+    const match = textBefore.match(/@([^\s]*)$/)
+    if (match) {
+      const q = match[1].toLowerCase()
+      const filtered = allMembers.filter(m =>
+        `${m.first_name} ${m.last_name}`.toLowerCase().includes(q) && m.id !== currentUserId
+      ).slice(0, 6)
+      setCommentMentionSuggestions(filtered)
+    } else {
+      setCommentMentionSuggestions([])
+    }
+  }
+
+  const insertCommentMention = (member: { id: string; first_name: string; last_name: string }) => {
+    const textarea = commentInputRef.current
+    if (!textarea) return
+    const cursor = textarea.selectionStart
+    const textBefore = comment.slice(0, cursor)
+    const textAfter = comment.slice(cursor)
+    const atIndex = textBefore.lastIndexOf('@')
+    const tag = `@${member.first_name}${member.last_name}`
+    const newContent = textBefore.slice(0, atIndex) + tag + ' ' + textAfter
+    setComment(newContent)
+    setCommentMentionSuggestions([])
+    setTimeout(() => {
+      textarea.focus()
+      const pos = atIndex + tag.length + 1
+      textarea.setSelectionRange(pos, pos)
+    }, 0)
+  }
+
   const handleComment = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!comment.trim()) return
     const supabase = createClient()
-    await supabase.from('comments').insert({ post_id: post.id, content: comment.trim(), author_id: currentUserId })
+    const commentContent = comment.trim()
+    await supabase.from('comments').insert({ post_id: post.id, content: commentContent, author_id: currentUserId })
+
     // Notifier l'auteur du post (sauf si c'est soi-même)
     if (post.author_id && post.author_id !== currentUserId) {
-      const { data: commenter } = await supabase.from('profiles').select('first_name').eq('id', currentUserId).single()
       await supabase.from('notifications').insert({
         user_id: post.author_id,
         type: 'comment',
@@ -644,7 +689,110 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
         from_user_id: currentUserId,
       })
     }
+
+    // Notifier les membres mentionnés
+    const mentionRegex = /@([^\s]+)/g
+    const matches = [...commentContent.matchAll(mentionRegex)]
+    const mentionedNames = [...new Set(matches.map(m => m[1].toLowerCase()))]
+    for (const tag of mentionedNames) {
+      const member = allMembers.find(m =>
+        `${m.first_name}${m.last_name}`.toLowerCase() === tag ||
+        m.first_name.toLowerCase() === tag
+      )
+      if (member && member.id !== currentUserId && member.id !== post.author_id) {
+        await supabase.from('notifications').insert({
+          user_id: member.id,
+          type: 'mention',
+          content: `t'a mentionné dans un commentaire`,
+          link: `/feed?post=${post.id}`,
+          from_user_id: currentUserId,
+        })
+      }
+    }
+
     setComment('')
+    if (commentInputRef.current) commentInputRef.current.style.height = 'auto'
+    setCommentCount(c => c + 1)
+    loadComments()
+  }
+
+  const handleReplyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value
+    setReplyContent(val)
+    e.target.style.height = 'auto'
+    e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'
+    const cursor = e.target.selectionStart
+    const textBefore = val.slice(0, cursor)
+    const match = textBefore.match(/@([^\s]*)$/)
+    if (match) {
+      const q = match[1].toLowerCase()
+      setReplyMentionSuggestions(allMembers.filter(m =>
+        `${m.first_name} ${m.last_name}`.toLowerCase().includes(q) && m.id !== currentUserId
+      ).slice(0, 5))
+    } else {
+      setReplyMentionSuggestions([])
+    }
+  }
+
+  const insertReplyMention = (member: { id: string; first_name: string; last_name: string }) => {
+    const textarea = replyInputRef.current
+    if (!textarea) return
+    const cursor = textarea.selectionStart
+    const textBefore = replyContent.slice(0, cursor)
+    const textAfter = replyContent.slice(cursor)
+    const atIndex = textBefore.lastIndexOf('@')
+    const tag = `@${member.first_name}${member.last_name}`
+    const newContent = textBefore.slice(0, atIndex) + tag + ' ' + textAfter
+    setReplyContent(newContent)
+    setReplyMentionSuggestions([])
+    setTimeout(() => {
+      textarea.focus()
+      const pos = atIndex + tag.length + 1
+      textarea.setSelectionRange(pos, pos)
+    }, 0)
+  }
+
+  const handleReply = async (e: React.FormEvent, parentComment: { id: string; author_id: string }) => {
+    e.preventDefault()
+    if (!replyContent.trim()) return
+    const supabase = createClient()
+    const content = replyContent.trim()
+    await supabase.from('comments').insert({
+      post_id: post.id,
+      content,
+      author_id: currentUserId,
+      parent_id: parentComment.id,
+    })
+    // Notifier l'auteur du commentaire parent
+    if (parentComment.author_id !== currentUserId) {
+      await supabase.from('notifications').insert({
+        user_id: parentComment.author_id,
+        type: 'comment',
+        content: `a répondu à ton commentaire`,
+        link: `/feed?post=${post.id}`,
+        from_user_id: currentUserId,
+      })
+    }
+    // Notifier les mentions
+    const mentionRegex = /@([^\s]+)/g
+    const matches = [...content.matchAll(mentionRegex)]
+    for (const match of matches) {
+      const tag = match[1].toLowerCase()
+      const member = allMembers.find(m =>
+        `${m.first_name}${m.last_name}`.toLowerCase() === tag || m.first_name.toLowerCase() === tag
+      )
+      if (member && member.id !== currentUserId && member.id !== parentComment.author_id) {
+        await supabase.from('notifications').insert({
+          user_id: member.id,
+          type: 'mention',
+          content: `t'a mentionné dans une réponse`,
+          link: `/feed?post=${post.id}`,
+          from_user_id: currentUserId,
+        })
+      }
+    }
+    setReplyContent('')
+    setReplyingTo(null)
     setCommentCount(c => c + 1)
     loadComments()
   }
@@ -899,76 +1047,181 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
       {/* Commentaires */}
       {showComments && (
         <div style={{ marginTop: '0.75rem' }}>
-          {comments.map(c => (
-            <div key={c.id} style={{ padding: '0.5rem 0', borderBottom: '1px solid #F5F0E8', fontSize: '0.9rem', color: '#2D2D2D' }}>
-              {editingCommentId === c.id ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  <input
-                    value={editCommentContent}
-                    onChange={e => setEditCommentContent(e.target.value)}
-                    style={{ border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 0.75rem', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
-                  />
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <button onClick={() => handleEditComment(c.id)} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.75rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>Enregistrer</button>
-                    <button onClick={() => setEditingCommentId(null)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '6px', padding: '0.3rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem' }}>Annuler</button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', flex: 1 }}>
-                    {/* Avatar */}
-                    <a href={`/membre/${c.author_id}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
-                      <div style={{
-                        width: '32px', height: '32px', borderRadius: '50%',
-                        backgroundColor: '#E8501A', color: 'white',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '0.65rem', fontWeight: 700, overflow: 'hidden', flexShrink: 0,
-                      }}>
-                        {c.profiles?.avatar_url
-                          ? <img src={c.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : `${(c.profiles?.first_name || '?')[0]}${(c.profiles?.last_name || '')[0] || ''}`}
-                      </div>
-                    </a>
-                    {/* Nom + activité + contenu */}
-                    <div style={{ flex: 1 }}>
-                      <a href={`/membre/${c.author_id}`} style={{ fontWeight: 600, color: '#2D2D2D', textDecoration: 'none', fontSize: '0.9rem' }}
-                        onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-                        onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
-                      >{c.profiles?.first_name} {c.profiles?.last_name}</a>
-                      {c.profiles?.activity && (
-                        <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.5 }}>{c.profiles.activity}</div>
-                      )}
-                      <div style={{ fontSize: '0.9rem', color: '#2D2D2D', marginTop: '0.2rem', lineHeight: 1.5 }}>{c.content}</div>
+          {comments.filter(c => !c.parent_id).map(c => (
+            <div key={c.id}>
+              {/* Commentaire principal */}
+              <div style={{ padding: '0.5rem 0', borderBottom: '1px solid #F5F0E8', fontSize: '0.9rem', color: '#2D2D2D' }}>
+                {editingCommentId === c.id ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <input
+                      value={editCommentContent}
+                      onChange={e => setEditCommentContent(e.target.value)}
+                      style={{ border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 0.75rem', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+                    />
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button onClick={() => handleEditComment(c.id)} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.75rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>Enregistrer</button>
+                      <button onClick={() => setEditingCommentId(null)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '6px', padding: '0.3rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem' }}>Annuler</button>
                     </div>
                   </div>
-                  {c.author_id === currentUserId && (
-                    <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                      <button onClick={() => { setEditingCommentId(c.id); setEditCommentContent(c.content) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
-                        <img src="/icons/edit.svg" alt="Modifier" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
-                      </button>
-                      <button onClick={() => handleDeleteComment(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
-                        <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
-                      </button>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', flex: 1 }}>
+                      <a href={`/membre/${c.author_id}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, overflow: 'hidden' }}>
+                          {c.profiles?.avatar_url ? <img src={c.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : `${(c.profiles?.first_name || '?')[0]}${(c.profiles?.last_name || '')[0] || ''}`}
+                        </div>
+                      </a>
+                      <div style={{ flex: 1 }}>
+                        <a href={`/membre/${c.author_id}`} style={{ fontWeight: 600, color: '#2D2D2D', textDecoration: 'none', fontSize: '0.9rem' }}
+                          onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                          onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                        >{c.profiles?.first_name} {c.profiles?.last_name}</a>
+                        {c.profiles?.activity && <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.5 }}>{c.profiles.activity}</div>}
+                        <div style={{ fontSize: '0.9rem', color: '#2D2D2D', marginTop: '0.2rem', lineHeight: 1.5 }}>{c.content}</div>
+                        <button
+                          onClick={() => { setReplyingTo(replyingTo?.id === c.id ? null : { id: c.id, first_name: c.profiles?.first_name || '' }); setReplyContent('') }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.45, padding: '0.2rem 0', marginTop: '0.15rem', fontWeight: 600 }}
+                        >
+                          Répondre
+                        </button>
+                      </div>
+                    </div>
+                    {c.author_id === currentUserId && (
+                      <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                        <button onClick={() => { setEditingCommentId(c.id); setEditCommentContent(c.content) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
+                          <img src="/icons/edit.svg" alt="Modifier" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
+                        </button>
+                        <button onClick={() => handleDeleteComment(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
+                          <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Réponses imbriquées */}
+              {comments.filter(r => r.parent_id === c.id).map(r => (
+                <div key={r.id} style={{ marginLeft: '2.5rem', padding: '0.4rem 0', borderBottom: '1px solid #F5F0E8', fontSize: '0.88rem', color: '#2D2D2D' }}>
+                  {editingCommentId === r.id ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <input value={editCommentContent} onChange={e => setEditCommentContent(e.target.value)} style={{ border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 0.75rem', fontSize: '0.88rem', outline: 'none', fontFamily: 'inherit' }} />
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <button onClick={() => handleEditComment(r.id)} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.75rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>Enregistrer</button>
+                        <button onClick={() => setEditingCommentId(null)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '6px', padding: '0.3rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem' }}>Annuler</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', flex: 1 }}>
+                        <a href={`/membre/${r.author_id}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
+                          <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700, overflow: 'hidden' }}>
+                            {r.profiles?.avatar_url ? <img src={r.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : `${(r.profiles?.first_name || '?')[0]}${(r.profiles?.last_name || '')[0] || ''}`}
+                          </div>
+                        </a>
+                        <div style={{ flex: 1 }}>
+                          <a href={`/membre/${r.author_id}`} style={{ fontWeight: 600, color: '#2D2D2D', textDecoration: 'none', fontSize: '0.85rem' }}
+                            onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                            onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                          >{r.profiles?.first_name} {r.profiles?.last_name}</a>
+                          {r.profiles?.activity && <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.5 }}>{r.profiles.activity}</div>}
+                          <div style={{ fontSize: '0.88rem', color: '#2D2D2D', marginTop: '0.15rem', lineHeight: 1.5 }}>{r.content}</div>
+                        </div>
+                      </div>
+                      {r.author_id === currentUserId && (
+                        <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                          <button onClick={() => { setEditingCommentId(r.id); setEditCommentContent(r.content) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
+                            <img src="/icons/edit.svg" alt="Modifier" style={{ width: '13px', height: '13px', filter: 'brightness(0) opacity(0.35)' }} />
+                          </button>
+                          <button onClick={() => handleDeleteComment(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
+                            <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '13px', height: '13px', filter: 'brightness(0) opacity(0.35)' }} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
+              ))}
+
+              {/* Formulaire de réponse */}
+              {replyingTo?.id === c.id && (
+                <form onSubmit={e => handleReply(e, c)} style={{ marginLeft: '2.5rem', marginTop: '0.4rem', marginBottom: '0.25rem', position: 'relative' }}>
+                  {replyMentionSuggestions.length > 0 && (
+                    <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', zIndex: 10, overflow: 'hidden', marginBottom: '4px' }}>
+                      {replyMentionSuggestions.map(m => (
+                        <div key={m.id} onMouseDown={e => { e.preventDefault(); insertReplyMention(m) }}
+                          style={{ padding: '0.45rem 0.75rem', cursor: 'pointer', fontSize: '0.85rem', color: '#2D2D2D', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
+                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 700 }}>
+                            {m.first_name[0]}{m.last_name[0]}
+                          </div>
+                          <span><strong>{m.first_name}</strong> {m.last_name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'flex-end' }}>
+                    <textarea
+                      ref={replyInputRef}
+                      value={replyContent}
+                      onChange={handleReplyChange}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(e as any, c) } }}
+                      placeholder={`Répondre à ${replyingTo.first_name}…`}
+                      rows={1}
+                      autoFocus
+                      style={{ flex: 1, border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 0.65rem', fontSize: '0.85rem', outline: 'none', fontFamily: 'inherit', resize: 'none', overflow: 'hidden', minHeight: '34px', lineHeight: '1.4' }}
+                    />
+                    <button type="submit" disabled={!replyContent.trim()} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.4rem 0.85rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', height: '34px', flexShrink: 0 }}>↩</button>
+                    <button type="button" onClick={() => setReplyingTo(null)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 0.65rem', cursor: 'pointer', fontSize: '0.85rem', height: '34px', flexShrink: 0 }}>✕</button>
+                  </div>
+                </form>
               )}
             </div>
           ))}
-          <form onSubmit={handleComment} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-            <input
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Ton commentaire…"
-              style={{ flex: 1, border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 0.75rem', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
-            />
-            <button
-              type="submit"
-              disabled={!comment.trim()}
-              style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 600 }}
-            >
-              OK
-            </button>
+          <form onSubmit={handleComment} style={{ marginTop: '0.75rem', position: 'relative' }}>
+            {commentMentionSuggestions.length > 0 && (
+              <div style={{
+                position: 'absolute', bottom: '100%', left: 0, right: 0,
+                backgroundColor: 'white', borderRadius: '10px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                zIndex: 10, overflow: 'hidden', marginBottom: '4px',
+              }}>
+                {commentMentionSuggestions.map(m => (
+                  <div
+                    key={m.id}
+                    onMouseDown={e => { e.preventDefault(); insertCommentMention(m) }}
+                    style={{ padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.88rem', color: '#2D2D2D', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700, flexShrink: 0 }}>
+                      {m.first_name[0]}{m.last_name[0]}
+                    </div>
+                    <span><strong>{m.first_name}</strong> {m.last_name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+              <textarea
+                ref={commentInputRef}
+                value={comment}
+                onChange={handleCommentChange}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(e as any) } }}
+                placeholder="Ton commentaire… (@nom pour mentionner)"
+                rows={1}
+                style={{ flex: 1, border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 0.75rem', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', resize: 'none', overflow: 'hidden', minHeight: '38px', lineHeight: '1.4' }}
+              />
+              <button
+                type="submit"
+                disabled={!comment.trim()}
+                style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 600, flexShrink: 0, height: '38px' }}
+              >
+                OK
+              </button>
+            </div>
           </form>
         </div>
       )}
