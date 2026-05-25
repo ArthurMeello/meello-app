@@ -670,14 +670,18 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
           <div style={{ display: 'flex', gap: '0.25rem' }}>
             <button
               onClick={() => { setEditingPost(true); setEditPostContent(post.content || '') }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2D2D2D', opacity: 0.3, fontSize: '0.95rem', padding: '0.25rem' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
               title="Modifier ce post"
-            >✏️</button>
+            >
+              <img src="/icons/edit.svg" alt="Modifier" style={{ width: '16px', height: '16px', filter: 'brightness(0) opacity(0.3)' }} />
+            </button>
             <button
               onClick={handleDelete}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2D2D2D', opacity: 0.3, fontSize: '0.95rem', padding: '0.25rem' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
               title="Supprimer ce post"
-            >🗑</button>
+            >
+              <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '16px', height: '16px', filter: 'brightness(0) opacity(0.3)' }} />
+            </button>
           </div>
         )}
       </div>
@@ -798,8 +802,12 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
                   </span>
                   {c.author_id === currentUserId && (
                     <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                      <button onClick={() => { setEditingCommentId(c.id); setEditCommentContent(c.content) }} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.35, fontSize: '0.85rem', padding: '0 0.1rem' }}>✏️</button>
-                      <button onClick={() => handleDeleteComment(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.35, fontSize: '0.85rem', padding: '0 0.1rem' }}>🗑</button>
+                      <button onClick={() => { setEditingCommentId(c.id); setEditCommentContent(c.content) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
+                        <img src="/icons/edit.svg" alt="Modifier" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
+                      </button>
+                      <button onClick={() => handleDeleteComment(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.1rem', display: 'flex', alignItems: 'center' }}>
+                        <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
+                      </button>
                     </div>
                   )}
                 </div>
