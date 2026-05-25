@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/types'
 
@@ -12,6 +13,8 @@ export default function FeedPage() {
   const [showModal, setShowModal] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [userProfile, setUserProfile] = useState<{ first_name: string; avatar_url: string | null } | null>(null)
+  const searchParams = useSearchParams()
+  const highlightPostId = searchParams.get('post')
 
   useEffect(() => {
     const supabase = createClient()
@@ -23,6 +26,20 @@ export default function FeedPage() {
     })
     fetchPosts()
   }, [])
+
+  // Scroller vers le post mentionné après chargement
+  useEffect(() => {
+    if (!highlightPostId || posts.length === 0) return
+    setTimeout(() => {
+      const el = document.getElementById(`post-${highlightPostId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.style.outline = '2px solid #E8501A'
+        el.style.borderRadius = '16px'
+        setTimeout(() => { el.style.outline = '' }, 2500)
+      }
+    }, 300)
+  }, [highlightPostId, posts])
 
   const fetchPosts = async () => {
     const supabase = createClient()
@@ -82,7 +99,9 @@ export default function FeedPage() {
       {/* Posts */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {posts.map(post => (
-          <PostCard key={post.id} post={post} currentUserId={userId} onRefresh={fetchPosts} />
+          <div key={post.id} id={`post-${post.id}`}>
+            <PostCard post={post} currentUserId={userId} onRefresh={fetchPosts} />
+          </div>
         ))}
         {posts.length === 0 && (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>
@@ -230,7 +249,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
           user_id: member.id,
           type: 'mention',
           content: `${authorName} t'a mentionné dans une publication`,
-          link: `/membre/${member.id}`,
+          link: `/feed?post=${postId}`,
         })
         if (notifError) console.error('Notif mention error:', notifError)
       }
@@ -510,8 +529,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
             user_id: post.author_id,
             type: 'reaction',
             content: `${post.profiles?.first_name || 'Quelqu\'un'} a réagi à ton post avec ${emoji}`,
-            link: `/feed`,
-            from_user_id: currentUserId,
+            link: `/feed?post=${post.id}`,
           })
         }
       }
@@ -524,7 +542,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
           user_id: post.author_id,
           type: 'reaction',
           content: `${reactor?.first_name || 'Quelqu\'un'} a réagi à ton post avec ${emoji}`,
-          link: `/feed`,
+          link: `/feed?post=${post.id}`,
         })
       }
     }
@@ -605,7 +623,7 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
         user_id: post.author_id,
         type: 'comment',
         content: `${commenter?.first_name || 'Quelqu\'un'} a commenté ton post`,
-        link: `/feed`,
+        link: `/feed?post=${post.id}`,
       })
     }
     setComment('')
