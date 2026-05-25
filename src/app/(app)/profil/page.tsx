@@ -29,16 +29,16 @@ function getCompletion(profile: Profile, hasReco: boolean, hasPortfolio: boolean
 }
 
 function getCompletionTip(profile: Profile, hasReco: boolean, hasPortfolio: boolean, hasServices: boolean): string | null {
-  if (!profile.bio) return '✍️ Rédige ta bio pour booster ton profil de 20 points — c\'est ce que les membres lisent en premier.'
-  if (!hasPortfolio) return '🖼 Ajoute un projet à ton portfolio pour gagner 15 points et montrer concrètement ce que tu fais.'
-  if (!hasServices) return '💼 Présente tes services pour gagner 15 points — c\'est ton vitrine commerciale dans l\'annuaire.'
-  if (!profile.website) return '🔗 Ajoute ton site web ou LinkedIn pour gagner 10 points et renvoyer du trafic vers toi.'
-  if (!profile.activity) return '🏷 Précise ton activité pour gagner 10 points — les membres cherchent des prestataires par métier.'
-  if (!hasReco) return '⭐️ Demande une recommandation à un membre pour gagner 10 points — rien ne vaut la preuve sociale.'
-  if (!SOCIAL_KEYS.some(k => profile[k as keyof Profile])) return '📲 Ajoute au moins un réseau social pour gagner 5 points et faciliter les prises de contact.'
-  if (!profile.city) return '📍 Indique ta ville pour gagner 5 points — les membres aiment collaborer en local.'
-  if (!profile.avatar_url) return '📸 Ajoute une photo de profil pour gagner 5 points — un visage inspire confiance.'
-  if (!profile.company_number) return '🏢 Renseigne ton numéro d\'entreprise pour gagner 5 points et rassurer tes futurs clients.'
+  if (!profile.bio) return '✍️ Rédige ta bio pour gagner 20% : c\'est ce que les membres lisent en premier.'
+  if (!hasPortfolio) return '🖼 Ajoute un projet à ton portfolio pour gagner 15% et montrer concrètement ce que tu fais.'
+  if (!hasServices) return '💼 Présente tes services pour gagner 15% : c\'est ta vitrine commerciale dans l\'annuaire.'
+  if (!profile.website) return '🔗 Ajoute ton site web pour gagner 10% et renvoyer du trafic vers toi.'
+  if (!profile.activity) return '🏷 Précise ton activité pour gagner 10% : les membres cherchent des prestataires par métier.'
+  if (!hasReco) return '⭐️ Demande une recommandation à un membre pour gagner 10% : rien ne vaut la preuve sociale.'
+  if (!SOCIAL_KEYS.some(k => profile[k as keyof Profile])) return '📲 Ajoute au moins un réseau social pour gagner 5% et faciliter les prises de contact.'
+  if (!profile.city) return '📍 Indique ta ville pour gagner 5% : les membres aiment collaborer en local.'
+  if (!profile.avatar_url) return '📸 Ajoute une photo de profil pour gagner 5% : un visage inspire confiance.'
+  if (!profile.company_number) return '🏢 Renseigne ton numéro d\'entreprise pour gagner 5% et rassurer tes futurs clients.'
   return null
 }
 
