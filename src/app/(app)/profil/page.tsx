@@ -278,7 +278,13 @@ export default function ProfilPage() {
   const completion = getCompletion(profile, hasReco, portfolio.length > 0, services.length > 0)
   const completionMsg = getCompletionMessage(completion)
   const completionTip = completion < 100 ? getCompletionTip(profile, hasReco, portfolio.length > 0, services.length > 0) : null
-  const badges = profile.badges || []
+
+  // Badge "nouveau" dynamique : affiché pendant 30 jours après l'inscription
+  const isNew = profile.member_since
+    ? (Date.now() - new Date(profile.member_since).getTime()) < 30 * 24 * 60 * 60 * 1000
+    : false
+  const badges = (profile.badges || []).filter((b: string) => b !== 'nouveau')
+  const allBadges = isNew ? ['nouveau', ...badges] : badges
 
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto' }}>
@@ -353,15 +359,16 @@ export default function ProfilPage() {
         </div>
 
         {/* Badges */}
-        {badges.length > 0 && (
+        {allBadges.length > 0 && (
           <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-            {badges.map((b: string) => (
+            {allBadges.map((b: string) => (
               <span key={b} style={{
-                backgroundColor: '#E8501A', color: 'white',
+                backgroundColor: b === 'nouveau' ? '#F5A623' : '#E8501A',
+                color: 'white',
                 fontSize: '0.72rem', fontWeight: 600,
                 padding: '0.2rem 0.6rem', borderRadius: '20px',
               }}>
-                {b === 'fondateur' ? 'Fondateur' : b === 'partenaire' ? 'Partenaire' : b === 'nouveau' ? 'Nouveau' : 'Profil complet'}
+                {b === 'fondateur' ? 'Fondateur' : b === 'partenaire' ? 'Partenaire' : b === 'nouveau' ? 'Nouveau membre' : 'Profil complet'}
               </span>
             ))}
           </div>

@@ -97,15 +97,26 @@ export default function MembrePublicPage() {
         </div>
 
         {/* Badges */}
-        {(profile.badges || []).length > 0 && (
-          <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-            {profile.badges.map((b: string) => (
-              <span key={b} style={{ backgroundColor: '#E8501A', color: 'white', fontSize: '0.72rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
-                {b === 'fondateur' ? 'Fondateur' : b === 'partenaire' ? 'Partenaire' : b === 'nouveau' ? 'Nouveau' : 'Profil complet'}
-              </span>
-            ))}
-          </div>
-        )}
+        {(() => {
+          const isNew = profile.member_since
+            ? (Date.now() - new Date(profile.member_since).getTime()) < 30 * 24 * 60 * 60 * 1000
+            : false
+          const badges = (profile.badges || []).filter((b: string) => b !== 'nouveau')
+          const allBadges = isNew ? ['nouveau', ...badges] : badges
+          return allBadges.length > 0 && (
+            <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+              {allBadges.map((b: string) => (
+                <span key={b} style={{
+                  backgroundColor: b === 'nouveau' ? '#F5A623' : '#E8501A',
+                  color: 'white', fontSize: '0.72rem', fontWeight: 600,
+                  padding: '0.2rem 0.6rem', borderRadius: '20px',
+                }}>
+                  {b === 'fondateur' ? 'Fondateur' : b === 'partenaire' ? 'Partenaire' : b === 'nouveau' ? 'Nouveau membre' : 'Profil complet'}
+                </span>
+              ))}
+            </div>
+          )
+        })()}
 
         {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 1rem' }}>{profile.bio}</p>}
 

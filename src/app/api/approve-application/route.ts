@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   })
 
   // 3. Créer le profil
-  const badges = memberCount < 200 ? ['fondateur', 'nouveau'] : ['nouveau']
+  const badges = memberCount < 200 ? ['fondateur'] : []
   await supabase.from('profiles').insert({
     id: authData.user.id,
     first_name: app.first_name,
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
     company_number: app.company_number,
     badges,
     is_active: true,
+    member_since: new Date().toISOString(),
   })
 
   // 4. Mettre à jour le statut de la candidature
