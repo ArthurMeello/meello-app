@@ -239,8 +239,11 @@ export default function TopBar() {
                   </div>
                   <div style={{ flex: 1 }}>
                     {n.from_profile && (
-                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#2D2D2D', marginBottom: '0.1rem' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#2D2D2D', marginBottom: '0.1rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         {n.from_profile.first_name} {n.from_profile.last_name}
+                        {(n.from_user_id === '13cdb485-42e0-48df-b2f8-14dc77dd895a' || n.from_user_id === '00000000-0000-0000-0000-000000000001') && (
+                          <img src="/icons/badge-check.svg" alt="Vérifié" style={{ width: '13px', height: '13px', flexShrink: 0 }} />
+                        )}
                       </div>
                     )}
                     <div style={{ fontSize: '0.85rem', color: '#2D2D2D', lineHeight: 1.45, opacity: 0.75 }}>{n.content}</div>
