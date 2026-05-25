@@ -92,8 +92,11 @@ export default function MembrePublicPage() {
               : initials}
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.4rem', color: '#2D2D2D', fontWeight: 700 }}>
+            <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.4rem', color: '#2D2D2D', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               {profile.first_name} {profile.last_name}
+              {id === '13cdb485-42e0-48df-b2f8-14dc77dd895a' && (
+                <img src="/icons/badge-check.svg" alt="Admin" title="Fondateur Meello" style={{ width: '20px', height: '20px', flexShrink: 0 }} />
+              )}
             </div>
             <div style={{ color: '#2D2D2D', opacity: 0.6, fontSize: '0.9rem' }}>{profile.activity}</div>
             {profile.city && <div style={{ color: '#2D2D2D', opacity: 0.45, fontSize: '0.82rem' }}>📍 {profile.city}</div>}

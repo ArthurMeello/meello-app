@@ -149,8 +149,11 @@ export default function MessagesPage() {
                 transition: 'background 0.15s',
               }}
             >
-              <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.9rem' }}>
+              <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 {conv.other_user?.first_name} {conv.other_user?.last_name}
+                {conv.other_user?.id === '13cdb485-42e0-48df-b2f8-14dc77dd895a' && (
+                  <img src="/icons/badge-check.svg" alt="Admin" title="Fondateur Meello" style={{ width: '14px', height: '14px', flexShrink: 0 }} />
+                )}
               </div>
               <div style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {conv.last_message || 'Aucun message'}
@@ -177,7 +180,12 @@ export default function MessagesPage() {
         ) : (
           <>
             <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #F5F0E8', fontWeight: 700, color: '#2D2D2D' }}>
-              {activeConv.other_user?.first_name} {activeConv.other_user?.last_name}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                {activeConv.other_user?.first_name} {activeConv.other_user?.last_name}
+                {activeConv.other_user?.id === '13cdb485-42e0-48df-b2f8-14dc77dd895a' && (
+                  <img src="/icons/badge-check.svg" alt="Admin" title="Fondateur Meello" style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                )}
+              </div>
               <div style={{ fontSize: '0.78rem', fontWeight: 400, opacity: 0.5 }}>{activeConv.other_user?.activity}</div>
             </div>
 

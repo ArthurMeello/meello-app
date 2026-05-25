@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 
+const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+
 const BADGE_COLORS: Record<string, string> = {
   fondateur: '#E8501A',
   partenaire: '#7A9E7E',
@@ -130,8 +132,11 @@ function MemberCard({ profile }: { profile: Profile }) {
               : initials}
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               {profile.first_name} {profile.last_name}
+              {profile.id === ADMIN_ID && (
+                <img src="/icons/badge-check.svg" alt="Admin" title="Fondateur Meello" style={{ width: '15px', height: '15px', flexShrink: 0 }} />
+              )}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.55, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {profile.activity}

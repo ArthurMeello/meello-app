@@ -1,10 +1,12 @@
 // @ts-nocheck
 import AppNav from '@/components/AppNav'
+import TopBar from '@/components/TopBar'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F5F0E8' }}>
       <AppNav />
+      <TopBar />
       <main style={{ marginLeft: '220px', flex: 1, padding: '2rem', maxWidth: '100%' }}>
         {children}
       </main>

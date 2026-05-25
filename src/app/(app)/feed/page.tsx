@@ -297,10 +297,12 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editCommentContent, setEditCommentContent] = useState('')
 
+  const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
   const profile = post.profiles
   const initials = profile ? `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}` : '?'
   const formattedDate = new Date(post.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
   const isOwner = currentUserId === post.author_id
+  const isAdmin = post.author_id === ADMIN_ID
 
   useEffect(() => {
     loadReactions()
@@ -333,9 +335,30 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
       await supabase.from('reactions').delete().eq('post_id', post.id).eq('author_id', currentUserId)
       if (existing.emoji !== emoji) {
         await supabase.from('reactions').insert({ post_id: post.id, author_id: currentUserId, emoji })
+        // Notifier l'auteur du post (sauf si c'est soi-même)
+        if (post.author_id && post.author_id !== currentUserId) {
+          await supabase.from('notifications').insert({
+            user_id: post.author_id,
+            type: 'reaction',
+            message: `${post.profiles?.first_name || 'Quelqu\'un'} a réagi à ton post avec ${emoji}`,
+            post_id: post.id,
+            from_user_id: currentUserId,
+          })
+        }
       }
     } else {
       await supabase.from('reactions').insert({ post_id: post.id, author_id: currentUserId, emoji })
+      // Notifier l'auteur du post (sauf si c'est soi-même)
+      if (post.author_id && post.author_id !== currentUserId) {
+        const { data: reactor } = await supabase.from('profiles').select('first_name').eq('id', currentUserId).single()
+        await supabase.from('notifications').insert({
+          user_id: post.author_id,
+          type: 'reaction',
+          message: `${reactor?.first_name || 'Quelqu\'un'} a réagi à ton post avec ${emoji}`,
+          post_id: post.id,
+          from_user_id: currentUserId,
+        })
+      }
     }
     loadReactions()
   }
@@ -392,6 +415,17 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
     if (!comment.trim()) return
     const supabase = createClient()
     await supabase.from('comments').insert({ post_id: post.id, content: comment.trim(), author_id: currentUserId })
+    // Notifier l'auteur du post (sauf si c'est soi-même)
+    if (post.author_id && post.author_id !== currentUserId) {
+      const { data: commenter } = await supabase.from('profiles').select('first_name').eq('id', currentUserId).single()
+      await supabase.from('notifications').insert({
+        user_id: post.author_id,
+        type: 'comment',
+        message: `${commenter?.first_name || 'Quelqu\'un'} a commenté ton post`,
+        post_id: post.id,
+        from_user_id: currentUserId,
+      })
+    }
     setComment('')
     setCommentCount(c => c + 1)
     loadComments()
@@ -437,8 +471,11 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
             : initials}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.95rem' }}>
+          <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             {profile ? `${profile.first_name} ${profile.last_name}` : 'Membre'}
+            {isAdmin && (
+              <img src="/icons/badge-check.svg" alt="Admin" title="Fondateur Meello" style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+            )}
           </div>
           <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5 }}>
             {profile?.activity} · {formattedDate}
