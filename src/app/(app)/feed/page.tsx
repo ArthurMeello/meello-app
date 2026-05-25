@@ -44,7 +44,7 @@ export default function FeedPage() {
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto' }}>
       <h1 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.75rem', color: '#2D2D2D', marginBottom: '1.5rem' }}>
-        Feed
+        Fil d'actualité
       </h1>
 
       {/* Composer */}

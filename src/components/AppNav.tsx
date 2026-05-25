@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const NAV_ITEMS = [
-  { href: '/feed', label: 'Feed', icon: '🏠' },
+  { href: '/feed', label: "Fil d'actualité", icon: null, svg: '/icons/feed.svg' },
   { href: '/annuaire', label: 'Annuaire', icon: '👥' },
   { href: '/forum', label: 'Forum', icon: '💬' },
   { href: '/messages', label: 'Messages', icon: '✉️' },
@@ -84,7 +84,9 @@ export default function AppNav() {
                   transition: 'all 0.15s',
                 }}
               >
-                <span>{item.icon}</span>
+                {item.svg
+                  ? <img src={item.svg} alt={item.label} style={{ width: '20px', height: '20px', filter: active ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(1)', flexShrink: 0 }} />
+                  : <span>{item.icon}</span>}
                 <span>{item.label}</span>
               </Link>
             )

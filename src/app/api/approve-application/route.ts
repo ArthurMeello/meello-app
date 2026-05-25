@@ -45,10 +45,16 @@ export async function POST(req: NextRequest) {
     member_since: new Date().toISOString(),
   })
 
-  // 4. Mettre à jour le statut de la candidature
+  // 4. Publier un post de bienvenue dans le feed
+  await supabase.from('posts').insert({
+    author_id: ADMIN_ID,
+    content: `Bienvenue à ${app.first_name} ${app.last_name}, nouveau membre de la communauté Meello ! 🎉`,
+  })
+
+  // 5. Mettre à jour le statut de la candidature
   await supabase.from('applications').update({ status: 'approved' }).eq('id', app.id)
 
-  // 5. Auto-connexion avec Arthur
+  // 6. Auto-connexion avec Arthur
   const ARTHUR_ID = process.env.NEXT_PUBLIC_CREATOR_ID || ADMIN_ID
   if (ARTHUR_ID !== authData.user.id) {
     await supabase.from('connections').insert([
