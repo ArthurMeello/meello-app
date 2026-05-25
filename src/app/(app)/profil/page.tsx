@@ -300,21 +300,45 @@ export default function ProfilPage() {
             <div style={{ color: '#2D2D2D', opacity: 0.6, fontSize: '0.9rem' }}>{profile.activity}</div>
             {profile.city && <div style={{ color: '#2D2D2D', opacity: 0.45, fontSize: '0.82rem' }}>📍 {profile.city}</div>}
           </div>
-          <button
-            onClick={() => setEditing(!editing)}
-            style={{
-              backgroundColor: editing ? '#2D2D2D' : '#F5F0E8',
-              color: editing ? 'white' : '#2D2D2D',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '0.5rem 1rem',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-            }}
-          >
-            {editing ? 'Annuler' : 'Modifier'}
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <a
+              href={`/membre/${profile.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                backgroundColor: '#F5F0E8',
+                color: '#2D2D2D',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '0.5rem 1rem',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+              title="Voir mon profil public"
+            >
+              👁 Voir
+            </a>
+            <button
+              onClick={() => setEditing(!editing)}
+              style={{
+                backgroundColor: editing ? '#2D2D2D' : '#F5F0E8',
+                color: editing ? 'white' : '#2D2D2D',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '0.5rem 1rem',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+              }}
+            >
+              {editing ? 'Annuler' : 'Modifier'}
+            </button>
+          </div>
         </div>
 
         {/* Badges */}
