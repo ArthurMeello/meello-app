@@ -60,7 +60,7 @@ export default function MembrePublicPage() {
 
   const initials = `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}`.toUpperCase()
   const SOCIAL_LINKS = [
-    { key: 'website', icon: '🔗', label: 'Site web', svg: null },
+    { key: 'website', icon: null, label: 'Site web', svg: '/icons/website.svg' },
     { key: 'linkedin', icon: null, label: 'LinkedIn', svg: '/icons/linkedin.svg' },
     { key: 'instagram', icon: null, label: 'Instagram', svg: '/icons/instagram.svg' },
     { key: 'facebook', icon: null, label: 'Facebook', svg: '/icons/facebook.svg' },

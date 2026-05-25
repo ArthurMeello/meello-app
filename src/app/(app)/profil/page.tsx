@@ -510,7 +510,7 @@ export default function ProfilPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: 0 }}>{profile.bio}</p>}
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-              {profile.website && <a href={profile.website} target="_blank" rel="noopener noreferrer" title="Site web" style={socialLinkStyle}>🔗</a>}
+              {profile.website && <a href={profile.website} target="_blank" rel="noopener noreferrer" title="Site web" style={socialLinkStyle}><img src="/icons/website.svg" alt="Site web" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.linkedin && <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" style={socialLinkStyle}><img src="/icons/linkedin.svg" alt="LinkedIn" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.instagram && <a href={profile.instagram} target="_blank" rel="noopener noreferrer" title="Instagram" style={socialLinkStyle}><img src="/icons/instagram.svg" alt="Instagram" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.facebook && <a href={profile.facebook} target="_blank" rel="noopener noreferrer" title="Facebook" style={socialLinkStyle}><img src="/icons/facebook.svg" alt="Facebook" style={{ width: '20px', height: '20px' }} /></a>}
