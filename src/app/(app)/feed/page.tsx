@@ -142,9 +142,14 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
   const handleReaction = async (emoji: string) => {
     if (!currentUserId) return
     const supabase = createClient()
-    const already = reactions.find(r => r.emoji === emoji && r.author_id === currentUserId)
-    if (already) {
-      await supabase.from('reactions').delete().eq('post_id', post.id).eq('author_id', currentUserId).eq('emoji', emoji)
+    const existing = reactions.find(r => r.author_id === currentUserId)
+    if (existing) {
+      // Supprimer la réaction existante
+      await supabase.from('reactions').delete().eq('post_id', post.id).eq('author_id', currentUserId)
+      // Si c'était pas le même emoji, on met le nouveau
+      if (existing.emoji !== emoji) {
+        await supabase.from('reactions').insert({ post_id: post.id, author_id: currentUserId, emoji })
+      }
     } else {
       await supabase.from('reactions').insert({ post_id: post.id, author_id: currentUserId, emoji })
     }
