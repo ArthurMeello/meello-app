@@ -105,6 +105,14 @@ export default function AdminPage() {
     setSelectedApp(null)
   }
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Supprimer définitivement cette candidature ?')) return
+    const supabase = createClient()
+    await supabase.from('applications').delete().eq('id', id)
+    await fetchApplications()
+    setSelectedApp(null)
+  }
+
   const toggleBadge = async (member: Member, badge: string) => {
     const supabase = createClient()
     const current = member.badges || []
@@ -178,28 +186,42 @@ export default function AdminPage() {
                 <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5, marginBottom: '0.4rem' }}>Motivation</div>
                 <p style={{ margin: 0, lineHeight: 1.65, color: '#2D2D2D' }}>{selectedApp.why_join}</p>
               </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                {selectedApp.status === 'pending' && (
+                  <>
+                    <button
+                      onClick={() => handleApprove(selectedApp)}
+                      disabled={loading}
+                      style={{
+                        backgroundColor: '#7A9E7E', color: 'white', border: 'none',
+                        borderRadius: '10px', padding: '0.75rem 1.5rem', fontWeight: 700,
+                        cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.95rem',
+                      }}
+                    >
+                      {loading ? 'Traitement...' : 'Accepter'}
+                    </button>
+                    <button
+                      onClick={() => handleReject(selectedApp)}
+                      disabled={loading}
+                      style={{
+                        backgroundColor: '#FFF0ED', color: '#E8501A', border: '2px solid #E8501A',
+                        borderRadius: '10px', padding: '0.75rem 1.5rem', fontWeight: 700,
+                        cursor: 'pointer', fontSize: '0.95rem',
+                      }}
+                    >
+                      Refuser
+                    </button>
+                  </>
+                )}
                 <button
-                  onClick={() => handleApprove(selectedApp)}
-                  disabled={loading}
+                  onClick={() => handleDelete(selectedApp.id)}
                   style={{
-                    backgroundColor: '#7A9E7E', color: 'white', border: 'none',
+                    backgroundColor: '#F5F5F5', color: '#999', border: 'none',
                     borderRadius: '10px', padding: '0.75rem 1.5rem', fontWeight: 700,
-                    cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.95rem',
+                    cursor: 'pointer', fontSize: '0.95rem', marginLeft: selectedApp.status === 'pending' ? 'auto' : '0',
                   }}
                 >
-                  {loading ? 'Traitement...' : 'Accepter'}
-                </button>
-                <button
-                  onClick={() => handleReject(selectedApp)}
-                  disabled={loading}
-                  style={{
-                    backgroundColor: '#FFF0ED', color: '#E8501A', border: '2px solid #E8501A',
-                    borderRadius: '10px', padding: '0.75rem 1.5rem', fontWeight: 700,
-                    cursor: 'pointer', fontSize: '0.95rem',
-                  }}
-                >
-                  Refuser
+                  🗑 Supprimer
                 </button>
               </div>
             </div>
@@ -236,23 +258,30 @@ export default function AdminPage() {
                   <h3 style={{ color: '#2D2D2D', marginBottom: '0.75rem', fontWeight: 700, opacity: 0.6 }}>Traites ({processed.length})</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {processed.map(app => (
-                      <div key={app.id} style={{
-                        backgroundColor: 'white', borderRadius: '12px', padding: '0.85rem 1.25rem',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        borderLeft: `4px solid ${app.status === 'approved' ? '#7A9E7E' : '#ccc'}`,
-                        opacity: 0.7,
-                      }}>
+                      <div
+                        key={app.id}
+                        onClick={() => setSelectedApp(app)}
+                        style={{
+                          backgroundColor: 'white', borderRadius: '12px', padding: '0.85rem 1.25rem',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          borderLeft: `4px solid ${app.status === 'approved' ? '#7A9E7E' : '#ccc'}`,
+                          opacity: 0.8, cursor: 'pointer',
+                        }}
+                      >
                         <div>
                           <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.9rem' }}>{app.first_name} {app.last_name}</div>
                           <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5 }}>{app.activity} · {app.city}</div>
                         </div>
-                        <span style={{
-                          fontSize: '0.78rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '20px',
-                          backgroundColor: app.status === 'approved' ? '#E8F5E9' : '#F5F5F5',
-                          color: app.status === 'approved' ? '#7A9E7E' : '#999',
-                        }}>
-                          {app.status === 'approved' ? 'Accepte' : 'Refuse'}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{
+                            fontSize: '0.78rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '20px',
+                            backgroundColor: app.status === 'approved' ? '#E8F5E9' : '#F5F5F5',
+                            color: app.status === 'approved' ? '#7A9E7E' : '#999',
+                          }}>
+                            {app.status === 'approved' ? 'Accepté' : 'Refusé'}
+                          </span>
+                          <span style={{ color: '#2D2D2D', opacity: 0.3, fontSize: '0.85rem' }}>Voir →</span>
+                        </div>
                       </div>
                     ))}
                   </div>
