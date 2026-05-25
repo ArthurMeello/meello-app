@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { emailTemplate } from '@/lib/emailTemplate'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 
@@ -71,25 +72,11 @@ export async function POST(req: NextRequest) {
       sender: { name: 'Meello', email: 'hello@meello.fr' },
       to: [{ email: app.email, name: `${app.first_name} ${app.last_name}` }],
       subject: `Bienvenue dans Meello, ${app.first_name} !`,
-      htmlContent: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 2rem;">
-          <h1 style="color: #E8501A; font-size: 2rem; margin-bottom: 0.5rem;">meello</h1>
-          <h2 style="color: #2D2D2D; font-weight: 700;">Ta candidature a été acceptée !</h2>
-          <p style="color: #2D2D2D; line-height: 1.6;">
-            Bonjour ${app.first_name},<br><br>
-            Bonne nouvelle — tu fais maintenant partie de la communauté Meello !<br><br>
-            Clique sur le bouton ci-dessous pour accéder à ton espace :
-          </p>
-          <p style="margin: 2rem 0;">
-            <a href="${loginLink}" style="background: #E8501A; color: white; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 1rem;">
-              Accéder à Meello →
-            </a>
-          </p>
-          <p style="color: #2D2D2D; opacity: 0.6; font-size: 0.85rem;">
-            Ce lien est valable 24h. Si tu as des questions, réponds à cet email.
-          </p>
-        </div>
-      `,
+      htmlContent: emailTemplate({
+        firstName: app.first_name,
+        body: `Bonne nouvelle — ta candidature a été acceptée et tu fais maintenant partie de la communauté Meello !<br><br>Clique sur le bouton ci-dessous pour créer ton mot de passe et accéder à ton espace. Ce lien est valable 24h.`,
+        cta: { label: 'Accéder à Meello →', href: loginLink },
+      }),
     }),
   })
 

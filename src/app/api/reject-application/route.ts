@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { emailTemplate } from '@/lib/emailTemplate'
 
 const MOTIFS = {
   info: {
@@ -37,14 +38,10 @@ export async function POST(req: Request) {
       sender: { name: 'Meello', email: 'bonjour@meello.fr' },
       to: [{ email: app.email, name: `${app.first_name} ${app.last_name}` }],
       subject: 'Ta candidature Meello',
-      htmlContent: `
-        <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; color: #2D2D2D;">
-          <img src="https://app.meello.fr/logo-meello.webp" alt="Meello" style="height: 60px; margin-bottom: 2rem;" />
-          <p>Bonjour ${app.first_name},</p>
-          <p>${motifData.body}</p>
-          <p style="margin-top: 2rem; opacity: 0.6; font-size: 0.9rem;">L'équipe Meello</p>
-        </div>
-      `,
+      htmlContent: emailTemplate({
+        firstName: app.first_name,
+        body: motifData.body,
+      }),
     }),
   })
 
