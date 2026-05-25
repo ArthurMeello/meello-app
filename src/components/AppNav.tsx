@@ -109,7 +109,7 @@ export default function AppNav() {
                 fontSize: '0.95rem',
               }}
             >
-              <span>⚙️</span>
+              <img src="/icons/admin.svg" alt="Admin" style={{ width: '20px', height: '20px', filter: pathname.startsWith('/admin') ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(0.4)', flexShrink: 0 }} />
               <span>Admin</span>
             </Link>
           )}
