@@ -805,7 +805,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
 
   const totalReactions = reactions.length
 
-  // Rendu du contenu avec titre en gras et liens cliquables
+  // Rendu du contenu avec titre en gras, liens et @mentions cliquables
   const renderContent = (text: string) => {
     return text.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
       /^https?:\/\//.test(part)
@@ -814,6 +814,25 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
           ? <strong key={i}>{part.slice(2, -2)}</strong>
           : part
     )
+  }
+
+  // Rendu d'un texte de commentaire/réponse avec @mentions cliquables
+  const renderCommentText = (text: string) => {
+    return text.split(/@([^\s]+)/g).map((part, i) => {
+      if (i % 2 === 1) {
+        // C'est un nom après @
+        const tag = part.toLowerCase()
+        const member = allMembers.find(m =>
+          `${m.first_name}${m.last_name}`.toLowerCase() === tag ||
+          m.first_name.toLowerCase() === tag
+        )
+        if (member) {
+          return <a key={i} href={`/membre/${member.id}`} style={{ color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>@{part}</a>
+        }
+        return <span key={i} style={{ color: '#E8501A', fontWeight: 600 }}>@{part}</span>
+      }
+      return part
+    })
   }
 
   // Séparer titre et contenu si le post a un titre
@@ -1077,7 +1096,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                           onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
                         >{c.profiles?.first_name} {c.profiles?.last_name}</a>
                         {c.profiles?.activity && <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.5 }}>{c.profiles.activity}</div>}
-                        <div style={{ fontSize: '0.9rem', color: '#2D2D2D', marginTop: '0.2rem', lineHeight: 1.5 }}>{c.content}</div>
+                        <div style={{ fontSize: '0.9rem', color: '#2D2D2D', marginTop: '0.2rem', lineHeight: 1.5 }}>{renderCommentText(c.content)}</div>
                         <button
                           onClick={() => { setReplyingTo(replyingTo?.id === c.id ? null : { id: c.id, first_name: c.profiles?.first_name || '' }); setReplyContent('') }}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.45, padding: '0.2rem 0', marginTop: '0.15rem', fontWeight: 600 }}
@@ -1125,7 +1144,19 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                             onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
                           >{r.profiles?.first_name} {r.profiles?.last_name}</a>
                           {r.profiles?.activity && <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.5 }}>{r.profiles.activity}</div>}
-                          <div style={{ fontSize: '0.88rem', color: '#2D2D2D', marginTop: '0.15rem', lineHeight: 1.5 }}>{r.content}</div>
+                          <div style={{ fontSize: '0.88rem', color: '#2D2D2D', marginTop: '0.15rem', lineHeight: 1.5 }}>{renderCommentText(r.content)}</div>
+                          {/* Répondre à une réponse → même niveau, parent_id = c.id, pré-rempli @auteur */}
+                          <button
+                            onClick={() => {
+                              const tag = `@${r.profiles?.first_name || ''}${r.profiles?.last_name || ''} `
+                              setReplyingTo({ id: c.id, first_name: r.profiles?.first_name || '' })
+                              setReplyContent(tag)
+                              setTimeout(() => replyInputRef.current?.focus(), 50)
+                            }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, padding: '0.15rem 0', marginTop: '0.1rem', fontWeight: 600 }}
+                          >
+                            Répondre
+                          </button>
                         </div>
                       </div>
                       {r.author_id === currentUserId && (
@@ -1143,7 +1174,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                 </div>
               ))}
 
-              {/* Formulaire de réponse */}
+              {/* Formulaire de réponse (commun à toutes les réponses du thread) */}
               {replyingTo?.id === c.id && (
                 <form onSubmit={e => handleReply(e, c)} style={{ marginLeft: '2.5rem', marginTop: '0.4rem', marginBottom: '0.25rem', position: 'relative' }}>
                   {replyMentionSuggestions.length > 0 && (
