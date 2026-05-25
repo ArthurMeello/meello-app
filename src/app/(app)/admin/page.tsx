@@ -40,6 +40,8 @@ export default function AdminPage() {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null)
   const [authorized, setAuthorized] = useState(false)
   const [motif, setMotif] = useState('info')
+  const [memberSearch, setMemberSearch] = useState('')
+  const [memberBadgeFilter, setMemberBadgeFilter] = useState('')
   const router = useRouter()
 
   const MOTIFS = [
@@ -342,8 +344,52 @@ export default function AdminPage() {
 
       {/* Membres */}
       {tab === 'membres' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          {members.map(member => (
+        <div>
+          {/* Barre de recherche + filtres */}
+          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+            <input
+              value={memberSearch}
+              onChange={e => setMemberSearch(e.target.value)}
+              placeholder="🔍 Rechercher par nom, email, ville, activité..."
+              style={{
+                flex: 1, minWidth: '220px', padding: '0.65rem 1rem',
+                border: '2px solid #E8E3D9', borderRadius: '10px',
+                fontSize: '0.9rem', fontFamily: 'inherit', outline: 'none',
+                backgroundColor: 'white',
+              }}
+            />
+            <select
+              value={memberBadgeFilter}
+              onChange={e => setMemberBadgeFilter(e.target.value)}
+              style={{
+                padding: '0.65rem 1rem', border: '2px solid #E8E3D9', borderRadius: '10px',
+                fontSize: '0.9rem', fontFamily: 'inherit', outline: 'none',
+                backgroundColor: 'white', cursor: 'pointer',
+              }}
+            >
+              <option value="">Tous les badges</option>
+              <option value="fondateur">Fondateur</option>
+              <option value="partenaire">Partenaire</option>
+              <option value="nouveau">Nouveau</option>
+              <option value="profil_complet">Profil complet</option>
+            </select>
+          </div>
+
+          {/* Résultats filtrés */}
+          {(() => {
+            const q = memberSearch.toLowerCase()
+            const filtered = members.filter(m => {
+              const matchSearch = !q || [m.first_name, m.last_name, m.email, m.activity, m.city].some(v => v?.toLowerCase().includes(q))
+              const matchBadge = !memberBadgeFilter || (m.badges || []).includes(memberBadgeFilter)
+              return matchSearch && matchBadge
+            })
+            return (
+              <>
+                <div style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.4, marginBottom: '0.75rem' }}>
+                  {filtered.length} membre{filtered.length > 1 ? 's' : ''} affiché{filtered.length > 1 ? 's' : ''}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  {filtered.map(member => (
             <div key={member.id} style={{
               backgroundColor: 'white', borderRadius: '12px', padding: '0.85rem 1.25rem',
               boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
@@ -375,6 +421,10 @@ export default function AdminPage() {
               </div>
             </div>
           ))}
+                </div>
+              </>
+            )
+          })()}
         </div>
       )}
     </div>
