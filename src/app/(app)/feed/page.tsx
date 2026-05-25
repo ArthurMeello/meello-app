@@ -300,11 +300,13 @@ function PostCard({ post, currentUserId, onRefresh }: { post: Post, currentUserI
 
       {/* Image */}
       {post.image_url && (
-        <img
-          src={post.image_url}
-          alt=""
-          style={{ width: '100%', borderRadius: '10px', objectFit: 'cover', maxHeight: '400px', display: 'block', marginBottom: '0.75rem' }}
-        />
+        <div style={{ borderRadius: '10px', overflow: 'hidden', maxHeight: '400px', marginBottom: '0.75rem', backgroundColor: '#F5F0E8' }}>
+          <img
+            src={post.image_url}
+            alt=""
+            style={{ width: '100%', height: '400px', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
+          />
+        </div>
       )}
 
       {/* Réactions + Commenter */}
