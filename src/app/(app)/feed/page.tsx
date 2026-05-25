@@ -236,15 +236,19 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
               <button
                 type="button"
                 onClick={() => { fileRef.current.accept = 'image/*'; fileRef.current?.click() }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.3rem', opacity: 0.4, padding: 0 }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
                 title="Ajouter une image"
-              >🖼</button>
+              >
+                <img src="/icons/image.svg" alt="Image" style={{ width: '26px', height: '26px', opacity: 0.4, filter: 'brightness(0)' }} />
+              </button>
               <button
                 type="button"
                 onClick={() => { fileRef.current.accept = 'video/*'; fileRef.current?.click() }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.3rem', opacity: 0.4, padding: 0 }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
                 title="Ajouter une vidéo"
-              >🎬</button>
+              >
+                <img src="/icons/video.svg" alt="Vidéo" style={{ width: '26px', height: '26px', opacity: 0.4, filter: 'brightness(0)' }} />
+              </button>
             </div>
             <input
               ref={fileRef}
