@@ -85,7 +85,7 @@ export default function MessagesPage() {
     setActiveConv(conv)
     const supabase = createClient()
     const { data } = await supabase
-      .from('messages')
+      .from('meello_messages')
       .select('id, content, sender_id, created_at')
       .eq('conversation_id', conv.id)
       .order('created_at', { ascending: true })
@@ -97,7 +97,7 @@ export default function MessagesPage() {
     if (!newMessage.trim() || !activeConv || !userId) return
 
     const supabase = createClient()
-    await supabase.from('messages').insert({
+    await supabase.from('meello_messages').insert({
       conversation_id: activeConv.id,
       sender_id: userId,
       content: newMessage.trim(),
