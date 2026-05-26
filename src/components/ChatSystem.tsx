@@ -611,8 +611,18 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
               const showEnvoyeId = (!lastReadMsg || lastSentMsg?.id !== lastReadMsg?.id) ? lastSentMsg?.id : null
               return messages.map((msg, i) => {
                 const isMe = msg.sender_id === userId
+                const prevMsg = messages[i - 1]
+                const showAvatar = !isMe && (!prevMsg || prevMsg.sender_id !== msg.sender_id)
                 return (
                   <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                    <div style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '0.4rem', width: '100%' }}>
+                      {!isMe && (
+                        <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.55rem', overflow: 'hidden', flexShrink: 0, opacity: showAvatar ? 1 : 0 }}>
+                          {activeConv.other_user?.avatar_url
+                            ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`}
+                        </div>
+                      )}
                     <div style={{
                       backgroundColor: isMe ? '#E8501A' : '#F5F0E8',
                       color: isMe ? 'white' : '#2D2D2D',
@@ -625,6 +635,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
                       whiteSpace: 'pre-wrap',
                     }}>
                       {renderMessageContent(msg.content, isMe)}
+                    </div>
                     </div>
                     {isMe && msg.id === showLuId && (
                       <span style={{ fontSize: '0.65rem', color: '#2D2D2D', opacity: 0.4, marginTop: '2px' }}>Lu</span>
