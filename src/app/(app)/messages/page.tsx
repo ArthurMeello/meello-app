@@ -25,6 +25,8 @@ interface Message {
   created_at: string
 }
 
+const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+
 export default function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConv, setActiveConv] = useState<Conversation | null>(null)
@@ -32,6 +34,7 @@ export default function MessagesPage() {
   const [newMessage, setNewMessage] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -49,40 +52,59 @@ export default function MessagesPage() {
 
   const fetchConversations = async (uid: string) => {
     const supabase = createClient()
-    // Étape 1 : récupérer les conversations
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('conversations')
       .select('id, last_message, last_message_at, participant1_id, participant2_id')
       .or(`participant1_id.eq.${uid},participant2_id.eq.${uid}`)
       .order('last_message_at', { ascending: false })
 
-    console.log('conversations:', data, 'error:', error)
     if (!data || data.length === 0) return
 
-    // Étape 2 : récupérer les profils des autres participants
     const otherIds = data.map((c: any) => c.participant1_id === uid ? c.participant2_id : c.participant1_id)
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, first_name, last_name, avatar_url, activity')
       .in('id', otherIds)
-
     const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, p]))
+
+    // Notifs non lues
+    const { data: unreadNotifs } = await supabase
+      .from('notifications')
+      .select('from_user_id')
+      .eq('user_id', uid)
+      .eq('type', 'message')
+      .eq('read', false)
+    const unreadSenderIds = new Set((unreadNotifs || []).map((n: any) => n.from_user_id))
+
+    // Dernier message reçu par conversation
+    const convIds = data.map((c: any) => c.id)
+    const { data: lastReceivedMsgs } = await supabase
+      .from('meello_messages')
+      .select('conversation_id, content')
+      .in('conversation_id', convIds)
+      .neq('sender_id', uid)
+      .order('created_at', { ascending: false })
+    const lastReceivedMap: Record<string, string> = {}
+    for (const msg of (lastReceivedMsgs || [])) {
+      if (!lastReceivedMap[msg.conversation_id]) lastReceivedMap[msg.conversation_id] = msg.content
+    }
 
     const convs = data.map((c: any) => {
       const otherId = c.participant1_id === uid ? c.participant2_id : c.participant1_id
+      const isUnread = unreadSenderIds.has(otherId)
       return {
         id: c.id,
         other_user: profileMap[otherId] || null,
-        last_message: c.last_message || '',
+        last_message: isUnread ? (lastReceivedMap[c.id] || c.last_message || '') : (c.last_message || ''),
         last_message_at: c.last_message_at || '',
-        unread: false,
+        unread: isUnread,
       }
     })
     setConversations(convs)
   }
 
   const openConversation = async (conv: Conversation) => {
-    setActiveConv(conv)
+    setActiveConv({ ...conv, unread: false })
     const supabase = createClient()
     const { data } = await supabase
       .from('meello_messages')
@@ -90,12 +112,22 @@ export default function MessagesPage() {
       .eq('conversation_id', conv.id)
       .order('created_at', { ascending: true })
     if (data) setMessages(data)
+
+    // Marquer notifs comme lues
+    if (userId && conv.other_user?.id) {
+      await supabase.from('notifications')
+        .update({ read: true })
+        .eq('user_id', userId)
+        .eq('type', 'message')
+        .eq('from_user_id', conv.other_user.id)
+        .eq('read', false)
+      setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread: false } : c))
+    }
   }
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim() || !activeConv || !userId) return
-
     const supabase = createClient()
     const msgContent = newMessage.trim()
 
@@ -109,44 +141,68 @@ export default function MessagesPage() {
       last_message_at: new Date().toISOString(),
     }).eq('id', activeConv.id)
 
-    // Notifier le destinataire
     const receiverId = activeConv.other_user?.id
     if (receiverId && receiverId !== userId) {
-      await supabase.from('notifications').insert({
-        user_id: receiverId,
-        type: 'message',
-        content: `t'a envoyé un message`,
-        link: `/messages`,
-        from_user_id: userId,
-      })
+      const { data: existing } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', receiverId)
+        .eq('type', 'message')
+        .eq('from_user_id', userId)
+        .eq('read', false)
+        .single()
+      if (!existing) {
+        await supabase.from('notifications').insert({
+          user_id: receiverId,
+          type: 'message',
+          content: `t'a envoyé un message`,
+          link: `/messages`,
+          from_user_id: userId,
+        })
+      }
     }
 
     setMessages(prev => [...prev, {
       id: Date.now().toString(),
-      content: newMessage.trim(),
+      content: msgContent,
       sender_id: userId,
       created_at: new Date().toISOString(),
     }])
     setNewMessage('')
+    if (inputRef.current) inputRef.current.style.height = 'auto'
     fetchConversations(userId)
   }
 
+  const renderContent = (text: string, isMe: boolean) =>
+    text.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+      /^https?:\/\//.test(part)
+        ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: isMe ? 'rgba(255,255,255,0.9)' : '#E8501A', textDecoration: 'underline', wordBreak: 'break-all' }}>{part}</a>
+        : <span key={i}>{part}</span>
+    )
+
+  const formatTime = (d: string) => {
+    if (!d) return ''
+    const date = new Date(d)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    if (diff < 60000) return 'à l\'instant'
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}min`
+    if (diff < 86400000) return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  }
+
   return (
-    <div style={{ height: 'calc(100vh - 4rem)', display: 'flex', gap: '1rem', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ height: 'calc(100vh - 4rem)', display: 'flex', gap: '1rem', maxWidth: '960px', margin: '0 auto' }}>
 
       {/* Liste conversations */}
       <div style={{
-        width: '300px',
-        flexShrink: 0,
-        backgroundColor: 'white',
-        borderRadius: '16px',
-        overflow: 'hidden',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-        display: 'flex',
-        flexDirection: 'column',
+        width: '300px', flexShrink: 0,
+        backgroundColor: 'white', borderRadius: '16px',
+        overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+        display: 'flex', flexDirection: 'column',
       }}>
         <div style={{ padding: '1.25rem', borderBottom: '1px solid #F5F0E8' }}>
-          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>Messages</h2>
+          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>Conversations</h2>
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {conversations.length === 0 && (
@@ -159,22 +215,45 @@ export default function MessagesPage() {
               key={conv.id}
               onClick={() => openConversation(conv)}
               style={{
+                display: 'flex', alignItems: 'center', gap: '0.75rem',
                 padding: '0.85rem 1.25rem',
                 cursor: 'pointer',
-                backgroundColor: activeConv?.id === conv.id ? '#FFF0ED' : 'transparent',
+                backgroundColor: activeConv?.id === conv.id ? '#FFF0ED' : conv.unread ? 'rgba(232,80,26,0.04)' : 'transparent',
                 borderLeft: activeConv?.id === conv.id ? '3px solid #E8501A' : '3px solid transparent',
                 transition: 'background 0.15s',
               }}
             >
-              <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                {conv.other_user?.first_name} {conv.other_user?.last_name}
-                {conv.other_user?.id === '13cdb485-42e0-48df-b2f8-14dc77dd895a' && (
-                  <img src="/icons/badge-check.svg" alt="Admin" title="Fondateur Meello" style={{ width: '14px', height: '14px', flexShrink: 0 }} />
-                )}
+              {/* Avatar */}
+              <div style={{
+                width: '42px', height: '42px', borderRadius: '50%',
+                backgroundColor: '#E8501A', color: 'white', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 700, fontSize: '0.82rem', overflow: 'hidden',
+              }}>
+                {conv.other_user?.avatar_url
+                  ? <img src={conv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : `${(conv.other_user?.first_name || '?')[0]}${(conv.other_user?.last_name || '')[0] || ''}`
+                }
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {conv.last_message || 'Aucun message'}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                  <div style={{ fontWeight: conv.unread ? 700 : 600, color: '#2D2D2D', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    {conv.other_user?.first_name} {conv.other_user?.last_name}
+                    {conv.other_user?.id === ADMIN_ID && (
+                      <img src="/icons/badge-check.svg" alt="" style={{ width: '13px', height: '13px' }} />
+                    )}
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, flexShrink: 0 }}>
+                    {formatTime(conv.last_message_at)}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: conv.unread ? 0.9 : 0.5, fontWeight: conv.unread ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {conv.last_message || 'Aucun message'}
+                </div>
               </div>
+              {conv.unread && (
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#E8501A', flexShrink: 0 }} />
+              )}
             </div>
           ))}
         </div>
@@ -182,45 +261,66 @@ export default function MessagesPage() {
 
       {/* Conversation active */}
       <div style={{
-        flex: 1,
-        backgroundColor: 'white',
-        borderRadius: '16px',
+        flex: 1, backgroundColor: 'white', borderRadius: '16px',
         boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         {!activeConv ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2D2D2D', opacity: 0.3, fontSize: '0.95rem' }}>
-            Selectionne une conversation
+            Sélectionne une conversation
           </div>
         ) : (
           <>
-            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #F5F0E8', fontWeight: 700, color: '#2D2D2D' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                {activeConv.other_user?.first_name} {activeConv.other_user?.last_name}
-                {activeConv.other_user?.id === '13cdb485-42e0-48df-b2f8-14dc77dd895a' && (
-                  <img src="/icons/badge-check.svg" alt="Admin" title="Fondateur Meello" style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+            {/* Header */}
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', overflow: 'hidden', flexShrink: 0 }}>
+                {activeConv.other_user?.avatar_url
+                  ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`
+                }
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, color: '#2D2D2D', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  {activeConv.other_user?.first_name} {activeConv.other_user?.last_name}
+                  {activeConv.other_user?.id === ADMIN_ID && (
+                    <img src="/icons/badge-check.svg" alt="" style={{ width: '16px', height: '16px' }} />
+                  )}
+                </div>
+                {activeConv.other_user?.activity && (
+                  <div style={{ fontSize: '0.78rem', opacity: 0.5, color: '#2D2D2D' }}>{activeConv.other_user.activity}</div>
                 )}
               </div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 400, opacity: 0.5 }}>{activeConv.other_user?.activity}</div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {messages.map(msg => {
+            {/* Messages */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', paddingBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {messages.map((msg, i) => {
                 const isMe = msg.sender_id === userId
+                const prevMsg = messages[i - 1]
+                const showAvatar = !isMe && (!prevMsg || prevMsg.sender_id !== msg.sender_id)
                 return (
-                  <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                  <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '0.5rem' }}>
+                    {/* Avatar à gauche pour les messages reçus */}
+                    {!isMe && (
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.6rem', overflow: 'hidden', flexShrink: 0, opacity: showAvatar ? 1 : 0 }}>
+                        {activeConv.other_user?.avatar_url
+                          ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`
+                        }
+                      </div>
+                    )}
                     <div style={{
                       backgroundColor: isMe ? '#E8501A' : '#F5F0E8',
                       color: isMe ? 'white' : '#2D2D2D',
-                      padding: '0.6rem 0.9rem',
+                      padding: '0.55rem 0.85rem',
                       borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                      maxWidth: '70%',
+                      maxWidth: '65%',
                       fontSize: '0.9rem',
                       lineHeight: 1.5,
+                      wordBreak: 'break-word',
+                      whiteSpace: 'pre-wrap',
                     }}>
-                      {msg.content}
+                      {renderContent(msg.content, isMe)}
                     </div>
                   </div>
                 )
@@ -228,30 +328,38 @@ export default function MessagesPage() {
               <div ref={bottomRef} />
             </div>
 
-            <form onSubmit={sendMessage} style={{ padding: '0.85rem 1rem', borderTop: '1px solid #F5F0E8', display: 'flex', gap: '0.5rem' }}>
-              <input
+            {/* Input */}
+            <form onSubmit={sendMessage} style={{ padding: '0.85rem 1rem', borderTop: '1px solid #F5F0E8', display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+              <textarea
+                ref={inputRef}
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Envoie un message..."
+                onChange={e => {
+                  setNewMessage(e.target.value)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(e as any) }
+                }}
+                placeholder="Envoie un message…"
+                rows={1}
                 style={{
-                  flex: 1,
-                  border: '2px solid #E8E3D9',
-                  borderRadius: '10px',
-                  padding: '0.6rem 0.9rem',
-                  fontSize: '0.95rem',
-                  outline: 'none',
+                  flex: 1, border: '2px solid #E8E3D9', borderRadius: '10px',
+                  padding: '0.6rem 0.9rem', fontSize: '0.95rem', outline: 'none',
+                  fontFamily: 'inherit', resize: 'none', overflow: 'hidden',
+                  minHeight: '42px', lineHeight: '1.4',
                 }}
               />
               <button
                 type="submit"
+                disabled={!newMessage.trim()}
                 style={{
-                  backgroundColor: '#E8501A',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '0.6rem 1.1rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
+                  backgroundColor: newMessage.trim() ? '#E8501A' : '#E8E3D9',
+                  color: newMessage.trim() ? 'white' : '#999',
+                  border: 'none', borderRadius: '10px',
+                  padding: '0.6rem 1.1rem', fontWeight: 600,
+                  cursor: newMessage.trim() ? 'pointer' : 'default',
+                  height: '42px', flexShrink: 0, transition: 'all 0.15s',
                 }}
               >
                 Envoyer
