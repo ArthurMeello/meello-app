@@ -29,6 +29,7 @@ export default function MembrePublicPage() {
   const [recoLoading, setRecoLoading] = useState(false)
   const [alreadyRecommended, setAlreadyRecommended] = useState(false)
   const [editingRecoId, setEditingRecoId] = useState<string | null>(null)
+  const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
   const router = useRouter()
 
   useEffect(() => {
@@ -369,15 +370,31 @@ export default function MembrePublicPage() {
                     </div>
                   </a>
                 </div>
-                {r.author_id === currentUserId && (
-                  <button
-                    onClick={() => { setEditingRecoId(r.id); setRecoText(r.content); setRecoModal(true) }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem', flexShrink: 0, display: 'flex', alignItems: 'center' }}
-                    title="Modifier ma recommandation"
-                  >
-                    <img src="/icons/edit.svg" alt="Modifier" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
-                  </button>
-                )}
+                <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                  {r.author_id === currentUserId && (
+                    <button
+                      onClick={() => { setEditingRecoId(r.id); setRecoText(r.content); setRecoModal(true) }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
+                      title="Modifier ma recommandation"
+                    >
+                      <img src="/icons/edit.svg" alt="Modifier" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
+                    </button>
+                  )}
+                  {currentUserId === ADMIN_ID && (
+                    <button
+                      onClick={async () => {
+                        if (!confirm('Supprimer cette recommandation ?')) return
+                        const supabase = createClient()
+                        await supabase.from('recommendations').delete().eq('id', r.id)
+                        setRecos(prev => prev.filter(x => x.id !== r.id))
+                      }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
+                      title="Supprimer cette recommandation"
+                    >
+                      <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
