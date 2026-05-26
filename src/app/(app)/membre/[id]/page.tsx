@@ -27,6 +27,7 @@ export default function MembrePublicPage() {
   const [recoModal, setRecoModal] = useState(false)
   const [recoText, setRecoText] = useState('')
   const [recoLoading, setRecoLoading] = useState(false)
+  const [alreadyRecommended, setAlreadyRecommended] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -63,6 +64,17 @@ export default function MembrePublicPage() {
         .eq('target_id', id)
         .order('created_at', { ascending: false })
       if (recoData) setRecos(recoData)
+
+      // Vérifier si déjà recommandé
+      if (user && user.id !== id) {
+        const { data: existingReco } = await supabase
+          .from('recommendations')
+          .select('id')
+          .eq('target_id', id)
+          .eq('author_id', user.id)
+          .single()
+        if (existingReco) setAlreadyRecommended(true)
+      }
 
       // Vérifier la connexion
       if (user && user.id !== id) {
@@ -139,7 +151,7 @@ export default function MembrePublicPage() {
       .select('id, content, profiles!recommendations_author_id_fkey(first_name, last_name)')
       .eq('target_id', id).order('created_at', { ascending: false })
     if (recoData) setRecos(recoData)
-    setRecoText(''); setRecoModal(false); setRecoLoading(false)
+    setRecoText(''); setRecoModal(false); setRecoLoading(false); setAlreadyRecommended(true)
   }
 
   if (loading) return (
@@ -216,8 +228,12 @@ export default function MembrePublicPage() {
                 <button onClick={openMessage} style={{ background: 'none', border: '1.5px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', color: '#2D2D2D' }}>
                   ✉️ Message
                 </button>
-                <button onClick={() => setRecoModal(true)} style={{ background: 'none', border: '1.5px solid #E8501A', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', color: '#E8501A' }}>
-                  ⭐️ Recommander
+                <button
+                  onClick={() => !alreadyRecommended && setRecoModal(true)}
+                  disabled={alreadyRecommended}
+                  style={{ background: 'none', border: `1.5px solid ${alreadyRecommended ? '#ccc' : '#E8501A'}`, borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: alreadyRecommended ? 'default' : 'pointer', fontSize: '0.85rem', color: alreadyRecommended ? '#aaa' : '#E8501A' }}
+                >
+                  {alreadyRecommended ? 'Déjà recommandé' : '⭐️ Recommander'}
                 </button>
               </>
             )}
