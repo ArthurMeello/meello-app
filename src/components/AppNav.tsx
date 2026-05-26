@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { href: '/feed', label: "Fil d'actualité", icon: null, svg: '/icons/feed.svg' },
   { href: '/annuaire', label: 'Annuaire', icon: '👥' },
   { href: '/forum', label: 'Forum', icon: '💬' },
-  { href: '/messages', label: 'Messages', icon: '✉️' },
+  { href: '/messages', label: 'Conversations', icon: '✉️' },
   { href: '/reseau', label: 'Mon Réseau', icon: null, svg: '/icons/network.svg' },
 ]
 
