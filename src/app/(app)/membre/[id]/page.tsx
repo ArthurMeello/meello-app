@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -20,6 +20,7 @@ export default function MembrePublicPage() {
   const [portfolio, setPortfolio] = useState([])
   const [services, setServices] = useState([])
   const [recos, setRecos] = useState([])
+  const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending_sent' | 'pending_received' | 'accepted'>('none')
@@ -30,8 +31,16 @@ export default function MembrePublicPage() {
   const [alreadyRecommended, setAlreadyRecommended] = useState(false)
   const [proofFile, setProofFile] = useState<File | null>(null)
   const [editingRecoId, setEditingRecoId] = useState<string | null>(null)
+  // Modale publications
+  const [postsModal, setPostsModal] = useState(false)
+  const [allPosts, setAllPosts] = useState([])
+  const [postsPage, setPostsPage] = useState(0)
+  const [postsHasMore, setPostsHasMore] = useState(true)
+  const [postsLoading, setPostsLoading] = useState(false)
+  const postsBottomRef = useRef<HTMLDivElement>(null)
+
   const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
-  const router = useRouter()
+  const POSTS_PER_PAGE = 10
 
   useEffect(() => {
     const load = async () => {
@@ -40,53 +49,27 @@ export default function MembrePublicPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) setCurrentUserId(user.id)
 
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', id)
-        .single()
+      const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).single()
       if (prof) setProfile(prof)
 
-      const { data: portfolioData } = await supabase
-        .from('portfolio_items')
-        .select('id, title, description, media_url, link')
-        .eq('profile_id', id)
-        .order('created_at', { ascending: false })
+      const { data: portfolioData } = await supabase.from('portfolio_items').select('id, title, description, media_url, link').eq('profile_id', id).order('created_at', { ascending: false })
       if (portfolioData) setPortfolio(portfolioData)
 
-      const { data: servicesData } = await supabase
-        .from('service_items')
-        .select('id, title, description, image_url, price, link, link_label')
-        .eq('profile_id', id)
-        .order('created_at', { ascending: false })
+      const { data: servicesData } = await supabase.from('service_items').select('id, title, description, image_url, price, link, link_label').eq('profile_id', id).order('created_at', { ascending: false })
       if (servicesData) setServices(servicesData)
 
-      const { data: recoData } = await supabase
-        .from('recommendations')
-        .select('id, content, author_id, profiles!recommendations_author_id_fkey(first_name, last_name, avatar_url, activity)')
-        .eq('target_id', id)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false })
+      const { data: recoData } = await supabase.from('recommendations').select('id, content, author_id, profiles!recommendations_author_id_fkey(first_name, last_name, avatar_url, activity)').eq('target_id', id).eq('status', 'approved').order('created_at', { ascending: false })
       if (recoData) setRecos(recoData)
 
-      // Vérifier si déjà recommandé
-      if (user && user.id !== id) {
-        const { data: existingReco } = await supabase
-          .from('recommendations')
-          .select('id')
-          .eq('target_id', id)
-          .eq('author_id', user.id)
-          .single()
-        if (existingReco) setAlreadyRecommended(true)
-      }
+      // 2 derniers posts
+      const { data: postsData } = await supabase.from('posts').select('id, content, image_url, created_at').eq('author_id', id).order('created_at', { ascending: false }).limit(2)
+      if (postsData) setPosts(postsData)
 
-      // Vérifier la connexion
       if (user && user.id !== id) {
-        const { data: conn } = await supabase
-          .from('connections')
-          .select('id, status, requester_id')
-          .or(`and(requester_id.eq.${user.id},receiver_id.eq.${id}),and(requester_id.eq.${id},receiver_id.eq.${user.id})`)
-          .single()
+        const { data: existingReco } = await supabase.from('recommendations').select('id').eq('target_id', id).eq('author_id', user.id).single()
+        if (existingReco) setAlreadyRecommended(true)
+
+        const { data: conn } = await supabase.from('connections').select('id, status, requester_id').or(`and(requester_id.eq.${user.id},receiver_id.eq.${id}),and(requester_id.eq.${id},receiver_id.eq.${user.id})`).single()
         if (conn) {
           setConnectionId(conn.id)
           if (conn.status === 'accepted') setConnectionStatus('accepted')
@@ -100,395 +83,370 @@ export default function MembrePublicPage() {
     load()
   }, [id])
 
+  const loadMorePosts = useCallback(async () => {
+    if (postsLoading || !postsHasMore) return
+    setPostsLoading(true)
+    const supabase = createClient()
+    const from = postsPage * POSTS_PER_PAGE
+    const { data } = await supabase.from('posts').select('id, content, image_url, created_at').eq('author_id', id).order('created_at', { ascending: false }).range(from, from + POSTS_PER_PAGE - 1)
+    if (data) {
+      setAllPosts(prev => [...prev, ...data])
+      if (data.length < POSTS_PER_PAGE) setPostsHasMore(false)
+      setPostsPage(p => p + 1)
+    }
+    setPostsLoading(false)
+  }, [postsPage, postsLoading, postsHasMore, id])
+
+  // Scroll infini dans la modale
+  useEffect(() => {
+    if (!postsModal) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) loadMorePosts()
+    }, { threshold: 0.5 })
+    if (postsBottomRef.current) observer.observe(postsBottomRef.current)
+    return () => observer.disconnect()
+  }, [postsModal, loadMorePosts])
+
+  const openPostsModal = () => {
+    setAllPosts([])
+    setPostsPage(0)
+    setPostsHasMore(true)
+    setPostsModal(true)
+    // Déclencher le premier chargement
+    setTimeout(() => {
+      const supabase = createClient()
+      supabase.from('posts').select('id, content, image_url, created_at').eq('author_id', id).order('created_at', { ascending: false }).range(0, POSTS_PER_PAGE - 1).then(({ data }) => {
+        if (data) {
+          setAllPosts(data)
+          if (data.length < POSTS_PER_PAGE) setPostsHasMore(false)
+          setPostsPage(1)
+        }
+      })
+    }, 50)
+  }
+
   const sendConnectionRequest = async () => {
     const supabase = createClient()
-    const { data } = await supabase.from('connections').insert({
-      requester_id: currentUserId,
-      receiver_id: id,
-      status: 'pending',
-    }).select('id').single()
+    const { data } = await supabase.from('connections').insert({ requester_id: currentUserId, receiver_id: id, status: 'pending' }).select('id').single()
     if (data) {
       setConnectionId(data.id)
       setConnectionStatus('pending_sent')
-      // Notifier le destinataire
-      await supabase.from('notifications').insert({
-        user_id: id,
-        type: 'connection',
-        content: `t'a envoyé une demande de connexion`,
-        link: `/reseau`,
-        from_user_id: currentUserId,
-      })
+      await supabase.from('notifications').insert({ user_id: id, type: 'connection', content: `t'a envoyé une demande de connexion`, link: `/reseau`, from_user_id: currentUserId })
     }
   }
 
   const acceptConnection = async () => {
     const supabase = createClient()
     await supabase.from('connections').update({ status: 'accepted' }).eq('id', connectionId)
-    // Créer la conversation
-    const { data: existing } = await supabase.from('conversations').select('id')
-      .or(`and(participant1_id.eq.${currentUserId},participant2_id.eq.${id}),and(participant1_id.eq.${id},participant2_id.eq.${currentUserId})`)
-      .single()
+    const { data: existing } = await supabase.from('conversations').select('id').or(`and(participant1_id.eq.${currentUserId},participant2_id.eq.${id}),and(participant1_id.eq.${id},participant2_id.eq.${currentUserId})`).single()
     if (!existing) await supabase.from('conversations').insert({ participant1_id: currentUserId, participant2_id: id })
     setConnectionStatus('accepted')
   }
 
   const openMessage = async () => {
     const supabase = createClient()
-    let convId: string | null = null
-    const { data: existing } = await supabase.from('conversations').select('id')
-      .or(`and(participant1_id.eq.${currentUserId},participant2_id.eq.${id}),and(participant1_id.eq.${id},participant2_id.eq.${currentUserId})`)
-      .single()
-    if (existing) {
-      convId = existing.id
-    } else {
+    const { data: existing } = await supabase.from('conversations').select('id').or(`and(participant1_id.eq.${currentUserId},participant2_id.eq.${id}),and(participant1_id.eq.${id},participant2_id.eq.${currentUserId})`).single()
+    let convId = existing?.id
+    if (!convId) {
       const { data: created } = await supabase.from('conversations').insert({ participant1_id: currentUserId, participant2_id: id }).select('id').single()
       if (created) convId = created.id
     }
-    if (convId) {
-      window.dispatchEvent(new CustomEvent('meello:open-conv', { detail: convId }))
-    }
+    if (convId) window.dispatchEvent(new CustomEvent('meello:open-conv', { detail: convId }))
   }
 
   const sendReco = async () => {
     if (!recoText.trim()) return
     setRecoLoading(true)
     const supabase = createClient()
-
     if (editingRecoId) {
-      // Mode édition
       await supabase.from('recommendations').update({ content: recoText.trim() }).eq('id', editingRecoId)
     } else {
-      // Upload justificatif si présent
       let proof_url = null
       if (proofFile) {
         const ext = proofFile.name.split('.').pop()
         const path = `${currentUserId}/${Date.now()}.${ext}`
         const { error } = await supabase.storage.from('proofs').upload(path, proofFile, { upsert: true })
-        if (!error) {
-          const { data: urlData } = supabase.storage.from('proofs').getPublicUrl(path)
-          proof_url = urlData.publicUrl
-        }
+        if (!error) { const { data: urlData } = supabase.storage.from('proofs').getPublicUrl(path); proof_url = urlData.publicUrl }
       }
-      // Nouvelle reco — status pending par défaut
       await supabase.from('recommendations').insert({ target_id: id, author_id: currentUserId, content: recoText.trim(), proof_url, status: 'pending' })
-      await supabase.from('notifications').insert({
-        user_id: id, type: 'recommendation', content: `t'a laissé une recommandation (en attente de validation)`,
-        link: `/membre/${id}`, from_user_id: currentUserId,
-      })
+      await supabase.from('notifications').insert({ user_id: id, type: 'recommendation', content: `t'a laissé une recommandation (en attente de validation)`, link: `/membre/${id}`, from_user_id: currentUserId })
       setAlreadyRecommended(true)
     }
-
-    // Recharger les recos
-    const { data: recoData } = await supabase.from('recommendations')
-      .select('id, content, author_id, profiles!recommendations_author_id_fkey(first_name, last_name, avatar_url, activity)')
-      .eq('target_id', id).eq('status', 'approved').order('created_at', { ascending: false })
+    const { data: recoData } = await supabase.from('recommendations').select('id, content, author_id, profiles!recommendations_author_id_fkey(first_name, last_name, avatar_url, activity)').eq('target_id', id).eq('status', 'approved').order('created_at', { ascending: false })
     if (recoData) setRecos(recoData)
     setRecoText(''); setRecoModal(false); setRecoLoading(false); setEditingRecoId(null); setProofFile(null)
   }
 
-  if (loading) return (
-    <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>Chargement...</div>
-  )
+  const formatDate = (d: string) => {
+    const date = new Date(d)
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
 
-  if (!profile) return (
-    <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>Membre introuvable.</div>
-  )
-
-  const initials = `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}`.toUpperCase()
   const SOCIAL_LINKS = [
-    { key: 'website', icon: null, label: 'Site web', svg: '/icons/website.svg' },
-    { key: 'linkedin', icon: null, label: 'LinkedIn', svg: '/icons/linkedin.svg' },
-    { key: 'instagram', icon: null, label: 'Instagram', svg: '/icons/instagram.svg' },
-    { key: 'facebook', icon: null, label: 'Facebook', svg: '/icons/facebook.svg' },
-    { key: 'pinterest', icon: null, label: 'Pinterest', svg: '/icons/pinterest.svg' },
-    { key: 'tiktok', icon: null, label: 'TikTok', svg: '/icons/tiktok.svg' },
-    { key: 'x', icon: null, label: 'X', svg: '/icons/x.svg' },
-    { key: 'youtube', icon: null, label: 'YouTube', svg: '/icons/youtube.svg' },
-    { key: 'whatsapp', icon: null, label: 'WhatsApp', svg: '/icons/whatsapp.svg' },
+    { key: 'linkedin', label: 'LinkedIn', svg: '/icons/linkedin.svg' },
+    { key: 'instagram', label: 'Instagram', svg: '/icons/instagram.svg' },
+    { key: 'facebook', label: 'Facebook', svg: '/icons/facebook.svg' },
+    { key: 'pinterest', label: 'Pinterest', svg: '/icons/pinterest.svg' },
+    { key: 'tiktok', label: 'TikTok', svg: '/icons/tiktok.svg' },
+    { key: 'x', label: 'X', svg: '/icons/x.svg' },
+    { key: 'youtube', label: 'YouTube', svg: '/icons/youtube.svg' },
+    { key: 'whatsapp', label: 'WhatsApp', svg: '/icons/whatsapp.svg' },
   ]
 
+  if (loading) return <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>Chargement...</div>
+  if (!profile) return <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>Membre introuvable.</div>
+
+  const initials = `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}`.toUpperCase()
+
   return (
-    <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
       <style>{`
         .social-icon img { filter: brightness(0); transition: filter 0.15s; }
         .social-icon:hover img { filter: brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg); }
       `}</style>
 
-      {/* Carte profil */}
-      <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.25rem' }}>
-          <div style={{
-            width: '72px', height: '72px', borderRadius: '50%',
-            backgroundColor: '#E8501A', color: 'white',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: '1.4rem', flexShrink: 0, overflow: 'hidden',
-          }}>
-            {profile.avatar_url
-              ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : initials}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.4rem', color: '#2D2D2D', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              {profile.first_name} {profile.last_name}
-              {id === '13cdb485-42e0-48df-b2f8-14dc77dd895a' && (
-                <img src="/icons/badge-check.svg" alt="Admin" title="Fondateur Meello" style={{ width: '20px', height: '20px', flexShrink: 0 }} />
-              )}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.5rem', alignItems: 'start' }}>
+
+        {/* COLONNE GAUCHE */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+          {/* Carte profil principale */}
+          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            {/* Avatar + nom + actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.25rem' }}>
+              <div style={{ width: '72px', height: '72px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.4rem', flexShrink: 0, overflow: 'hidden' }}>
+                {profile.avatar_url ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.4rem', color: '#2D2D2D', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  {profile.first_name} {profile.last_name}
+                  {id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="Admin" title="Fondateur Meello" style={{ width: '20px', height: '20px', flexShrink: 0 }} />}
+                </div>
+                <div style={{ color: '#2D2D2D', opacity: 0.6, fontSize: '0.9rem' }}>{profile.activity}</div>
+              </div>
             </div>
-            <div style={{ color: '#2D2D2D', opacity: 0.6, fontSize: '0.9rem' }}>{profile.activity}</div>
-            {profile.city && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#2D2D2D', opacity: 0.45, fontSize: '0.82rem' }}>
-                <img src="/icons/pin.svg" alt="" style={{ width: '13px', height: '13px', flexShrink: 0 }} />
-                {profile.city}
+
+            {/* Actions connexion */}
+            {currentUserId && currentUserId !== id && (
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                {connectionStatus === 'none' && (
+                  <button onClick={sendConnectionRequest} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>
+                    Envoyer une demande de connexion
+                  </button>
+                )}
+                {connectionStatus === 'pending_sent' && <span style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.5, padding: '0.5rem 0' }}>Demande envoyée…</span>}
+                {connectionStatus === 'pending_received' && (
+                  <button onClick={acceptConnection} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>
+                    Accepter la demande
+                  </button>
+                )}
+                {connectionStatus === 'accepted' && (
+                  <>
+                    <button onClick={openMessage} style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Envoyer un message"
+                      onMouseEnter={e => e.currentTarget.querySelector('svg')!.style.stroke = '#E8501A'}
+                      onMouseLeave={e => e.currentTarget.querySelector('svg')!.style.stroke = '#2D2D2D'}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6, transition: 'stroke 0.15s' }}>
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                    </button>
+                    <button onClick={() => !alreadyRecommended && setRecoModal(true)} disabled={alreadyRecommended}
+                      style={{ background: 'none', border: `1.5px solid ${alreadyRecommended ? '#ccc' : '#E8501A'}`, borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: alreadyRecommended ? 'default' : 'pointer', fontSize: '0.85rem', color: alreadyRecommended ? '#aaa' : '#E8501A' }}>
+                      {alreadyRecommended ? 'Déjà recommandé' : 'Recommander'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Badges */}
+            {(() => {
+              const isNew = profile.member_since && !profile.hide_new_badge ? (Date.now() - new Date(profile.member_since).getTime()) < 30 * 24 * 60 * 60 * 1000 : false
+              const badges = (profile.badges || []).filter((b: string) => b !== 'nouveau' && b !== 'profil_complet')
+              const allBadges = isNew ? ['nouveau', ...badges] : badges
+              return allBadges.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                  {allBadges.map((b: string) => (
+                    <span key={b} style={{ backgroundColor: b === 'nouveau' ? '#F5A623' : b === 'membre_fondateur' ? '#6B4FA0' : '#E8501A', color: 'white', fontSize: '0.72rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                      {b === 'fondateur' ? 'Fondateur' : b === 'partenaire' ? 'Partenaire' : b === 'membre_fondateur' ? 'Membre fondateur' : 'Nouveau membre'}
+                    </span>
+                  ))}
+                </div>
+              )
+            })()}
+
+            {/* Bio */}
+            {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem' }}>{profile.bio}</p>}
+
+            {/* Compétences */}
+            {(profile.skills || []).length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {(profile.skills || []).map((skill: string) => (
+                  <span key={skill} style={{ backgroundColor: '#FFF0ED', color: '#E8501A', borderRadius: '20px', padding: '0.3rem 0.75rem', fontSize: '0.82rem', fontWeight: 600 }}>
+                    {skill}
+                  </span>
+                ))}
               </div>
             )}
           </div>
+
+          {/* Portfolio */}
+          {portfolio.length > 0 && (
+            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>Portfolio</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
+                {portfolio.map(item => (
+                  <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA' }}>
+                    {item.media_url.match(/\.(mp4|mov|webm)$/i)
+                      ? <video src={item.media_url} controls style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />
+                      : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />}
+                    <div style={{ padding: '0.75rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#2D2D2D', marginBottom: '0.2rem' }}>{item.title}</div>
+                      {item.description && <p style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.4rem', lineHeight: 1.4 }}>{item.description}</p>}
+                      {item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Produits & Services */}
+          {services.length > 0 && (
+            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>Produits & Services</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
+                {services.map(item => (
+                  <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
+                    {item.image_url && <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />}
+                    <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#2D2D2D' }}>{item.title}</div>
+                      {item.price && <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#E8501A' }}>{item.price}</div>}
+                      {item.description && <p style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.4 }}>{item.description}</p>}
+                      {item.link && (
+                        <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', alignSelf: 'flex-start', fontSize: '0.75rem', color: 'white', backgroundColor: '#E8501A', fontWeight: 600, textDecoration: 'none', padding: '0.3rem 0.7rem', borderRadius: '6px', marginTop: '0.4rem' }}>
+                          {item.link_label || 'En savoir plus'}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Actions connexion/message — masquées sur son propre profil */}
-        {currentUserId && currentUserId !== id && (
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-            {connectionStatus === 'none' && (
-              <button onClick={sendConnectionRequest} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>
-                Envoyer une demande de connexion
-              </button>
+        {/* COLONNE DROITE */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+          {/* Localisation + Réseaux */}
+          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            {profile.city && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#2D2D2D', opacity: 0.5, fontSize: '0.9rem', marginBottom: '1rem' }}>
+                <img src="/icons/pin.svg" alt="" style={{ width: '14px', height: '14px', flexShrink: 0 }} />
+                {profile.city}
+              </div>
             )}
-            {connectionStatus === 'pending_sent' && (
-              <span style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.5, padding: '0.5rem 0' }}>Demande envoyée…</span>
-            )}
-            {connectionStatus === 'pending_received' && (
-              <button onClick={acceptConnection} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>
-                Accepter la demande
-              </button>
-            )}
-            {connectionStatus === 'accepted' && (
+            {(profile.website || SOCIAL_LINKS.some(s => profile[s.key])) && (
               <>
-                <button onClick={openMessage} style={{ background: 'none', border: 'none', padding: '0.5rem 0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Envoyer un message"
-                  onMouseEnter={e => e.currentTarget.querySelector('svg')!.style.stroke = '#E8501A'}
-                  onMouseLeave={e => e.currentTarget.querySelector('svg')!.style.stroke = '#2D2D2D'}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6, transition: 'stroke 0.15s' }}>
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                  </svg>
-                </button>
-                <button
-                  onClick={() => !alreadyRecommended && setRecoModal(true)}
-                  disabled={alreadyRecommended}
-                  style={{ background: 'none', border: `1.5px solid ${alreadyRecommended ? '#ccc' : '#E8501A'}`, borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: alreadyRecommended ? 'default' : 'pointer', fontSize: '0.85rem', color: alreadyRecommended ? '#aaa' : '#E8501A' }}
-                >
-                  {alreadyRecommended ? 'Déjà recommandé' : 'Recommander'}
+                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Retrouvez-moi sur</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {profile.website && (
+                    <a href={profile.website} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#E8501A', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500 }}>
+                      <img src="/icons/website.svg" alt="Site web" style={{ width: '16px', height: '16px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' }} />
+                      <span>{profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
+                    </a>
+                  )}
+                  <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                    {SOCIAL_LINKS.map(s => profile[s.key] && (
+                      <a key={s.key} href={s.key === 'whatsapp' ? `https://wa.me/${profile[s.key].replace(/\D/g, '')}` : profile[s.key]} target="_blank" rel="noopener noreferrer" title={s.label} className="social-icon" style={socialLinkStyle}>
+                        <img src={s.svg} alt={s.label} style={{ width: '20px', height: '20px' }} />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Recommandations */}
+          {recos.length > 0 && (
+            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1rem', color: '#2D2D2D', marginBottom: '0.75rem' }}>
+                Recommandations ({recos.length})
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                {recos.map(r => (
+                  <div key={r.id} style={{ borderLeft: '3px solid #E8501A', paddingLeft: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: '0 0 0.5rem', color: '#2D2D2D', lineHeight: 1.5, fontSize: '0.88rem' }}>{r.content}</p>
+                      <a href={`/membre/${r.author_id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 700, flexShrink: 0, overflow: 'hidden' }}>
+                          {r.profiles?.avatar_url ? <img src={r.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : `${(r.profiles?.first_name || '?')[0]}${(r.profiles?.last_name || '')[0] || ''}`}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.78rem', color: '#E8501A', fontWeight: 600 }}>{r.profiles?.first_name} {r.profiles?.last_name}</div>
+                          {r.profiles?.activity && <div style={{ fontSize: '0.7rem', color: '#2D2D2D', opacity: 0.5 }}>{r.profiles.activity}</div>}
+                        </div>
+                      </a>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                      {r.author_id === currentUserId && (
+                        <button onClick={() => { setEditingRecoId(r.id); setRecoText(r.content); setRecoModal(true) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem' }}>
+                          <img src="/icons/pen-edit.svg" alt="Modifier" style={{ width: '13px', height: '13px', filter: 'brightness(0) opacity(0.35)' }} />
+                        </button>
+                      )}
+                      {currentUserId === ADMIN_ID && (
+                        <button onClick={async () => { if (!confirm('Supprimer ?')) return; const supabase = createClient(); await supabase.from('recommendations').delete().eq('id', r.id); setRecos(prev => prev.filter(x => x.id !== r.id)) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem' }}>
+                          <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '13px', height: '13px', filter: 'brightness(0) opacity(0.35)' }} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Publications */}
+          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1rem', color: '#2D2D2D', marginBottom: '0.75rem' }}>Publications</h2>
+            {posts.length === 0 ? (
+              <p style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.4, margin: 0 }}>Aucune publication pour l'instant.</p>
+            ) : (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {posts.map(post => (
+                    <div key={post.id} style={{ borderBottom: '1px solid #F5F0E8', paddingBottom: '0.75rem' }}>
+                      {post.image_url && <img src={post.image_url} alt="" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px', marginBottom: '0.4rem' }} />}
+                      <p style={{ fontSize: '0.82rem', color: '#2D2D2D', lineHeight: 1.5, margin: '0 0 0.3rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{post.content}</p>
+                      <span style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4 }}>{formatDate(post.created_at)}</span>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={openPostsModal} style={{ marginTop: '0.75rem', background: 'none', border: 'none', color: '#E8501A', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}>
+                  Voir toutes les publications →
                 </button>
               </>
             )}
           </div>
-        )}
 
-        {/* Badges */}
-        {(() => {
-          const isNew = profile.member_since && !profile.hide_new_badge
-            ? (Date.now() - new Date(profile.member_since).getTime()) < 30 * 24 * 60 * 60 * 1000
-            : false
-          const badges = (profile.badges || []).filter((b: string) => b !== 'nouveau' && b !== 'profil_complet')
-          const allBadges = isNew ? ['nouveau', ...badges] : badges
-          return allBadges.length > 0 && (
-            <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-              {allBadges.map((b: string) => (
-                <span key={b} style={{
-                  backgroundColor: b === 'nouveau' ? '#F5A623' : b === 'membre_fondateur' ? '#6B4FA0' : '#E8501A',
-                  color: 'white', fontSize: '0.72rem', fontWeight: 600,
-                  padding: '0.2rem 0.6rem', borderRadius: '20px',
-                }}>
-                  {b === 'fondateur' ? 'Fondateur' : b === 'partenaire' ? 'Partenaire' : b === 'membre_fondateur' ? 'Membre fondateur' : 'Nouveau membre'}
-                </span>
-              ))}
-            </div>
-          )
-        })()}
-
-        {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem' }}>{profile.bio}</p>}
-
-        {/* Compétences */}
-        {(profile.skills || []).length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
-            {(profile.skills || []).map((skill: string) => (
-              <span key={skill} style={{ backgroundColor: '#FFF0ED', color: '#E8501A', borderRadius: '20px', padding: '0.3rem 0.75rem', fontSize: '0.82rem', fontWeight: 600 }}>
-                {skill}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Réseaux sociaux */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {/* Site web en premier avec texte */}
-          {profile.website && (
-            <a
-              href={profile.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#E8501A', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500 }}
-            >
-              <img src="/icons/website.svg" alt="Site web" style={{ width: '16px', height: '16px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' }} />
-              <span>
-                {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-              </span>
-            </a>
-          )}
-          {/* Autres réseaux en icônes */}
-          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-            {SOCIAL_LINKS.filter(s => s.key !== 'website').map(s => profile[s.key] && (
-              <a
-                key={s.key}
-                href={s.key === 'whatsapp' ? `https://wa.me/${profile[s.key].replace(/\D/g, '')}` : profile[s.key]}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={s.label}
-                className="social-icon"
-                style={socialLinkStyle}
-              >
-                {s.svg
-                  ? <img src={s.svg} alt={s.label} style={{ width: '20px', height: '20px' }} />
-                  : s.icon}
-              </a>
-            ))}
-          </div>
         </div>
       </div>
 
-      {/* Portfolio */}
-      {portfolio.length > 0 && (
-        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>Portfolio</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-            {portfolio.map(item => (
-              <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA' }}>
-                {item.media_url.match(/\.(mp4|mov|webm)$/i)
-                  ? <video src={item.media_url} controls style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
-                  : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
-                }
-                <div style={{ padding: '0.75rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D', marginBottom: '0.25rem' }}>{item.title}</div>
-                  {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.5rem', lineHeight: 1.5 }}>{item.description}</p>}
-                  {item.link && (
-                    <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>
-                      Voir le projet →
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Produits & Services */}
-      {services.length > 0 && (
-        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>Produits & Services</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-            {services.map(item => (
-              <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
-                {item.image_url && (
-                  <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
-                )}
-                <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D' }}>{item.title}</div>
-                  {item.price && <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#E8501A' }}>{item.price}</div>}
-                  {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.5 }}>{item.description}</p>}
-                  {item.link && (
-                    <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', alignSelf: 'flex-start', fontSize: '0.78rem', color: 'white', backgroundColor: '#E8501A', fontWeight: 600, textDecoration: 'none', padding: '0.35rem 0.8rem', borderRadius: '6px', marginTop: '0.5rem' }}>
-                      {item.link_label || 'En savoir plus'}
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recommandations */}
-      {recos.length > 0 && (
-        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>
-            Recommandations ({recos.length})
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {recos.map(r => (
-              <div key={r.id} style={{ borderLeft: '3px solid #E8501A', paddingLeft: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ margin: '0 0 0.6rem', color: '#2D2D2D', lineHeight: 1.6, fontSize: '0.95rem' }}>{r.content}</p>
-                  <a href={`/membre/${r.author_id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700, flexShrink: 0, overflow: 'hidden' }}>
-                      {r.profiles?.avatar_url
-                        ? <img src={r.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : `${(r.profiles?.first_name || '?')[0]}${(r.profiles?.last_name || '')[0] || ''}`}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.85rem', color: '#E8501A', fontWeight: 600 }}>{r.profiles?.first_name} {r.profiles?.last_name}</div>
-                      {r.profiles?.activity && <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.5 }}>{r.profiles.activity}</div>}
-                    </div>
-                  </a>
-                </div>
-                <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                  {r.author_id === currentUserId && (
-                    <button
-                      onClick={() => { setEditingRecoId(r.id); setRecoText(r.content); setRecoModal(true) }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
-                      title="Modifier ma recommandation"
-                    >
-                      <img src="/icons/edit.svg" alt="Modifier" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
-                    </button>
-                  )}
-                  {currentUserId === ADMIN_ID && (
-                    <button
-                      onClick={async () => {
-                        if (!confirm('Supprimer cette recommandation ?')) return
-                        const supabase = createClient()
-                        await supabase.from('recommendations').delete().eq('id', r.id)
-                        setRecos(prev => prev.filter(x => x.id !== r.id))
-                      }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
-                      title="Supprimer cette recommandation"
-                    >
-                      <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Modal recommandation */}
       {recoModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
-          onClick={() => { setRecoModal(false); setEditingRecoId(null) }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => { setRecoModal(false); setEditingRecoId(null) }}>
           <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '480px' }}>
             <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.1rem', color: '#2D2D2D', marginBottom: '0.5rem' }}>
               {editingRecoId ? 'Modifier ma recommandation' : `Recommander ${profile?.first_name}`}
             </h3>
-            <p style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.5, marginBottom: '1rem' }}>
-              Ta recommandation apparaîtra sur son profil.
-            </p>
-            <textarea
-              value={recoText}
-              onChange={e => setRecoText(e.target.value)}
-              placeholder={`Décris ton expérience avec ${profile?.first_name}…`}
-              rows={4}
-              style={{ width: '100%', border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.75rem', fontSize: '0.95rem', fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
-            />
+            <p style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.5, marginBottom: '1rem' }}>Ta recommandation apparaîtra sur son profil.</p>
+            <textarea value={recoText} onChange={e => setRecoText(e.target.value)} placeholder={`Décris ton expérience avec ${profile?.first_name}…`} rows={4} style={{ width: '100%', border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.75rem', fontSize: '0.95rem', fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
             {!editingRecoId && (
               <div style={{ marginTop: '0.75rem' }}>
-                <label style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.4rem' }}>
-                  📎 Justificatif <span style={{ opacity: 0.5 }}>(facultatif — facture, contrat, email…)</span>
-                </label>
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                  onChange={e => setProofFile(e.target.files?.[0] || null)}
-                  style={{ fontSize: '0.85rem', color: '#2D2D2D', width: '100%' }}
-                />
+                <label style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.4rem' }}>📎 Justificatif <span style={{ opacity: 0.5 }}>(facultatif)</span></label>
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={e => setProofFile(e.target.files?.[0] || null)} style={{ fontSize: '0.85rem', color: '#2D2D2D', width: '100%' }} />
                 {proofFile && <div style={{ fontSize: '0.78rem', color: '#7A9E7E', marginTop: '0.3rem' }}>✓ {proofFile.name}</div>}
               </div>
             )}
@@ -497,6 +455,30 @@ export default function MembrePublicPage() {
               <button onClick={sendReco} disabled={!recoText.trim() || recoLoading} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}>
                 {recoLoading ? '...' : 'Envoyer'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modale publications scroll infini */}
+      {postsModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setPostsModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '560px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.1rem', color: '#2D2D2D', margin: 0 }}>Publications de {profile.first_name}</h3>
+              <button onClick={() => setPostsModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ overflowY: 'auto', flex: 1, padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {allPosts.map(post => (
+                <div key={post.id} style={{ borderBottom: '1px solid #F5F0E8', paddingBottom: '1rem' }}>
+                  {post.image_url && <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '10px', marginBottom: '0.6rem' }} />}
+                  <p style={{ fontSize: '0.9rem', color: '#2D2D2D', lineHeight: 1.6, margin: '0 0 0.4rem' }}>{post.content}</p>
+                  <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.4 }}>{formatDate(post.created_at)}</span>
+                </div>
+              ))}
+              {postsLoading && <div style={{ textAlign: 'center', color: '#2D2D2D', opacity: 0.4, fontSize: '0.85rem', padding: '0.5rem' }}>Chargement...</div>}
+              {!postsHasMore && allPosts.length > 0 && <div style={{ textAlign: 'center', color: '#2D2D2D', opacity: 0.3, fontSize: '0.82rem', padding: '0.5rem' }}>Toutes les publications ont été chargées</div>}
+              <div ref={postsBottomRef} style={{ height: '1px' }} />
             </div>
           </div>
         </div>
