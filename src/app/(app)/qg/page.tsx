@@ -69,19 +69,20 @@ export default function QGPage() {
   const oldestCreatedAt = useRef<string | null>(null)
   const isAtBottom = useRef(true)
   const presenceInterval = useRef<any>(null)
+  const channelRef = useRef<any>(null)
+  const userIdRef = useRef<string | null>(null)
 
   useEffect(() => {
+    const supabase = createClient()
+
     const init = async () => {
-      const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       setUserId(user.id)
+      userIdRef.current = user.id
 
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       if (prof) setProfile(prof)
-
-      // Charger les 50 derniers messages
-      await loadMessages(supabase, null)
 
       // Présence en ligne
       await supabase.from('qg_presence').upsert({ user_id: user.id, last_seen: new Date().toISOString() })
@@ -89,13 +90,13 @@ export default function QGPage() {
 
       // Mettre à jour la présence toutes les 30s
       presenceInterval.current = setInterval(async () => {
-        await supabase.from('qg_presence').upsert({ user_id: user.id, last_seen: new Date().toISOString() })
+        await supabase.from('qg_presence').upsert({ user_id: userIdRef.current, last_seen: new Date().toISOString() })
         await loadOnlineMembers(supabase)
       }, 30000)
 
       // Realtime nouveaux messages
-      const channel = supabase
-        .channel('qg-messages')
+      channelRef.current = supabase
+        .channel('qg-messages-live')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'qg_messages' }, async (payload) => {
           const msg = payload.new
           const { data: prof } = await supabase.from('profiles').select('first_name, last_name, avatar_url, badges').eq('id', msg.user_id).single()
@@ -106,15 +107,14 @@ export default function QGPage() {
           }
         })
         .subscribe()
-
-      return () => {
-        channel.unsubscribe()
-        clearInterval(presenceInterval.current)
-      }
     }
+
     init()
 
-    return () => { clearInterval(presenceInterval.current) }
+    return () => {
+      if (channelRef.current) channelRef.current.unsubscribe()
+      clearInterval(presenceInterval.current)
+    }
   }, [])
 
   const loadMessages = async (supabase: any, before: string | null) => {
@@ -364,9 +364,14 @@ export default function QGPage() {
               </div>
               <span style={{ position: 'absolute', bottom: '0', right: '0', width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#22C55E', border: '1.5px solid white' }} />
             </div>
-            <span style={{ fontSize: '0.82rem', color: '#2D2D2D', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {member.profile?.first_name} {member.profile?.last_name}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0 }}>
+              <span style={{ fontSize: '0.82rem', color: '#2D2D2D', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {member.profile?.first_name} {member.profile?.last_name}
+              </span>
+              {(member.user_id === ADMIN_ID || member.user_id === '00000000-0000-0000-0000-000000000001') && (
+                <img src="/icons/badge-check.svg" alt="Admin" style={{ width: '14px', height: '14px', flexShrink: 0 }} />
+              )}
+            </div>
           </a>
         ))}
         {onlineMembers.length === 0 && (
