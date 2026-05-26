@@ -24,12 +24,6 @@ export default function TopBar() {
   const [userId, setUserId] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
-  // Écouter le badge messages depuis ChatSystem
-  useEffect(() => {
-    const handler = (e: CustomEvent) => setUnreadMessages(e.detail)
-    window.addEventListener('meello:chat-unread', handler as EventListener)
-    return () => window.removeEventListener('meello:chat-unread', handler as EventListener)
-  }, [])
 
   useEffect(() => {
     const supabase = createClient()
@@ -75,14 +69,21 @@ export default function TopBar() {
       }
     }
 
-    setNotifications(data.map(n => ({
+    setNotifications(data.filter(n => n.type !== 'message').map(n => ({
       ...n,
       from_profile: n.from_user_id ? profilesMap[n.from_user_id] || null : null,
     })))
   }
 
   const loadUnreadMessages = async (uid: string) => {
-    // Le badge messages est géré par ChatSystem via event
+    const supabase = createClient()
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', uid)
+      .eq('type', 'message')
+      .eq('read', false)
+    setUnreadMessages(count || 0)
   }
 
   const markAllRead = async () => {

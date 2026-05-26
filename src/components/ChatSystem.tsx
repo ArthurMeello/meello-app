@@ -100,6 +100,16 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       .eq('conversation_id', conv.id)
       .order('created_at', { ascending: true })
     if (data) setMessages(data)
+    // Marquer les notifs message comme lues
+    if (userId) {
+      await supabase.from('notifications')
+        .update({ read: true })
+        .eq('user_id', userId)
+        .eq('type', 'message')
+        .eq('read', false)
+      setUnreadCount(0)
+      window.dispatchEvent(new CustomEvent('meello:chat-unread', { detail: 0 }))
+    }
     setTimeout(() => inputRef.current?.focus(), 100)
   }
 
