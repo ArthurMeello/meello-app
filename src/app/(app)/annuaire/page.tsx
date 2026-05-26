@@ -105,7 +105,7 @@ function MemberCard({ profile }: { profile: Profile }) {
   const badges = isNew ? ['nouveau', ...baseBadges] : baseBadges
 
   return (
-    <Link href={`/profil/${profile.id}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/membre/${profile.id}`} style={{ textDecoration: 'none' }}>
       <div style={{
         backgroundColor: 'white',
         borderRadius: '16px',
