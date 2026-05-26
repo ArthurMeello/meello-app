@@ -58,6 +58,16 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       .channel(`new-messages:${userId}`)
       .on(
         'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'meello_messages' },
+        (payload: any) => {
+          const updated = payload.new
+          if (updated.read_at && updated.sender_id === userId) {
+            setMessages(prev => prev.map(m => m.id === updated.id ? { ...m, read_at: updated.read_at } : m))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'meello_messages' },
         async (payload: any) => {
           const msg = payload.new
@@ -312,11 +322,11 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
     const supabase = createClient()
     const msgContent = newMessage.trim()
 
-    await supabase.from('meello_messages').insert({
+    const { data: insertedMsg } = await supabase.from('meello_messages').insert({
       conversation_id: activeConv.id,
       sender_id: userId,
       content: msgContent,
-    })
+    }).select('id, content, sender_id, created_at, read_at').single()
     await supabase.from('conversations').update({
       last_message: msgContent,
       last_message_at: new Date().toISOString(),
@@ -351,7 +361,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       channelRef.current.send({ type: 'broadcast', event: 'stop_typing', payload: { user_id: userId } })
     }
 
-    setMessages(prev => [...prev, {
+    setMessages(prev => [...prev, insertedMsg || {
       id: Date.now().toString(),
       content: msgContent,
       sender_id: userId,
