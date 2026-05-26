@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 interface Conversation {
@@ -27,6 +28,8 @@ interface Message {
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 
 export default function ChatSystem({ userId }: { userId: string | null }) {
+  const pathname = usePathname()
+  const isOnMessagesPage = pathname === '/messages'
   const [showDropdown, setShowDropdown] = useState(false)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConv, setActiveConv] = useState<Conversation | null>(null)
@@ -86,6 +89,9 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
             created_at: msg.created_at,
           }
 
+          // Si on est sur la page /messages, ne rien faire ici
+          if (isOnMessagesPage) return
+
           const currentConv = activeConvRef.current
           if (currentConv?.id === conv.id) {
             // Conversation déjà ouverte — ajouter le message en live
@@ -98,7 +104,6 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
               last_message: msg.content,
               last_message_at: msg.created_at,
             }
-            // Charger tout l'historique puis ajouter le nouveau message
             const { data: history } = await supabase
               .from('meello_messages')
               .select('id, content, sender_id, created_at')
@@ -312,6 +317,18 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
     if (diff < 3600000) return `${Math.floor(diff / 60000)}min`
     if (diff < 86400000) return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  }
+
+  // Fermer le chat flottant quand on navigue vers /messages
+  useEffect(() => {
+    if (isOnMessagesPage) {
+      setActiveConv(null)
+      setShowDropdown(false)
+    }
+  }, [isOnMessagesPage])
+
+  if (isOnMessagesPage) {
+    return <ToggleExposer onToggle={() => {}} unreadCount={unreadCount} />
   }
 
   return (
