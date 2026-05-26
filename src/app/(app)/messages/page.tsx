@@ -97,15 +97,29 @@ export default function MessagesPage() {
     if (!newMessage.trim() || !activeConv || !userId) return
 
     const supabase = createClient()
+    const msgContent = newMessage.trim()
+
     await supabase.from('meello_messages').insert({
       conversation_id: activeConv.id,
       sender_id: userId,
-      content: newMessage.trim(),
+      content: msgContent,
     })
     await supabase.from('conversations').update({
-      last_message: newMessage.trim(),
+      last_message: msgContent,
       last_message_at: new Date().toISOString(),
     }).eq('id', activeConv.id)
+
+    // Notifier le destinataire
+    const receiverId = activeConv.other_user?.id
+    if (receiverId && receiverId !== userId) {
+      await supabase.from('notifications').insert({
+        user_id: receiverId,
+        type: 'message',
+        content: `t'a envoyé un message`,
+        link: `/messages`,
+        from_user_id: userId,
+      })
+    }
 
     setMessages(prev => [...prev, {
       id: Date.now().toString(),

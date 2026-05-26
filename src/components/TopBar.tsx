@@ -24,6 +24,13 @@ export default function TopBar() {
   const [userId, setUserId] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
+  // Écouter le badge messages depuis ChatSystem
+  useEffect(() => {
+    const handler = (e: CustomEvent) => setUnreadMessages(e.detail)
+    window.addEventListener('meello:chat-unread', handler as EventListener)
+    return () => window.removeEventListener('meello:chat-unread', handler as EventListener)
+  }, [])
+
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
@@ -75,13 +82,7 @@ export default function TopBar() {
   }
 
   const loadUnreadMessages = async (uid: string) => {
-    const supabase = createClient()
-    const { count } = await supabase
-      .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('receiver_id', uid)
-      .eq('read', false)
-    setUnreadMessages(count || 0)
+    // Le badge messages est géré par ChatSystem via event
   }
 
   const markAllRead = async () => {
@@ -158,7 +159,7 @@ export default function TopBar() {
 
         {/* Messages */}
         <button
-          onClick={() => router.push('/messages')}
+          onClick={() => window.dispatchEvent(new CustomEvent('meello:toggle-chat'))}
           style={{
             position: 'relative', background: 'none', border: 'none',
             cursor: 'pointer', padding: '0.35rem 0.5rem',
