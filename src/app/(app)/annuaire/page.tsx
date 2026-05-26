@@ -149,8 +149,9 @@ function MemberCard({ profile }: { profile: Profile }) {
         </div>
 
         {profile.city && (
-          <div style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5, marginBottom: '0.6rem' }}>
-            📍 {profile.city}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5, marginBottom: '0.6rem' }}>
+            <img src="/icons/pin.svg" alt="" style={{ width: '13px', height: '13px', flexShrink: 0, opacity: 0.6 }} />
+            {profile.city}
           </div>
         )}
 

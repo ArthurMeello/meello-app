@@ -227,7 +227,12 @@ export default function MembrePublicPage() {
               )}
             </div>
             <div style={{ color: '#2D2D2D', opacity: 0.6, fontSize: '0.9rem' }}>{profile.activity}</div>
-            {profile.city && <div style={{ color: '#2D2D2D', opacity: 0.45, fontSize: '0.82rem' }}>📍 {profile.city}</div>}
+            {profile.city && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#2D2D2D', opacity: 0.45, fontSize: '0.82rem' }}>
+                <img src="/icons/pin.svg" alt="" style={{ width: '13px', height: '13px', flexShrink: 0 }} />
+                {profile.city}
+              </div>
+            )}
           </div>
         </div>
 
