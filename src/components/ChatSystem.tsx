@@ -267,13 +267,11 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
 
     // Marquer les messages reçus comme lus
     if (userId) {
-      const { data: updatedRows, error: updateError } = await supabase.from('meello_messages')
+      await supabase.from('meello_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('conversation_id', conv.id)
         .neq('sender_id', userId)
         .is('read_at', null)
-        .select('id')
-      console.log('[read] rows updated:', updatedRows, 'error:', updateError)
     }
     // Ouvrir canal Realtime pour le typing indicator
     if (channelRef.current) {
