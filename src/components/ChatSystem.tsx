@@ -451,7 +451,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
           </div>
 
           {/* Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', paddingBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {messages.length === 0 && (
               <div style={{ textAlign: 'center', color: '#2D2D2D', opacity: 0.3, fontSize: '0.85rem', marginTop: '2rem' }}>
                 Commencez la conversation
