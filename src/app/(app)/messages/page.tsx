@@ -33,22 +33,52 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
+  const [otherIsTyping, setOtherIsTyping] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const typingChannelRef = useRef<any>(null)
+  const typingTimeoutRef = useRef<any>(null)
+  const activeConvRef = useRef<Conversation | null>(null)
+  const userIdRef = useRef<string | null>(null)
+
+  useEffect(() => { activeConvRef.current = activeConv }, [activeConv])
+  useEffect(() => { userIdRef.current = userId }, [userId])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, otherIsTyping])
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUserId(data.user.id)
-        fetchConversations(data.user.id)
-      }
+      if (!data.user) return
+      const uid = data.user.id
+      setUserId(uid)
+      fetchConversations(uid)
+
+      // Écouter les nouveaux messages en temps réel
+      const msgChannel = supabase
+        .channel(`messages-page:${uid}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'meello_messages' }, async (payload: any) => {
+          const msg = payload.new
+          if (msg.sender_id === userIdRef.current) return
+
+          const currentConv = activeConvRef.current
+          const newMsg = { id: msg.id, content: msg.content, sender_id: msg.sender_id, created_at: msg.created_at }
+
+          if (currentConv?.id === msg.conversation_id) {
+            // Conversation déjà ouverte — ajouter en live
+            setMessages(prev => [...prev, newMsg])
+          }
+
+          // Mettre à jour la liste des conversations
+          fetchConversations(userIdRef.current!)
+        })
+        .subscribe()
+
+      return () => { msgChannel.unsubscribe() }
     })
   }, [])
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
 
   const fetchConversations = async (uid: string) => {
     const supabase = createClient()
@@ -78,14 +108,14 @@ export default function MessagesPage() {
 
     // Dernier message reçu par conversation
     const convIds = data.map((c: any) => c.id)
-    const { data: lastReceivedMsgs } = await supabase
+    const { data: lastReceived } = await supabase
       .from('meello_messages')
       .select('conversation_id, content')
       .in('conversation_id', convIds)
       .neq('sender_id', uid)
       .order('created_at', { ascending: false })
     const lastReceivedMap: Record<string, string> = {}
-    for (const msg of (lastReceivedMsgs || [])) {
+    for (const msg of (lastReceived || [])) {
       if (!lastReceivedMap[msg.conversation_id]) lastReceivedMap[msg.conversation_id] = msg.content
     }
 
@@ -105,7 +135,9 @@ export default function MessagesPage() {
 
   const openConversation = async (conv: Conversation) => {
     setActiveConv({ ...conv, unread: false })
+    setOtherIsTyping(false)
     const supabase = createClient()
+
     const { data } = await supabase
       .from('meello_messages')
       .select('id, content, sender_id, created_at')
@@ -123,6 +155,22 @@ export default function MessagesPage() {
         .eq('read', false)
       setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread: false } : c))
     }
+
+    // Canal typing indicator
+    if (typingChannelRef.current) typingChannelRef.current.unsubscribe()
+    const typingChannel = supabase.channel(`typing:${conv.id}`)
+    typingChannel
+      .on('broadcast', { event: 'typing' }, ({ payload }: any) => {
+        if (payload.user_id !== userId) {
+          setOtherIsTyping(true)
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+          typingTimeoutRef.current = setTimeout(() => setOtherIsTyping(false), 2500)
+        }
+      })
+      .subscribe()
+    typingChannelRef.current = typingChannel
+
+    setTimeout(() => inputRef.current?.focus(), 100)
   }
 
   const sendMessage = async (e: React.FormEvent) => {
@@ -144,29 +192,20 @@ export default function MessagesPage() {
     const receiverId = activeConv.other_user?.id
     if (receiverId && receiverId !== userId) {
       const { data: existing } = await supabase
-        .from('notifications')
-        .select('id')
-        .eq('user_id', receiverId)
-        .eq('type', 'message')
-        .eq('from_user_id', userId)
-        .eq('read', false)
-        .single()
+        .from('notifications').select('id')
+        .eq('user_id', receiverId).eq('type', 'message')
+        .eq('from_user_id', userId).eq('read', false).single()
       if (!existing) {
         await supabase.from('notifications').insert({
-          user_id: receiverId,
-          type: 'message',
-          content: `t'a envoyé un message`,
-          link: `/messages`,
-          from_user_id: userId,
+          user_id: receiverId, type: 'message',
+          content: `t'a envoyé un message`, link: `/messages`, from_user_id: userId,
         })
       }
     }
 
     setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      content: msgContent,
-      sender_id: userId,
-      created_at: new Date().toISOString(),
+      id: Date.now().toString(), content: msgContent,
+      sender_id: userId, created_at: new Date().toISOString(),
     }])
     setNewMessage('')
     if (inputRef.current) inputRef.current.style.height = 'auto'
@@ -192,182 +231,182 @@ export default function MessagesPage() {
   }
 
   return (
-    <div style={{ height: 'calc(100vh - 4rem)', display: 'flex', gap: '1rem', maxWidth: '960px', margin: '0 auto' }}>
+    <>
+      <style>{`
+        @keyframes typing-dot {
+          0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
+          30% { opacity: 1; transform: translateY(-3px); }
+        }
+      `}</style>
 
-      {/* Liste conversations */}
-      <div style={{
-        width: '300px', flexShrink: 0,
-        backgroundColor: 'white', borderRadius: '16px',
-        overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-        display: 'flex', flexDirection: 'column',
-      }}>
-        <div style={{ padding: '1.25rem', borderBottom: '1px solid #F5F0E8' }}>
-          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>Conversations</h2>
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {conversations.length === 0 && (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>
-              Aucune conversation pour l&apos;instant.
-            </div>
-          )}
-          {conversations.map(conv => (
-            <div
-              key={conv.id}
-              onClick={() => openConversation(conv)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
-                padding: '0.85rem 1.25rem',
-                cursor: 'pointer',
-                backgroundColor: activeConv?.id === conv.id ? '#FFF0ED' : conv.unread ? 'rgba(232,80,26,0.04)' : 'transparent',
-                borderLeft: activeConv?.id === conv.id ? '3px solid #E8501A' : '3px solid transparent',
-                transition: 'background 0.15s',
-              }}
-            >
-              {/* Avatar */}
-              <div style={{
-                width: '42px', height: '42px', borderRadius: '50%',
-                backgroundColor: '#E8501A', color: 'white', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700, fontSize: '0.82rem', overflow: 'hidden',
-              }}>
-                {conv.other_user?.avatar_url
-                  ? <img src={conv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : `${(conv.other_user?.first_name || '?')[0]}${(conv.other_user?.last_name || '')[0] || ''}`
-                }
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                  <div style={{ fontWeight: conv.unread ? 700 : 600, color: '#2D2D2D', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    {conv.other_user?.first_name} {conv.other_user?.last_name}
-                    {conv.other_user?.id === ADMIN_ID && (
-                      <img src="/icons/badge-check.svg" alt="" style={{ width: '13px', height: '13px' }} />
-                    )}
-                  </div>
-                  <span style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, flexShrink: 0 }}>
-                    {formatTime(conv.last_message_at)}
-                  </span>
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: conv.unread ? 0.9 : 0.5, fontWeight: conv.unread ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {conv.last_message || 'Aucun message'}
-                </div>
-              </div>
-              {conv.unread && (
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#E8501A', flexShrink: 0 }} />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      <div style={{ height: 'calc(100vh - 4rem)', display: 'flex', gap: '1rem', maxWidth: '960px', margin: '0 auto' }}>
 
-      {/* Conversation active */}
-      <div style={{
-        flex: 1, backgroundColor: 'white', borderRadius: '16px',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-        display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      }}>
-        {!activeConv ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2D2D2D', opacity: 0.3, fontSize: '0.95rem' }}>
-            Sélectionne une conversation
+        {/* Liste conversations */}
+        <div style={{
+          width: '300px', flexShrink: 0, backgroundColor: 'white',
+          borderRadius: '16px', overflow: 'hidden',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{ padding: '1.25rem', borderBottom: '1px solid #F5F0E8' }}>
+            <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>Conversations</h2>
           </div>
-        ) : (
-          <>
-            {/* Header */}
-            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', overflow: 'hidden', flexShrink: 0 }}>
-                {activeConv.other_user?.avatar_url
-                  ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`
-                }
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {conversations.length === 0 && (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>
+                Aucune conversation pour l&apos;instant.
               </div>
-              <div>
-                <div style={{ fontWeight: 700, color: '#2D2D2D', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  {activeConv.other_user?.first_name} {activeConv.other_user?.last_name}
-                  {activeConv.other_user?.id === ADMIN_ID && (
-                    <img src="/icons/badge-check.svg" alt="" style={{ width: '16px', height: '16px' }} />
-                  )}
-                </div>
-                {activeConv.other_user?.activity && (
-                  <div style={{ fontSize: '0.78rem', opacity: 0.5, color: '#2D2D2D' }}>{activeConv.other_user.activity}</div>
-                )}
-              </div>
-            </div>
-
-            {/* Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', paddingBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {messages.map((msg, i) => {
-                const isMe = msg.sender_id === userId
-                const prevMsg = messages[i - 1]
-                const showAvatar = !isMe && (!prevMsg || prevMsg.sender_id !== msg.sender_id)
-                return (
-                  <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '0.5rem' }}>
-                    {/* Avatar à gauche pour les messages reçus */}
-                    {!isMe && (
-                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.6rem', overflow: 'hidden', flexShrink: 0, opacity: showAvatar ? 1 : 0 }}>
-                        {activeConv.other_user?.avatar_url
-                          ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`
-                        }
-                      </div>
-                    )}
-                    <div style={{
-                      backgroundColor: isMe ? '#E8501A' : '#F5F0E8',
-                      color: isMe ? 'white' : '#2D2D2D',
-                      padding: '0.55rem 0.85rem',
-                      borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                      maxWidth: '65%',
-                      fontSize: '0.9rem',
-                      lineHeight: 1.5,
-                      wordBreak: 'break-word',
-                      whiteSpace: 'pre-wrap',
-                    }}>
-                      {renderContent(msg.content, isMe)}
-                    </div>
-                  </div>
-                )
-              })}
-              <div ref={bottomRef} />
-            </div>
-
-            {/* Input */}
-            <form onSubmit={sendMessage} style={{ padding: '0.85rem 1rem', borderTop: '1px solid #F5F0E8', display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
-              <textarea
-                ref={inputRef}
-                value={newMessage}
-                onChange={e => {
-                  setNewMessage(e.target.value)
-                  e.target.style.height = 'auto'
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(e as any) }
-                }}
-                placeholder="Envoie un message…"
-                rows={1}
+            )}
+            {conversations.map(conv => (
+              <div
+                key={conv.id}
+                onClick={() => openConversation(conv)}
                 style={{
-                  flex: 1, border: '2px solid #E8E3D9', borderRadius: '10px',
-                  padding: '0.6rem 0.9rem', fontSize: '0.95rem', outline: 'none',
-                  fontFamily: 'inherit', resize: 'none', overflow: 'hidden',
-                  minHeight: '42px', lineHeight: '1.4',
-                }}
-              />
-              <button
-                type="submit"
-                disabled={!newMessage.trim()}
-                style={{
-                  backgroundColor: newMessage.trim() ? '#E8501A' : '#E8E3D9',
-                  color: newMessage.trim() ? 'white' : '#999',
-                  border: 'none', borderRadius: '10px',
-                  padding: '0.6rem 1.1rem', fontWeight: 600,
-                  cursor: newMessage.trim() ? 'pointer' : 'default',
-                  height: '42px', flexShrink: 0, transition: 'all 0.15s',
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  padding: '0.85rem 1.25rem', cursor: 'pointer',
+                  backgroundColor: activeConv?.id === conv.id ? '#FFF0ED' : conv.unread ? 'rgba(232,80,26,0.04)' : 'transparent',
+                  borderLeft: activeConv?.id === conv.id ? '3px solid #E8501A' : '3px solid transparent',
+                  transition: 'background 0.15s',
                 }}
               >
-                Envoyer
-              </button>
-            </form>
-          </>
-        )}
+                <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.82rem', overflow: 'hidden' }}>
+                  {conv.other_user?.avatar_url
+                    ? <img src={conv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : `${(conv.other_user?.first_name || '?')[0]}${(conv.other_user?.last_name || '')[0] || ''}`}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <div style={{ fontWeight: conv.unread ? 700 : 600, color: '#2D2D2D', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      {conv.other_user?.first_name} {conv.other_user?.last_name}
+                      {conv.other_user?.id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="" style={{ width: '13px', height: '13px' }} />}
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, flexShrink: 0 }}>{formatTime(conv.last_message_at)}</span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: conv.unread ? 0.9 : 0.5, fontWeight: conv.unread ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {conv.last_message || 'Aucun message'}
+                  </div>
+                </div>
+                {conv.unread && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#E8501A', flexShrink: 0 }} />}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Conversation active */}
+        <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {!activeConv ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2D2D2D', opacity: 0.3, fontSize: '0.95rem' }}>
+              Sélectionne une conversation
+            </div>
+          ) : (
+            <>
+              {/* Header */}
+              <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', overflow: 'hidden', flexShrink: 0 }}>
+                  {activeConv.other_user?.avatar_url
+                    ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, color: '#2D2D2D', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    {activeConv.other_user?.first_name} {activeConv.other_user?.last_name}
+                    {activeConv.other_user?.id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="" style={{ width: '16px', height: '16px' }} />}
+                  </div>
+                  {activeConv.other_user?.activity && <div style={{ fontSize: '0.78rem', opacity: 0.5, color: '#2D2D2D' }}>{activeConv.other_user.activity}</div>}
+                </div>
+              </div>
+
+              {/* Messages */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', paddingBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {messages.map((msg, i) => {
+                  const isMe = msg.sender_id === userId
+                  const prevMsg = messages[i - 1]
+                  const showAvatar = !isMe && (!prevMsg || prevMsg.sender_id !== msg.sender_id)
+                  return (
+                    <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '0.5rem' }}>
+                      {!isMe && (
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.6rem', overflow: 'hidden', flexShrink: 0, opacity: showAvatar ? 1 : 0 }}>
+                          {activeConv.other_user?.avatar_url
+                            ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`}
+                        </div>
+                      )}
+                      <div style={{
+                        backgroundColor: isMe ? '#E8501A' : '#F5F0E8',
+                        color: isMe ? 'white' : '#2D2D2D',
+                        padding: '0.55rem 0.85rem',
+                        borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                        maxWidth: '65%', fontSize: '0.9rem', lineHeight: 1.5,
+                        wordBreak: 'break-word', whiteSpace: 'pre-wrap',
+                      }}>
+                        {renderContent(msg.content, isMe)}
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {/* Typing indicator */}
+                {otherIsTyping && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-end', gap: '0.5rem' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.6rem', overflow: 'hidden', flexShrink: 0 }}>
+                      {activeConv.other_user?.avatar_url
+                        ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`}
+                    </div>
+                    <div style={{ backgroundColor: '#F5F0E8', padding: '0.5rem 0.9rem', borderRadius: '16px 16px 16px 4px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#2D2D2D', opacity: 0.4, animation: 'typing-dot 1.2s infinite', animationDelay: '0s', display: 'inline-block' }} />
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#2D2D2D', opacity: 0.4, animation: 'typing-dot 1.2s infinite', animationDelay: '0.2s', display: 'inline-block' }} />
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#2D2D2D', opacity: 0.4, animation: 'typing-dot 1.2s infinite', animationDelay: '0.4s', display: 'inline-block' }} />
+                    </div>
+                  </div>
+                )}
+                <div ref={bottomRef} />
+              </div>
+
+              {/* Input */}
+              <form onSubmit={sendMessage} style={{ padding: '0.85rem 1rem', borderTop: '1px solid #F5F0E8', display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+                <textarea
+                  ref={inputRef}
+                  value={newMessage}
+                  onChange={e => {
+                    setNewMessage(e.target.value)
+                    e.target.style.height = 'auto'
+                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+                    // Broadcaster le signal typing
+                    if (typingChannelRef.current && e.target.value.trim()) {
+                      typingChannelRef.current.send({ type: 'broadcast', event: 'typing', payload: { user_id: userId } })
+                    }
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(e as any) }
+                  }}
+                  placeholder="Envoie un message…"
+                  rows={1}
+                  style={{
+                    flex: 1, border: '2px solid #E8E3D9', borderRadius: '10px',
+                    padding: '0.6rem 0.9rem', fontSize: '0.95rem', outline: 'none',
+                    fontFamily: 'inherit', resize: 'none', overflow: 'hidden',
+                    minHeight: '42px', lineHeight: '1.4',
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={!newMessage.trim()}
+                  style={{
+                    backgroundColor: newMessage.trim() ? '#E8501A' : '#E8E3D9',
+                    color: newMessage.trim() ? 'white' : '#999',
+                    border: 'none', borderRadius: '10px',
+                    padding: '0.6rem 1.1rem', fontWeight: 600,
+                    cursor: newMessage.trim() ? 'pointer' : 'default',
+                    height: '42px', flexShrink: 0, transition: 'all 0.15s',
+                  }}
+                >
+                  Envoyer
+                </button>
+              </form>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }

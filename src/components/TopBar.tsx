@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 interface Notification {
@@ -18,6 +18,7 @@ interface Notification {
 
 export default function TopBar() {
   const router = useRouter()
+  const pathname = usePathname()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [showNotifs, setShowNotifs] = useState(false)
@@ -162,34 +163,36 @@ export default function TopBar() {
           )}
         </button>
 
-        {/* Séparateur */}
-        <div style={{ width: '1px', height: '20px', backgroundColor: '#E8E3D9' }} />
-
-        {/* Messages */}
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('meello:toggle-chat'))}
-          style={{
-            position: 'relative', background: 'none', border: 'none',
-            cursor: 'pointer', padding: '0.35rem 0.5rem',
-            borderRadius: '30px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background 0.15s',
-          }}
-          title="Messages"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          {unreadMessages > 0 && (
-            <span style={{
-              position: 'absolute', top: '2px', right: '2px',
-              backgroundColor: '#E8501A', color: 'white',
-              fontSize: '0.6rem', fontWeight: 700,
-              width: '16px', height: '16px', borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>{unreadMessages > 9 ? '9+' : unreadMessages}</span>
-          )}
-        </button>
+        {/* Séparateur + bouton messages (masqué sur /messages) */}
+        {pathname !== '/messages' && (
+          <>
+            <div style={{ width: '1px', height: '20px', backgroundColor: '#E8E3D9' }} />
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('meello:toggle-chat'))}
+              style={{
+                position: 'relative', background: 'none', border: 'none',
+                cursor: 'pointer', padding: '0.35rem 0.5rem',
+                borderRadius: '30px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'background 0.15s',
+              }}
+              title="Messages"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              {unreadMessages > 0 && (
+                <span style={{
+                  position: 'absolute', top: '2px', right: '2px',
+                  backgroundColor: '#E8501A', color: 'white',
+                  fontSize: '0.6rem', fontWeight: 700,
+                  width: '16px', height: '16px', borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>{unreadMessages > 9 ? '9+' : unreadMessages}</span>
+              )}
+            </button>
+          </>
+        )}
       </div>
 
       {/* Dropdown notifications */}
