@@ -69,12 +69,26 @@ export default function ProfilPage() {
   const serviceFileRef = useRef<HTMLInputElement>(null)
 
   const ALL_SKILLS = [
-    'WordPress', 'Webflow', 'Shopify', 'SEO', 'No-code', 'IA', 'Automatisation', 'React', 'Next.js', 'Python',
-    'Branding', 'Graphisme', 'Vidéo', 'Photo', 'Copywriting', 'UX/UI', 'Motion design', 'Illustration',
-    'Comptabilité', 'Juridique', 'Coaching', 'Formation', 'E-commerce', 'Stratégie',
-    'Réseaux sociaux', 'Emailing', 'Publicité', 'Growth hacking', 'Community management',
-    'Menuiserie', 'Plomberie', 'Électricité', 'BTP', 'Paysagisme', 'Décoration intérieure',
+    // Web & Dev
+    'WordPress', 'Webflow', 'Framer', 'Wix', 'Squarespace', 'Shopify', 'WooCommerce', 'Prestashop',
+    'React', 'Next.js', 'Vue.js', 'Angular', 'Node.js', 'TypeScript', 'JavaScript', 'Python', 'PHP', 'Ruby',
+    'HTML/CSS', 'Tailwind CSS', 'GraphQL', 'REST API', 'Git', 'Docker', 'AWS', 'Supabase', 'Firebase',
+    // No-code & Automatisation
+    'No-code', 'Low-code', 'Bubble', 'Webflow', 'Airtable', 'Notion', 'Make', 'Zapier', 'n8n',
+    'Automatisation', 'ChatGPT', 'IA générative', 'Prompt engineering', 'LangChain', 'RAG',
+    // Web design & UX
+    'Web design', 'UI design', 'UX/UI', 'Figma', 'Adobe XD', 'Webdesign responsive', 'Design system',
+    'Maquettage', 'Prototypage', 'User research', 'Accessibilité web',
+    // SEO & Marketing digital
+    'SEO', 'SEA', 'Google Ads', 'Meta Ads', 'Analytics', 'Google Tag Manager', 'Emailing', 'Growth hacking',
+    'Réseaux sociaux', 'Community management', 'Publicité', 'Copywriting', 'Content marketing', 'Inbound marketing',
+    // Créatif
+    'Branding', 'Identité visuelle', 'Graphisme', 'Illustration', 'Motion design', 'Vidéo', 'Photo',
+    'Montage vidéo', 'After Effects', 'Premiere Pro', 'Photoshop', 'Illustrator', 'InDesign',
+    // Business & Autres
+    'E-commerce', 'Stratégie', 'Coaching', 'Formation', 'Comptabilité', 'Juridique',
     'Rédaction web', 'Traduction', 'Podcast', 'Événementiel', 'Recrutement', 'Finance',
+    'Menuiserie', 'Plomberie', 'Électricité', 'BTP', 'Paysagisme', 'Décoration intérieure',
   ]
 
   useEffect(() => {
