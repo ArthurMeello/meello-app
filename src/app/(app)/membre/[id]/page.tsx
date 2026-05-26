@@ -28,6 +28,7 @@ export default function MembrePublicPage() {
   const [recoText, setRecoText] = useState('')
   const [recoLoading, setRecoLoading] = useState(false)
   const [alreadyRecommended, setAlreadyRecommended] = useState(false)
+  const [editingRecoId, setEditingRecoId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -60,7 +61,7 @@ export default function MembrePublicPage() {
 
       const { data: recoData } = await supabase
         .from('recommendations')
-        .select('id, content, profiles!recommendations_author_id_fkey(first_name, last_name)')
+        .select('id, content, author_id, profiles!recommendations_author_id_fkey(first_name, last_name, avatar_url, activity)')
         .eq('target_id', id)
         .order('created_at', { ascending: false })
       if (recoData) setRecos(recoData)
@@ -141,17 +142,26 @@ export default function MembrePublicPage() {
     if (!recoText.trim()) return
     setRecoLoading(true)
     const supabase = createClient()
-    await supabase.from('recommendations').insert({ target_id: id, author_id: currentUserId, content: recoText.trim() })
-    await supabase.from('notifications').insert({
-      user_id: id, type: 'recommendation', content: `t'a laissé une recommandation`,
-      link: `/membre/${id}`, from_user_id: currentUserId,
-    })
+
+    if (editingRecoId) {
+      // Mode édition
+      await supabase.from('recommendations').update({ content: recoText.trim() }).eq('id', editingRecoId)
+    } else {
+      // Nouvelle reco
+      await supabase.from('recommendations').insert({ target_id: id, author_id: currentUserId, content: recoText.trim() })
+      await supabase.from('notifications').insert({
+        user_id: id, type: 'recommendation', content: `t'a laissé une recommandation`,
+        link: `/membre/${id}`, from_user_id: currentUserId,
+      })
+      setAlreadyRecommended(true)
+    }
+
     // Recharger les recos
     const { data: recoData } = await supabase.from('recommendations')
-      .select('id, content, profiles!recommendations_author_id_fkey(first_name, last_name)')
+      .select('id, content, author_id, profiles!recommendations_author_id_fkey(first_name, last_name, avatar_url, activity)')
       .eq('target_id', id).order('created_at', { ascending: false })
     if (recoData) setRecos(recoData)
-    setRecoText(''); setRecoModal(false); setRecoLoading(false); setAlreadyRecommended(true)
+    setRecoText(''); setRecoModal(false); setRecoLoading(false); setEditingRecoId(null)
   }
 
   if (loading) return (
@@ -344,11 +354,30 @@ export default function MembrePublicPage() {
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             {recos.map(r => (
-              <div key={r.id} style={{ borderLeft: '3px solid #E8501A', paddingLeft: '1rem' }}>
-                <p style={{ margin: '0 0 0.35rem', color: '#2D2D2D', lineHeight: 1.6, fontSize: '0.95rem' }}>{r.content}</p>
-                <span style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.5, fontWeight: 600 }}>
-                  {r.profiles?.first_name} {r.profiles?.last_name}
-                </span>
+              <div key={r.id} style={{ borderLeft: '3px solid #E8501A', paddingLeft: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: '0 0 0.6rem', color: '#2D2D2D', lineHeight: 1.6, fontSize: '0.95rem' }}>{r.content}</p>
+                  <a href={`/membre/${r.author_id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700, flexShrink: 0, overflow: 'hidden' }}>
+                      {r.profiles?.avatar_url
+                        ? <img src={r.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : `${(r.profiles?.first_name || '?')[0]}${(r.profiles?.last_name || '')[0] || ''}`}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.85rem', color: '#E8501A', fontWeight: 600 }}>{r.profiles?.first_name} {r.profiles?.last_name}</div>
+                      {r.profiles?.activity && <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.5 }}>{r.profiles.activity}</div>}
+                    </div>
+                  </a>
+                </div>
+                {r.author_id === currentUserId && (
+                  <button
+                    onClick={() => { setEditingRecoId(r.id); setRecoText(r.content); setRecoModal(true) }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+                    title="Modifier ma recommandation"
+                  >
+                    <img src="/icons/edit.svg" alt="Modifier" style={{ width: '14px', height: '14px', filter: 'brightness(0) opacity(0.35)' }} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -358,10 +387,10 @@ export default function MembrePublicPage() {
       {/* Modal recommandation */}
       {recoModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
-          onClick={() => setRecoModal(false)}>
+          onClick={() => { setRecoModal(false); setEditingRecoId(null) }}>
           <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '480px' }}>
             <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.1rem', color: '#2D2D2D', marginBottom: '0.5rem' }}>
-              Recommander {profile?.first_name}
+              {editingRecoId ? 'Modifier ma recommandation' : `Recommander ${profile?.first_name}`}
             </h3>
             <p style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.5, marginBottom: '1rem' }}>
               Ta recommandation apparaîtra sur son profil.
