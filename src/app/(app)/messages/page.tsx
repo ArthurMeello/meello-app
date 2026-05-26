@@ -167,6 +167,12 @@ export default function MessagesPage() {
           typingTimeoutRef.current = setTimeout(() => setOtherIsTyping(false), 2500)
         }
       })
+      .on('broadcast', { event: 'stop_typing' }, ({ payload }: any) => {
+        if (payload.user_id !== userId) {
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+          setOtherIsTyping(false)
+        }
+      })
       .subscribe()
     typingChannelRef.current = typingChannel
 
@@ -201,6 +207,11 @@ export default function MessagesPage() {
           content: `t'a envoyé un message`, link: `/messages`, from_user_id: userId,
         })
       }
+    }
+
+    // Stopper le typing indicator immédiatement
+    if (typingChannelRef.current) {
+      typingChannelRef.current.send({ type: 'broadcast', event: 'stop_typing', payload: { user_id: userId } })
     }
 
     setMessages(prev => [...prev, {

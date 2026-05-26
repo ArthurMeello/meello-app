@@ -224,6 +224,12 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
           typingTimeoutRef.current = setTimeout(() => setOtherIsTyping(false), 2500)
         }
       })
+      .on('broadcast', { event: 'stop_typing' }, ({ payload }: any) => {
+        if (payload.user_id !== userId) {
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+          setOtherIsTyping(false)
+        }
+      })
       .subscribe()
     channelRef.current = channel
 
@@ -285,6 +291,11 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
           from_user_id: userId,
         })
       }
+    }
+
+    // Stopper le typing indicator immédiatement
+    if (channelRef.current) {
+      channelRef.current.send({ type: 'broadcast', event: 'stop_typing', payload: { user_id: userId } })
     }
 
     setMessages(prev => [...prev, {
