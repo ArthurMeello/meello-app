@@ -200,7 +200,7 @@ export default function ReseauPage() {
                       onClick={() => { setRecoModal(c.other_user); setRecoText('') }}
                       style={{ background: 'none', border: '1.5px solid #E8501A', borderRadius: '8px', padding: '0.45rem 0.85rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem', color: '#E8501A' }}
                     >
-                      ⭐️ Recommander
+                      Recommander
                     </button>
                   )}
                 </div>

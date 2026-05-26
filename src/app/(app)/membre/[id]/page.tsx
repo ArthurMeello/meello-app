@@ -246,7 +246,7 @@ export default function MembrePublicPage() {
                   disabled={alreadyRecommended}
                   style={{ background: 'none', border: `1.5px solid ${alreadyRecommended ? '#ccc' : '#E8501A'}`, borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: alreadyRecommended ? 'default' : 'pointer', fontSize: '0.85rem', color: alreadyRecommended ? '#aaa' : '#E8501A' }}
                 >
-                  {alreadyRecommended ? 'Déjà recommandé' : '⭐️ Recommander'}
+                  {alreadyRecommended ? 'Déjà recommandé' : 'Recommander'}
                 </button>
               </>
             )}
