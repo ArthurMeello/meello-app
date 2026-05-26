@@ -314,10 +314,10 @@ export default function MembrePublicPage() {
               href={profile.website}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#2D2D2D', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#E8501A', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500 }}
             >
-              <img src="/icons/website.svg" alt="Site web" style={{ width: '16px', height: '16px', opacity: 0.7 }} />
-              <span style={{ textDecoration: 'underline', opacity: 0.7 }}>
+              <img src="/icons/website.svg" alt="Site web" style={{ width: '16px', height: '16px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' }} />
+              <span>
                 {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
               </span>
             </a>
