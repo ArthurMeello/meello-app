@@ -57,15 +57,15 @@ export default function MessagesPage() {
         last_message_at,
         participant1_id,
         participant2_id,
-        profiles!conversations_participant1_id_fkey(id, first_name, last_name, avatar_url, activity),
-        profiles!conversations_participant2_id_fkey(id, first_name, last_name, avatar_url, activity)
+        p1:profiles!conversations_participant1_id_fkey(id, first_name, last_name, avatar_url, activity),
+        p2:profiles!conversations_participant2_id_fkey(id, first_name, last_name, avatar_url, activity)
       `)
       .or(`participant1_id.eq.${uid},participant2_id.eq.${uid}`)
       .order('last_message_at', { ascending: false })
 
     if (data) {
       const convs = data.map((c: any) => {
-        const other = c.participant1_id === uid ? c['profiles!conversations_participant2_id_fkey'] : c['profiles!conversations_participant1_id_fkey']
+        const other = c.participant1_id === uid ? c.p2 : c.p1
         return {
           id: c.id,
           other_user: other,
