@@ -28,14 +28,21 @@ export default function ReseauPage() {
   const [recoModal, setRecoModal] = useState<Connection['other_user'] | null>(null)
   const [recoText, setRecoText] = useState('')
   const [recoLoading, setRecoLoading] = useState(false)
+  const [alreadyRecommended, setAlreadyRecommended] = useState<Set<string>>(new Set())
   const router = useRouter()
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (data.user) {
         setUserId(data.user.id)
         fetchConnections(data.user.id)
+        // Charger les recos déjà envoyées
+        const { data: recos } = await supabase
+          .from('recommendations')
+          .select('target_id')
+          .eq('author_id', data.user.id)
+        if (recos) setAlreadyRecommended(new Set(recos.map(r => r.target_id)))
       }
     })
   }, [])
@@ -114,6 +121,7 @@ export default function ReseauPage() {
       link: `/membre/${recoModal.id}`,
       from_user_id: userId,
     })
+    setAlreadyRecommended(prev => new Set([...prev, recoModal.id]))
     setRecoText('')
     setRecoModal(null)
     setRecoLoading(false)
@@ -180,12 +188,18 @@ export default function ReseauPage() {
                   >
                     ✉️ Message
                   </button>
-                  <button
-                    onClick={() => { setRecoModal(c.other_user); setRecoText('') }}
-                    style={{ background: 'none', border: '1.5px solid #E8501A', borderRadius: '8px', padding: '0.45rem 0.85rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem', color: '#E8501A' }}
-                  >
-                    ⭐️ Recommander
-                  </button>
+                  {alreadyRecommended.has(c.other_user.id) ? (
+                    <button disabled style={{ background: 'none', border: '1.5px solid #ccc', borderRadius: '8px', padding: '0.45rem 0.85rem', fontWeight: 600, cursor: 'default', fontSize: '0.82rem', color: '#aaa' }}>
+                      Déjà recommandé
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { setRecoModal(c.other_user); setRecoText('') }}
+                      style={{ background: 'none', border: '1.5px solid #E8501A', borderRadius: '8px', padding: '0.45rem 0.85rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem', color: '#E8501A' }}
+                    >
+                      ⭐️ Recommander
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
