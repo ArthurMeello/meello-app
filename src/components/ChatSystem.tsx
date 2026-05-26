@@ -34,9 +34,12 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   const [newMessage, setNewMessage] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
   const [unreadConvIds, setUnreadConvIds] = useState<Set<string>>(new Set())
+  const [otherIsTyping, setOtherIsTyping] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const channelRef = useRef<any>(null)
 
   useEffect(() => {
     if (!userId) return
@@ -114,6 +117,23 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       .eq('conversation_id', conv.id)
       .order('created_at', { ascending: true })
     if (data) setMessages(data)
+    // Ouvrir canal Realtime pour le typing indicator
+    if (channelRef.current) {
+      channelRef.current.unsubscribe()
+    }
+    const supabaseRT = createClient()
+    const channel = supabaseRT.channel(`typing:${conv.id}`)
+    channel
+      .on('broadcast', { event: 'typing' }, ({ payload }: any) => {
+        if (payload.user_id !== userId) {
+          setOtherIsTyping(true)
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+          typingTimeoutRef.current = setTimeout(() => setOtherIsTyping(false), 2500)
+        }
+      })
+      .subscribe()
+    channelRef.current = channel
+
     // Marquer les notifs message de cet expéditeur comme lues
     if (userId && conv.other_user?.id) {
       await supabase.from('notifications')
@@ -336,7 +356,12 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
               )}
             </div>
             <button
-              onClick={e => { e.stopPropagation(); setActiveConv(null) }}
+              onClick={e => {
+                e.stopPropagation()
+                setActiveConv(null)
+                setOtherIsTyping(false)
+                if (channelRef.current) { channelRef.current.unsubscribe(); channelRef.current = null }
+              }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: '1.1rem', padding: '0.2rem 0.4rem', lineHeight: 1 }}
             >✕</button>
           </div>
@@ -368,6 +393,20 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
                 </div>
               )
             })}
+            {otherIsTyping && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div style={{
+                  backgroundColor: '#F5F0E8',
+                  padding: '0.5rem 0.9rem',
+                  borderRadius: '14px 14px 14px 4px',
+                  display: 'flex', alignItems: 'center', gap: '3px',
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#2D2D2D', opacity: 0.4, animation: 'typing-dot 1.2s infinite', animationDelay: '0s', display: 'inline-block' }} />
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#2D2D2D', opacity: 0.4, animation: 'typing-dot 1.2s infinite', animationDelay: '0.2s', display: 'inline-block' }} />
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#2D2D2D', opacity: 0.4, animation: 'typing-dot 1.2s infinite', animationDelay: '0.4s', display: 'inline-block' }} />
+                </div>
+              </div>
+            )}
             <div ref={bottomRef} />
           </div>
 
@@ -380,6 +419,10 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
                 setNewMessage(e.target.value)
                 e.target.style.height = 'auto'
                 e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+                // Broadcaster le signal "typing"
+                if (channelRef.current && e.target.value.trim()) {
+                  channelRef.current.send({ type: 'broadcast', event: 'typing', payload: { user_id: userId } })
+                }
               }}
               onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -414,6 +457,14 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
           </form>
         </div>
       )}
+
+      {/* CSS animation typing */}
+      <style>{`
+        @keyframes typing-dot {
+          0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
+          30% { opacity: 1; transform: translateY(-3px); }
+        }
+      `}</style>
 
       {/* Exposer toggle pour TopBar via window */}
       <ToggleExposer onToggle={() => setShowDropdown(v => !v)} unreadCount={unreadCount} />
