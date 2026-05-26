@@ -34,6 +34,7 @@ export default function MessagesPage() {
   const [newMessage, setNewMessage] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [otherIsTyping, setOtherIsTyping] = useState(false)
+  const [otherIsOnline, setOtherIsOnline] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const typingChannelRef = useRef<any>(null)
@@ -146,7 +147,20 @@ export default function MessagesPage() {
   const openConversation = async (conv: Conversation) => {
     setActiveConv({ ...conv, unread: false })
     setOtherIsTyping(false)
+    setOtherIsOnline(false)
     const supabase = createClient()
+
+    // Vérifier si l'autre membre est en ligne
+    if (conv.other_user?.id) {
+      const since = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+      const { data: presence } = await supabase
+        .from('qg_presence')
+        .select('last_seen')
+        .eq('user_id', conv.other_user.id)
+        .gte('last_seen', since)
+        .maybeSingle()
+      setOtherIsOnline(!!presence)
+    }
 
     const { data } = await supabase
       .from('meello_messages')
@@ -353,10 +367,15 @@ export default function MessagesPage() {
             <>
               {/* Header */}
               <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', overflow: 'hidden', flexShrink: 0 }}>
-                  {activeConv.other_user?.avatar_url
-                    ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`}
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', overflow: 'hidden' }}>
+                    {activeConv.other_user?.avatar_url
+                      ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`}
+                  </div>
+                  {otherIsOnline && (
+                    <span style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#22C55E', border: '2px solid white' }} />
+                  )}
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, color: '#2D2D2D', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>

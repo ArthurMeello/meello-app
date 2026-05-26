@@ -255,7 +255,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
         .select('last_seen')
         .eq('user_id', conv.other_user.id)
         .gte('last_seen', since)
-        .single()
+        .maybeSingle()
       setOtherIsOnline(!!presence)
     }
     const supabase = createClient()
