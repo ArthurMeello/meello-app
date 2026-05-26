@@ -367,7 +367,7 @@ export default function MembrePublicPage() {
                   {item.price && <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#E8501A' }}>{item.price}</div>}
                   {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.5 }}>{item.description}</p>}
                   {item.link && (
-                    <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ marginTop: 'auto', paddingTop: '0.5rem', display: 'inline-block', fontSize: '0.78rem', color: 'white', backgroundColor: '#E8501A', fontWeight: 600, textDecoration: 'none', padding: '0.3rem 0.7rem', borderRadius: '6px' }}>
+                    <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', alignSelf: 'flex-start', fontSize: '0.78rem', color: 'white', backgroundColor: '#E8501A', fontWeight: 600, textDecoration: 'none', padding: '0.35rem 0.8rem', borderRadius: '6px', marginTop: '0.5rem' }}>
                       {item.link_label || 'En savoir plus'}
                     </a>
                   )}
