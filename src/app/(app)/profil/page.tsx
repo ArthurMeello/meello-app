@@ -51,23 +51,17 @@ export default function ProfilPage() {
   const [recos, setRecos] = useState<{ id: string; content: string; author: { first_name: string; last_name: string } }[]>([])
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [portfolio, setPortfolio] = useState<{ id: string; title: string; description: string | null; media_url: string; link: string | null }[]>([])
-  const [showPortfolioForm, setShowPortfolioForm] = useState(false)
+  const [portfolioModal, setPortfolioModal] = useState<{ open: boolean; editId: string | null }>({ open: false, editId: null })
   const [portfolioForm, setPortfolioForm] = useState({ title: '', description: '', link: '' })
   const [portfolioFile, setPortfolioFile] = useState<File | null>(null)
   const [portfolioPreview, setPortfolioPreview] = useState<string | null>(null)
   const [savingPortfolio, setSavingPortfolio] = useState(false)
   const [services, setServices] = useState<{ id: string; title: string; description: string | null; image_url: string | null; price: string | null; link: string | null; link_label: string | null }[]>([])
-  const [showServiceForm, setShowServiceForm] = useState(false)
+  const [serviceModal, setServiceModal] = useState<{ open: boolean; editId: string | null }>({ open: false, editId: null })
   const [serviceForm, setServiceForm] = useState({ title: '', description: '', price: '', link: '', link_label: 'En savoir plus' })
   const [serviceFile, setServiceFile] = useState<File | null>(null)
   const [servicePreview, setServicePreview] = useState<string | null>(null)
   const [savingService, setSavingService] = useState(false)
-  const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null)
-  const [editPortfolioForm, setEditPortfolioForm] = useState({ title: '', description: '', link: '' })
-  const [savingEditPortfolio, setSavingEditPortfolio] = useState(false)
-  const [editingServiceId, setEditingServiceId] = useState<string | null>(null)
-  const [editServiceForm, setEditServiceForm] = useState({ title: '', description: '', price: '', link: '', link_label: '' })
-  const [savingEditService, setSavingEditService] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const portfolioFileRef = useRef<HTMLInputElement>(null)
   const serviceFileRef = useRef<HTMLInputElement>(null)
@@ -164,83 +158,125 @@ export default function ProfilPage() {
     setPortfolioPreview(URL.createObjectURL(file))
   }
 
-  const handleAddPortfolio = async () => {
-    if (!portfolioForm.title || !portfolioFile || !profile) return
-    setSavingPortfolio(true)
-    const supabase = createClient()
-    const ext = portfolioFile.name.split('.').pop()
-    const path = `${profile.id}/${Date.now()}.${ext}`
-    const { error: uploadError } = await supabase.storage.from('portfolio').upload(path, portfolioFile, { upsert: true })
-    if (uploadError) {
-      console.error('Portfolio upload error:', uploadError.message)
-      setSavingPortfolio(false)
-      return
+  const openPortfolioModal = (item?: { id: string; title: string; description: string | null; link: string | null }) => {
+    if (item) {
+      setPortfolioForm({ title: item.title, description: item.description || '', link: item.link || '' })
+      setPortfolioFile(null)
+      setPortfolioPreview(null)
+      setPortfolioModal({ open: true, editId: item.id })
+    } else {
+      setPortfolioForm({ title: '', description: '', link: '' })
+      setPortfolioFile(null)
+      setPortfolioPreview(null)
+      setPortfolioModal({ open: true, editId: null })
     }
-    const { data: urlData } = supabase.storage.from('portfolio').getPublicUrl(path)
-    await supabase.from('portfolio_items').insert({
-      profile_id: profile.id,
-      title: portfolioForm.title,
-      description: portfolioForm.description || null,
-      media_url: urlData.publicUrl,
-      link: portfolioForm.link || null,
-    })
+  }
+
+  const closePortfolioModal = () => {
+    setPortfolioModal({ open: false, editId: null })
     setPortfolioForm({ title: '', description: '', link: '' })
     setPortfolioFile(null)
     setPortfolioPreview(null)
-    setShowPortfolioForm(false)
+  }
+
+  const openServiceModal = (item?: { id: string; title: string; description: string | null; price: string | null; link: string | null; link_label: string | null }) => {
+    if (item) {
+      setServiceForm({ title: item.title, description: item.description || '', price: item.price || '', link: item.link || '', link_label: item.link_label || 'En savoir plus' })
+      setServiceFile(null)
+      setServicePreview(null)
+      setServiceModal({ open: true, editId: item.id })
+    } else {
+      setServiceForm({ title: '', description: '', price: '', link: '', link_label: 'En savoir plus' })
+      setServiceFile(null)
+      setServicePreview(null)
+      setServiceModal({ open: true, editId: null })
+    }
+  }
+
+  const closeServiceModal = () => {
+    setServiceModal({ open: false, editId: null })
+    setServiceForm({ title: '', description: '', price: '', link: '', link_label: 'En savoir plus' })
+    setServiceFile(null)
+    setServicePreview(null)
+  }
+
+  const handleSavePortfolio = async () => {
+    if (!portfolioForm.title || !profile) return
+    if (!portfolioModal.editId && !portfolioFile) return
+    setSavingPortfolio(true)
+    const supabase = createClient()
+
+    if (portfolioModal.editId) {
+      await supabase.from('portfolio_items').update({
+        title: portfolioForm.title,
+        description: portfolioForm.description || null,
+        link: portfolioForm.link || null,
+      }).eq('id', portfolioModal.editId)
+    } else {
+      const ext = portfolioFile!.name.split('.').pop()
+      const path = `${profile.id}/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage.from('portfolio').upload(path, portfolioFile!, { upsert: true })
+      if (uploadError) { setSavingPortfolio(false); return }
+      const { data: urlData } = supabase.storage.from('portfolio').getPublicUrl(path)
+      await supabase.from('portfolio_items').insert({
+        profile_id: profile.id,
+        title: portfolioForm.title,
+        description: portfolioForm.description || null,
+        media_url: urlData.publicUrl,
+        link: portfolioForm.link || null,
+      })
+    }
+
     setSavingPortfolio(false)
+    closePortfolioModal()
     await loadProfile()
   }
 
   const handleDeletePortfolio = async (id: string, mediaUrl: string) => {
     const supabase = createClient()
-    // Extraire le path depuis l'URL publique
     const urlParts = mediaUrl.split('/portfolio/')
-    if (urlParts[1]) {
-      await supabase.storage.from('portfolio').remove([urlParts[1]])
-    }
+    if (urlParts[1]) await supabase.storage.from('portfolio').remove([urlParts[1]])
     await supabase.from('portfolio_items').delete().eq('id', id)
     await loadProfile()
   }
 
-  const handleServiceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setServiceFile(file)
-    setServicePreview(URL.createObjectURL(file))
-  }
-
-  const handleAddService = async () => {
+  const handleSaveService = async () => {
     if (!serviceForm.title || !profile) return
     setSavingService(true)
     const supabase = createClient()
-    let image_url = null
 
-    if (serviceFile) {
-      const ext = serviceFile.name.split('.').pop()
-      const path = `${profile.id}/${Date.now()}.${ext}`
-      const { error: uploadError } = await supabase.storage.from('services').upload(path, serviceFile, { upsert: true })
-      if (!uploadError) {
-        const { data: urlData } = supabase.storage.from('services').getPublicUrl(path)
-        image_url = urlData.publicUrl
+    if (serviceModal.editId) {
+      await supabase.from('service_items').update({
+        title: serviceForm.title,
+        description: serviceForm.description || null,
+        price: serviceForm.price || null,
+        link: serviceForm.link || null,
+        link_label: serviceForm.link ? (serviceForm.link_label || 'En savoir plus') : null,
+      }).eq('id', serviceModal.editId)
+    } else {
+      let image_url = null
+      if (serviceFile) {
+        const ext = serviceFile.name.split('.').pop()
+        const path = `${profile.id}/${Date.now()}.${ext}`
+        const { error: uploadError } = await supabase.storage.from('services').upload(path, serviceFile, { upsert: true })
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('services').getPublicUrl(path)
+          image_url = urlData.publicUrl
+        }
       }
+      await supabase.from('service_items').insert({
+        profile_id: profile.id,
+        title: serviceForm.title,
+        description: serviceForm.description || null,
+        image_url,
+        price: serviceForm.price || null,
+        link: serviceForm.link || null,
+        link_label: serviceForm.link ? (serviceForm.link_label || 'En savoir plus') : null,
+      })
     }
 
-    await supabase.from('service_items').insert({
-      profile_id: profile.id,
-      title: serviceForm.title,
-      description: serviceForm.description || null,
-      image_url,
-      price: serviceForm.price || null,
-      link: serviceForm.link || null,
-      link_label: serviceForm.link ? (serviceForm.link_label || 'En savoir plus') : null,
-    })
-
-    setServiceForm({ title: '', description: '', price: '', link: '', link_label: 'En savoir plus' })
-    setServiceFile(null)
-    setServicePreview(null)
-    setShowServiceForm(false)
     setSavingService(false)
+    closeServiceModal()
     await loadProfile()
   }
 
@@ -251,34 +287,6 @@ export default function ProfilPage() {
       if (urlParts[1]) await supabase.storage.from('services').remove([urlParts[1]])
     }
     await supabase.from('service_items').delete().eq('id', id)
-    await loadProfile()
-  }
-
-  const handleUpdatePortfolio = async (id: string) => {
-    setSavingEditPortfolio(true)
-    const supabase = createClient()
-    await supabase.from('portfolio_items').update({
-      title: editPortfolioForm.title,
-      description: editPortfolioForm.description || null,
-      link: editPortfolioForm.link || null,
-    }).eq('id', id)
-    setEditingPortfolioId(null)
-    setSavingEditPortfolio(false)
-    await loadProfile()
-  }
-
-  const handleUpdateService = async (id: string) => {
-    setSavingEditService(true)
-    const supabase = createClient()
-    await supabase.from('service_items').update({
-      title: editServiceForm.title,
-      description: editServiceForm.description || null,
-      price: editServiceForm.price || null,
-      link: editServiceForm.link || null,
-      link_label: editServiceForm.link ? (editServiceForm.link_label || 'En savoir plus') : null,
-    }).eq('id', id)
-    setEditingServiceId(null)
-    setSavingEditService(false)
     await loadProfile()
   }
 
@@ -352,7 +360,12 @@ export default function ProfilPage() {
               {profile.first_name} {profile.last_name}
             </div>
             <div style={{ color: '#2D2D2D', opacity: 0.6, fontSize: '0.9rem' }}>{profile.activity}</div>
-            {profile.city && <div style={{ color: '#2D2D2D', opacity: 0.45, fontSize: '0.82rem' }}>📍 {profile.city}</div>}
+            {profile.city && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.1rem' }}>
+                <img src="/icons/pin.svg" alt="" style={{ width: '13px', height: '13px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)', flexShrink: 0 }} />
+                <span style={{ color: '#E8501A', fontSize: '0.82rem', fontWeight: 500 }}>{profile.city}</span>
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <a
@@ -565,79 +578,12 @@ export default function ProfilPage() {
       {/* Portfolio */}
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>
-            Portfolio
-          </h2>
-          <button
-            onClick={() => { setShowPortfolioForm(!showPortfolioForm); setPortfolioPreview(null); setPortfolioForm({ title: '', description: '', link: '' }) }}
-            style={{
-              backgroundColor: showPortfolioForm ? '#2D2D2D' : '#E8501A',
-              color: 'white', border: 'none', borderRadius: '10px',
-              padding: '0.45rem 1rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
-            }}
-          >
-            {showPortfolioForm ? 'Annuler' : '+ Ajouter un projet'}
+          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>Portfolio</h2>
+          <button onClick={() => openPortfolioModal()} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '10px', padding: '0.45rem 1rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+            + Ajouter un projet
           </button>
         </div>
-
-        {/* Formulaire ajout */}
-        {showPortfolioForm && (
-          <div style={{ backgroundColor: '#F5F0E8', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {/* Upload média */}
-            <div
-              onClick={() => portfolioFileRef.current?.click()}
-              style={{
-                border: '2px dashed #E8E3D9', borderRadius: '10px',
-                height: portfolioPreview ? 'auto' : '120px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', overflow: 'hidden', backgroundColor: 'white',
-              }}
-            >
-              {portfolioPreview ? (
-                portfolioFile?.type.startsWith('video/')
-                  ? <video src={portfolioPreview} controls style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }} />
-                  : <img src={portfolioPreview} alt="" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }} />
-              ) : (
-                <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>📁 Cliquer pour ajouter une image ou vidéo</span>
-              )}
-            </div>
-            <input ref={portfolioFileRef} type="file" accept="image/*,video/*" onChange={handlePortfolioFileChange} style={{ display: 'none' }} />
-
-            <input
-              value={portfolioForm.title}
-              onChange={e => setPortfolioForm(p => ({ ...p, title: e.target.value }))}
-              placeholder="Titre du projet *"
-              style={inputStyle}
-            />
-            <textarea
-              value={portfolioForm.description}
-              onChange={e => setPortfolioForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="Description (facultatif)"
-              rows={2}
-              style={{ ...inputStyle, resize: 'vertical' }}
-            />
-            <input
-              value={portfolioForm.link}
-              onChange={e => setPortfolioForm(p => ({ ...p, link: e.target.value }))}
-              placeholder="Lien externe (facultatif)"
-              style={inputStyle}
-            />
-            <button
-              onClick={handleAddPortfolio}
-              disabled={savingPortfolio || !portfolioForm.title || !portfolioFile}
-              style={{
-                backgroundColor: savingPortfolio || !portfolioForm.title || !portfolioFile ? '#ccc' : '#E8501A',
-                color: 'white', border: 'none', borderRadius: '10px',
-                padding: '0.7rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer',
-              }}
-            >
-              {savingPortfolio ? 'Enregistrement...' : 'Ajouter au portfolio'}
-            </button>
-          </div>
-        )}
-
-        {/* Cartes portfolio */}
-        {portfolio.length === 0 && !showPortfolioForm && (
+        {portfolio.length === 0 && (
           <p style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem', textAlign: 'center', margin: '1rem 0' }}>
             Aucun projet pour l'instant — ajoutes-en un !
           </p>
@@ -649,44 +595,21 @@ export default function ProfilPage() {
                 ? <video src={item.media_url} controls style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
                 : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
               }
-              {editingPortfolioId === item.id ? (
-                <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <input value={editPortfolioForm.title} onChange={e => setEditPortfolioForm(p => ({ ...p, title: e.target.value }))} placeholder="Titre *" style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem' }} />
-                  <textarea value={editPortfolioForm.description} onChange={e => setEditPortfolioForm(p => ({ ...p, description: e.target.value }))} placeholder="Description" rows={2} style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem', resize: 'vertical' }} />
-                  <input value={editPortfolioForm.link} onChange={e => setEditPortfolioForm(p => ({ ...p, link: e.target.value }))} placeholder="Lien externe" style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem' }} />
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <button onClick={() => handleUpdatePortfolio(item.id)} disabled={savingEditPortfolio || !editPortfolioForm.title} style={{ flex: 1, backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.4rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}>
-                      {savingEditPortfolio ? '...' : 'Enregistrer'}
+              <div style={{ padding: '0.75rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D', marginBottom: '0.25rem' }}>{item.title}</div>
+                {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.5rem', lineHeight: 1.5 }}>{item.description}</p>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {item.link ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a> : <span />}
+                  <div style={{ display: 'flex', gap: '0.35rem' }}>
+                    <button onClick={() => openPortfolioModal(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: 0.5 }} title="Modifier">
+                      <img src="/icons/pen-edit.svg" alt="Modifier" style={{ width: '15px', height: '15px' }} />
                     </button>
-                    <button onClick={() => setEditingPortfolioId(null)} style={{ flex: 1, backgroundColor: '#F5F0E8', color: '#2D2D2D', border: 'none', borderRadius: '8px', padding: '0.4rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}>
-                      Annuler
+                    <button onClick={() => handleDeletePortfolio(item.id, item.media_url)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: 0.35 }} title="Supprimer">
+                      <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '15px', height: '15px' }} />
                     </button>
                   </div>
                 </div>
-              ) : (
-                <div style={{ padding: '0.75rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D', marginBottom: '0.25rem' }}>{item.title}</div>
-                  {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.5rem', lineHeight: 1.5 }}>{item.description}</p>}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    {item.link
-                      ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a>
-                      : <span />
-                    }
-                    <div style={{ display: 'flex', gap: '0.35rem' }}>
-                      <button
-                        onClick={() => { setEditingPortfolioId(item.id); setEditPortfolioForm({ title: item.title, description: item.description || '', link: item.link || '' }) }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.4 }}
-                        title="Modifier"
-                      >✏️</button>
-                      <button
-                        onClick={() => handleDeletePortfolio(item.id, item.media_url)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.3 }}
-                        title="Supprimer"
-                      >🗑</button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           ))}
         </div>
@@ -695,90 +618,12 @@ export default function ProfilPage() {
       {/* Produits & Services */}
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>
-            Produits & Services
-          </h2>
-          <button
-            onClick={() => { setShowServiceForm(!showServiceForm); setServicePreview(null); setServiceForm({ title: '', description: '', price: '', link: '', link_label: 'En savoir plus' }) }}
-            style={{
-              backgroundColor: showServiceForm ? '#2D2D2D' : '#E8501A',
-              color: 'white', border: 'none', borderRadius: '10px',
-              padding: '0.45rem 1rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
-            }}
-          >
-            {showServiceForm ? 'Annuler' : '+ Ajouter'}
+          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>Produits & Services</h2>
+          <button onClick={() => openServiceModal()} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '10px', padding: '0.45rem 1rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+            + Ajouter
           </button>
         </div>
-
-        {/* Formulaire ajout */}
-        {showServiceForm && (
-          <div style={{ backgroundColor: '#F5F0E8', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {/* Image facultative */}
-            <div
-              onClick={() => serviceFileRef.current?.click()}
-              style={{
-                border: '2px dashed #E8E3D9', borderRadius: '10px',
-                height: servicePreview ? 'auto' : '100px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', overflow: 'hidden', backgroundColor: 'white',
-              }}
-            >
-              {servicePreview
-                ? <img src={servicePreview} alt="" style={{ width: '100%', maxHeight: '180px', objectFit: 'cover' }} />
-                : <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>🖼 Image du produit/service (facultatif)</span>
-              }
-            </div>
-            <input ref={serviceFileRef} type="file" accept="image/*" onChange={handleServiceFileChange} style={{ display: 'none' }} />
-
-            <input
-              value={serviceForm.title}
-              onChange={e => setServiceForm(p => ({ ...p, title: e.target.value }))}
-              placeholder="Titre du produit / service *"
-              style={inputStyle}
-            />
-            <textarea
-              value={serviceForm.description}
-              onChange={e => setServiceForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="Description (facultatif)"
-              rows={2}
-              style={{ ...inputStyle, resize: 'vertical' }}
-            />
-            <input
-              value={serviceForm.price}
-              onChange={e => setServiceForm(p => ({ ...p, price: e.target.value }))}
-              placeholder="Prix (ex: 150€, À partir de 500€, Sur devis...)"
-              style={inputStyle}
-            />
-            <input
-              value={serviceForm.link}
-              onChange={e => setServiceForm(p => ({ ...p, link: e.target.value }))}
-              placeholder="Lien (facultatif)"
-              style={inputStyle}
-            />
-            {serviceForm.link && (
-              <input
-                value={serviceForm.link_label}
-                onChange={e => setServiceForm(p => ({ ...p, link_label: e.target.value }))}
-                placeholder="Texte du bouton (ex: En savoir plus, Commander, Réserver...)"
-                style={inputStyle}
-              />
-            )}
-            <button
-              onClick={handleAddService}
-              disabled={savingService || !serviceForm.title}
-              style={{
-                backgroundColor: savingService || !serviceForm.title ? '#ccc' : '#E8501A',
-                color: 'white', border: 'none', borderRadius: '10px',
-                padding: '0.7rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer',
-              }}
-            >
-              {savingService ? 'Enregistrement...' : 'Ajouter'}
-            </button>
-          </div>
-        )}
-
-        {/* Cartes services */}
-        {services.length === 0 && !showServiceForm && (
+        {services.length === 0 && (
           <p style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem', textAlign: 'center', margin: '1rem 0' }}>
             Aucun produit ou service pour l'instant.
           </p>
@@ -786,62 +631,103 @@ export default function ProfilPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
           {services.map(item => (
             <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
-              {item.image_url && (
-                <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
-              )}
-              {editingServiceId === item.id ? (
-                <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <input value={editServiceForm.title} onChange={e => setEditServiceForm(p => ({ ...p, title: e.target.value }))} placeholder="Titre *" style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem' }} />
-                  <textarea value={editServiceForm.description} onChange={e => setEditServiceForm(p => ({ ...p, description: e.target.value }))} placeholder="Description" rows={2} style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem', resize: 'vertical' }} />
-                  <input value={editServiceForm.price} onChange={e => setEditServiceForm(p => ({ ...p, price: e.target.value }))} placeholder="Prix" style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem' }} />
-                  <input value={editServiceForm.link} onChange={e => setEditServiceForm(p => ({ ...p, link: e.target.value }))} placeholder="Lien" style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem' }} />
-                  {editServiceForm.link && (
-                    <input value={editServiceForm.link_label} onChange={e => setEditServiceForm(p => ({ ...p, link_label: e.target.value }))} placeholder="Texte du bouton" style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem' }} />
-                  )}
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <button onClick={() => handleUpdateService(item.id)} disabled={savingEditService || !editServiceForm.title} style={{ flex: 1, backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.4rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}>
-                      {savingEditService ? '...' : 'Enregistrer'}
+              {item.image_url && <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />}
+              <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D' }}>{item.title}</div>
+                {item.price && <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#E8501A' }}>{item.price}</div>}
+                {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.5 }}>{item.description}</p>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem' }}>
+                  {item.link
+                    ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: 'white', backgroundColor: '#E8501A', fontWeight: 600, textDecoration: 'none', padding: '0.3rem 0.7rem', borderRadius: '6px' }}>{item.link_label || 'En savoir plus'}</a>
+                    : <span />
+                  }
+                  <div style={{ display: 'flex', gap: '0.35rem' }}>
+                    <button onClick={() => openServiceModal(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: 0.5 }} title="Modifier">
+                      <img src="/icons/pen-edit.svg" alt="Modifier" style={{ width: '15px', height: '15px' }} />
                     </button>
-                    <button onClick={() => setEditingServiceId(null)} style={{ flex: 1, backgroundColor: '#F5F0E8', color: '#2D2D2D', border: 'none', borderRadius: '8px', padding: '0.4rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}>
-                      Annuler
+                    <button onClick={() => handleDeleteService(item.id, item.image_url)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: 0.35 }} title="Supprimer">
+                      <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '15px', height: '15px' }} />
                     </button>
                   </div>
                 </div>
-              ) : (
-                <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D' }}>{item.title}</div>
-                  {item.price && (
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#E8501A' }}>{item.price}</div>
-                  )}
-                  {item.description && (
-                    <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.5 }}>{item.description}</p>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem' }}>
-                    {item.link
-                      ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: 'white', backgroundColor: '#E8501A', fontWeight: 600, textDecoration: 'none', padding: '0.3rem 0.7rem', borderRadius: '6px' }}>
-                          {item.link_label || 'En savoir plus'}
-                        </a>
-                      : <span />
-                    }
-                    <div style={{ display: 'flex', gap: '0.35rem' }}>
-                      <button
-                        onClick={() => { setEditingServiceId(item.id); setEditServiceForm({ title: item.title, description: item.description || '', price: item.price || '', link: item.link || '', link_label: item.link_label || 'En savoir plus' }) }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.4 }}
-                        title="Modifier"
-                      >✏️</button>
-                      <button
-                        onClick={() => handleDeleteService(item.id, item.image_url)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.3 }}
-                        title="Supprimer"
-                      >🗑</button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Modale Portfolio */}
+      {portfolioModal.open && (
+        <div onClick={closePortfolioModal} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '1rem', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>
+                {portfolioModal.editId ? 'Modifier le projet' : 'Ajouter un projet'}
+              </h3>
+              <button onClick={closePortfolioModal} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}>×</button>
+            </div>
+            {!portfolioModal.editId && (
+              <div onClick={() => portfolioFileRef.current?.click()} style={{ border: '2px dashed #E8E3D9', borderRadius: '12px', height: portfolioPreview ? 'auto' : '130px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', backgroundColor: '#FAFAFA' }}>
+                {portfolioPreview ? (
+                  portfolioFile?.type.startsWith('video/')
+                    ? <video src={portfolioPreview} controls style={{ width: '100%', maxHeight: '220px', objectFit: 'cover' }} />
+                    : <img src={portfolioPreview} alt="" style={{ width: '100%', maxHeight: '220px', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Cliquer pour ajouter une image ou vidéo</span>
+                )}
+              </div>
+            )}
+            <input ref={portfolioFileRef} type="file" accept="image/*,video/*" onChange={handlePortfolioFileChange} style={{ display: 'none' }} />
+            <input value={portfolioForm.title} onChange={e => setPortfolioForm(p => ({ ...p, title: e.target.value }))} placeholder="Titre du projet *" style={inputStyle} />
+            <textarea value={portfolioForm.description} onChange={e => setPortfolioForm(p => ({ ...p, description: e.target.value }))} placeholder="Description (facultatif)" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
+            <input value={portfolioForm.link} onChange={e => setPortfolioForm(p => ({ ...p, link: e.target.value }))} placeholder="Lien externe (facultatif)" style={inputStyle} />
+            <button
+              onClick={handleSavePortfolio}
+              disabled={savingPortfolio || !portfolioForm.title || (!portfolioModal.editId && !portfolioFile)}
+              style={{ backgroundColor: savingPortfolio || !portfolioForm.title || (!portfolioModal.editId && !portfolioFile) ? '#ccc' : '#E8501A', color: 'white', border: 'none', borderRadius: '12px', padding: '0.85rem', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}
+            >
+              {savingPortfolio ? 'Enregistrement...' : portfolioModal.editId ? 'Enregistrer les modifications' : 'Ajouter au portfolio'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modale Services */}
+      {serviceModal.open && (
+        <div onClick={closeServiceModal} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '1rem', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>
+                {serviceModal.editId ? 'Modifier le service' : 'Ajouter un produit / service'}
+              </h3>
+              <button onClick={closeServiceModal} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}>×</button>
+            </div>
+            {!serviceModal.editId && (
+              <div onClick={() => serviceFileRef.current?.click()} style={{ border: '2px dashed #E8E3D9', borderRadius: '12px', height: servicePreview ? 'auto' : '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', backgroundColor: '#FAFAFA' }}>
+                {servicePreview
+                  ? <img src={servicePreview} alt="" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }} />
+                  : <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Image du produit/service (facultatif)</span>
+                }
+              </div>
+            )}
+            <input ref={serviceFileRef} type="file" accept="image/*" onChange={handleServiceFileChange} style={{ display: 'none' }} />
+            <input value={serviceForm.title} onChange={e => setServiceForm(p => ({ ...p, title: e.target.value }))} placeholder="Titre du produit / service *" style={inputStyle} />
+            <textarea value={serviceForm.description} onChange={e => setServiceForm(p => ({ ...p, description: e.target.value }))} placeholder="Description (facultatif)" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
+            <input value={serviceForm.price} onChange={e => setServiceForm(p => ({ ...p, price: e.target.value }))} placeholder="Prix (ex: 150€, À partir de 500€, Sur devis...)" style={inputStyle} />
+            <input value={serviceForm.link} onChange={e => setServiceForm(p => ({ ...p, link: e.target.value }))} placeholder="Lien (facultatif)" style={inputStyle} />
+            {serviceForm.link && (
+              <input value={serviceForm.link_label} onChange={e => setServiceForm(p => ({ ...p, link_label: e.target.value }))} placeholder="Texte du bouton (ex: En savoir plus, Commander...)" style={inputStyle} />
+            )}
+            <button
+              onClick={handleSaveService}
+              disabled={savingService || !serviceForm.title}
+              style={{ backgroundColor: savingService || !serviceForm.title ? '#ccc' : '#E8501A', color: 'white', border: 'none', borderRadius: '12px', padding: '0.85rem', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}
+            >
+              {savingService ? 'Enregistrement...' : serviceModal.editId ? 'Enregistrer les modifications' : 'Ajouter'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Recommandations */}
       {recos.length > 0 && (
