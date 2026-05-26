@@ -25,12 +25,17 @@ export default function TopBar() {
   const [userId, setUserId] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
-  // Écouter les mises à jour du badge messages depuis ChatSystem
+  // Écouter les mises à jour du badge messages depuis ChatSystem ou page /messages
   useEffect(() => {
     const handler = (e: CustomEvent) => setUnreadMessages(e.detail)
     window.addEventListener('meello:chat-unread', handler as EventListener)
     return () => window.removeEventListener('meello:chat-unread', handler as EventListener)
   }, [])
+
+  // Recharger le badge messages quand on revient sur une page (navigation)
+  useEffect(() => {
+    if (userId) loadUnreadMessages(userId)
+  }, [pathname, userId])
 
 
   useEffect(() => {
