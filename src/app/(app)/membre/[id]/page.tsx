@@ -60,7 +60,7 @@ export default function MembrePublicPage() {
       const { data: recoData } = await supabase
         .from('recommendations')
         .select('id, content, profiles!recommendations_author_id_fkey(first_name, last_name)')
-        .eq('recommended_id', id)
+        .eq('target_id', id)
         .order('created_at', { ascending: false })
       if (recoData) setRecos(recoData)
 
@@ -129,7 +129,7 @@ export default function MembrePublicPage() {
     if (!recoText.trim()) return
     setRecoLoading(true)
     const supabase = createClient()
-    await supabase.from('recommendations').insert({ recommended_id: id, author_id: currentUserId, content: recoText.trim() })
+    await supabase.from('recommendations').insert({ target_id: id, author_id: currentUserId, content: recoText.trim() })
     await supabase.from('notifications').insert({
       user_id: id, type: 'recommendation', content: `t'a laissé une recommandation`,
       link: `/membre/${id}`, from_user_id: currentUserId,
@@ -137,7 +137,7 @@ export default function MembrePublicPage() {
     // Recharger les recos
     const { data: recoData } = await supabase.from('recommendations')
       .select('id, content, profiles!recommendations_author_id_fkey(first_name, last_name)')
-      .eq('recommended_id', id).order('created_at', { ascending: false })
+      .eq('target_id', id).order('created_at', { ascending: false })
     if (recoData) setRecos(recoData)
     setRecoText(''); setRecoModal(false); setRecoLoading(false)
   }

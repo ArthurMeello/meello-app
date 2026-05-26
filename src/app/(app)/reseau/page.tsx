@@ -103,7 +103,7 @@ export default function ReseauPage() {
     setRecoLoading(true)
     const supabase = createClient()
     await supabase.from('recommendations').insert({
-      recommended_id: recoModal.id,
+      target_id: recoModal.id,
       author_id: userId,
       content: recoText.trim(),
     })
