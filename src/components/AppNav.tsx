@@ -22,6 +22,7 @@ export default function AppNav() {
   const [profile, setProfile] = useState<{ first_name: string; last_name: string; avatar_url: string | null } | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [pendingConnections, setPendingConnections] = useState(0)
+  const [adminActions, setAdminActions] = useState(0)
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -38,6 +39,14 @@ export default function AppNav() {
         .eq('receiver_id', user.id)
         .eq('status', 'pending')
       setPendingConnections(count || 0)
+      // Compter les actions admin en attente
+      if (user.id === ADMIN_ID) {
+        const [{ count: appCount }, { count: recoCount }] = await Promise.all([
+          supabase.from('applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+          supabase.from('recommendations').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        ])
+        setAdminActions((appCount || 0) + (recoCount || 0))
+      }
     }
     loadProfile()
   }, [pathname])
@@ -124,7 +133,14 @@ export default function AppNav() {
                 fontSize: '0.95rem',
               }}
             >
-              <img src="/icons/admin.svg" alt="Admin" style={{ width: '16px', height: '16px', filter: pathname.startsWith('/admin') ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(0.4)', flexShrink: 0 }} />
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <img src="/icons/admin.svg" alt="Admin" style={{ width: '16px', height: '16px', filter: pathname.startsWith('/admin') ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(0.4)' }} />
+                {adminActions > 0 && (
+                  <span style={{ position: 'absolute', top: '-5px', right: '-6px', backgroundColor: '#E8501A', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #1A1A2E' }}>
+                    {adminActions}
+                  </span>
+                )}
+              </div>
               <span>Admin</span>
             </Link>
           )}
