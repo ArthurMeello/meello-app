@@ -49,7 +49,7 @@ export default function MessagesPage() {
 
   const fetchConversations = async (uid: string) => {
     const supabase = createClient()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('conversations')
       .select(`
         id,
@@ -62,6 +62,8 @@ export default function MessagesPage() {
       `)
       .or(`participant1_id.eq.${uid},participant2_id.eq.${uid}`)
       .order('last_message_at', { ascending: false })
+
+    console.log('conversations data:', data, 'error:', error, 'uid:', uid)
 
     if (data) {
       const convs = data.map((c: any) => {
