@@ -164,31 +164,29 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
 
     const unreadSenderIds = new Set((unreadNotifs || []).map((n: any) => n.from_user_id))
 
-    // Récupérer le dernier message reçu (de l'autre) pour les convs non lues
+    // Dernier message de chaque conversation (tous expéditeurs confondus)
     const convIds = data.map((c: any) => c.id)
-    const { data: lastReceivedMsgs } = await supabase
+    const { data: lastMsgs } = await supabase
       .from('meello_messages')
-      .select('conversation_id, content, created_at')
+      .select('conversation_id, content, sender_id, created_at')
       .in('conversation_id', convIds)
-      .neq('sender_id', uid)
       .order('created_at', { ascending: false })
-
-    // Garder uniquement le dernier message reçu par conversation
-    const lastReceivedMap: Record<string, string> = {}
-    for (const msg of (lastReceivedMsgs || [])) {
-      if (!lastReceivedMap[msg.conversation_id]) {
-        lastReceivedMap[msg.conversation_id] = msg.content
-      }
+    const lastMsgMap: Record<string, { content: string; sender_id: string }> = {}
+    for (const msg of (lastMsgs || [])) {
+      if (!lastMsgMap[msg.conversation_id]) lastMsgMap[msg.conversation_id] = { content: msg.content, sender_id: msg.sender_id }
     }
 
     const convs = data.map((c: any) => {
       const otherId = c.participant1_id === uid ? c.participant2_id : c.participant1_id
       const isUnread = unreadSenderIds.has(otherId)
+      const lastMsg = lastMsgMap[c.id]
+      const preview = lastMsg
+        ? (lastMsg.sender_id === uid ? `Vous : ${lastMsg.content}` : lastMsg.content)
+        : (c.last_message || '')
       return {
         id: c.id,
         other_user: profileMap[otherId] || null,
-        // Si non lu : afficher le dernier message reçu, sinon le last_message général
-        last_message: isUnread ? (lastReceivedMap[c.id] || c.last_message || '') : (c.last_message || ''),
+        last_message: preview,
         last_message_at: c.last_message_at || '',
       }
     })
