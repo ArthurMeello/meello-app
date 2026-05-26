@@ -40,6 +40,7 @@ export default function MessagesPage() {
   const typingTimeoutRef = useRef<any>(null)
   const activeConvRef = useRef<Conversation | null>(null)
   const userIdRef = useRef<string | null>(null)
+  const readPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => { activeConvRef.current = activeConv }, [activeConv])
   useEffect(() => { userIdRef.current = userId }, [userId])
@@ -194,6 +195,27 @@ export default function MessagesPage() {
       })
       .subscribe()
     typingChannelRef.current = typingChannel
+
+    // Polling "Lu" toutes les 3s
+    if (readPollRef.current) clearInterval(readPollRef.current)
+    const pollUid = userIdRef.current || userId
+    readPollRef.current = setInterval(async () => {
+      const currentConv = activeConvRef.current
+      if (!currentConv || !pollUid) return
+      const supabasePoll = createClient()
+      const { data } = await supabasePoll
+        .from('meello_messages')
+        .select('id, read_at')
+        .eq('conversation_id', currentConv.id)
+        .eq('sender_id', pollUid)
+        .not('read_at', 'is', null)
+      if (data && data.length > 0) {
+        setMessages(prev => prev.map(m => {
+          const updated = data.find(d => d.id === m.id)
+          return updated ? { ...m, read_at: updated.read_at } : m
+        }))
+      }
+    }, 3000)
 
     setTimeout(() => inputRef.current?.focus(), 100)
   }

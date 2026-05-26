@@ -47,6 +47,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const channelRef = useRef<any>(null)
   const activeConvRef = useRef<Conversation | null>(null)
+  const readPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (!userId) return
@@ -295,6 +296,26 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       })
       .subscribe()
     channelRef.current = channel
+
+    // Polling "Lu" — vérifier toutes les 3s si les messages envoyés ont été lus
+    if (readPollRef.current) clearInterval(readPollRef.current)
+    readPollRef.current = setInterval(async () => {
+      const currentConv = activeConvRef.current
+      if (!currentConv || !userId) return
+      const supabasePoll = createClient()
+      const { data } = await supabasePoll
+        .from('meello_messages')
+        .select('id, read_at')
+        .eq('conversation_id', currentConv.id)
+        .eq('sender_id', userId)
+        .not('read_at', 'is', null)
+      if (data && data.length > 0) {
+        setMessages(prev => prev.map(m => {
+          const updated = data.find(d => d.id === m.id)
+          return updated ? { ...m, read_at: updated.read_at } : m
+        }))
+      }
+    }, 3000)
 
     // Marquer les notifs message de cet expéditeur comme lues
     if (userId && conv.other_user?.id) {
@@ -568,6 +589,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
                 setActiveConv(null)
                 setOtherIsTyping(false)
                 if (channelRef.current) { channelRef.current.unsubscribe(); channelRef.current = null }
+                if (readPollRef.current) { clearInterval(readPollRef.current); readPollRef.current = null }
               }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: '1.1rem', padding: '0.2rem 0.4rem', lineHeight: 1 }}
             >✕</button>
