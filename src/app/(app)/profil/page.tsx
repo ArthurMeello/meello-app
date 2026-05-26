@@ -326,7 +326,7 @@ export default function ProfilPage() {
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                backgroundColor: '#3B82F6',
+                backgroundColor: '#1A1A2E',
                 color: 'white',
                 border: 'none',
                 borderRadius: '10px',
