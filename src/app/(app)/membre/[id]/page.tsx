@@ -91,7 +91,18 @@ export default function MembrePublicPage() {
       receiver_id: id,
       status: 'pending',
     }).select('id').single()
-    if (data) { setConnectionId(data.id); setConnectionStatus('pending_sent') }
+    if (data) {
+      setConnectionId(data.id)
+      setConnectionStatus('pending_sent')
+      // Notifier le destinataire
+      await supabase.from('notifications').insert({
+        user_id: id,
+        type: 'connection',
+        content: `veut se connecter avec toi`,
+        link: `/reseau`,
+        from_user_id: currentUserId,
+      })
+    }
   }
 
   const acceptConnection = async () => {
@@ -189,7 +200,7 @@ export default function MembrePublicPage() {
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
             {connectionStatus === 'none' && (
               <button onClick={sendConnectionRequest} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>
-                + Se connecter
+                Envoyer une demande de connexion
               </button>
             )}
             {connectionStatus === 'pending_sent' && (
