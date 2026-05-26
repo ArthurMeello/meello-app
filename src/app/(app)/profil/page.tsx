@@ -326,8 +326,8 @@ export default function ProfilPage() {
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                backgroundColor: '#F5F0E8',
-                color: '#2D2D2D',
+                backgroundColor: '#3B82F6',
+                color: 'white',
                 border: 'none',
                 borderRadius: '10px',
                 padding: '0.5rem 1rem',
@@ -341,7 +341,7 @@ export default function ProfilPage() {
               }}
               title="Voir mon profil public"
             >
-              👁 Voir
+              Voir
             </a>
             <button
               onClick={() => setEditing(!editing)}
