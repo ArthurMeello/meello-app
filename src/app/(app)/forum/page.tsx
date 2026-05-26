@@ -53,28 +53,37 @@ export default function ForumPage() {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-        {categories.map(cat => (
-          <Link key={cat.id} href={`/forum/${cat.id}`} style={{ textDecoration: 'none' }}>
-            <div
-              style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)' }}
-            >
-              <div>
-                <div style={{ fontFamily: 'var(--font-clash)', fontWeight: 700, color: '#2D2D2D', fontSize: '1rem', marginBottom: '0.3rem' }}>{cat.name}</div>
-                {cat.description && <p style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5, margin: 0, lineHeight: 1.5 }}>{cat.description}</p>}
-              </div>
-              <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E8501A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-                <span style={{ fontSize: '0.8rem', color: '#E8501A', fontWeight: 600 }}>
-                  {cat.topic_count} sujet{cat.topic_count !== 1 ? 's' : ''}
-                </span>
-              </div>
-            </div>
-          </Link>
-        ))}
+        {(() => {
+          const presentations = categories.find(c => c.name === 'Présentations')
+          const others = categories.filter(c => c.name !== 'Présentations')
+          const all = presentations ? [presentations, ...others] : categories
+
+          return all.map((cat, i) => {
+            const isFirst = i === 0 && cat.name === 'Présentations'
+            return (
+              <Link key={cat.id} href={`/forum/${cat.id}`} style={{ textDecoration: 'none', gridColumn: isFirst ? '1 / -1' : undefined }}>
+                <div
+                  style={{ backgroundColor: isFirst ? '#FFF0ED' : 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: isFirst ? 'row' : 'column', alignItems: isFirst ? 'center' : undefined, justifyContent: isFirst ? 'space-between' : undefined, gap: '0.75rem' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)' }}
+                >
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-clash)', fontWeight: 700, color: '#2D2D2D', fontSize: isFirst ? '1.1rem' : '1rem', marginBottom: '0.3rem' }}>{cat.name}</div>
+                    {cat.description && <p style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.55, margin: 0, lineHeight: 1.5 }}>{cat.description}</p>}
+                  </div>
+                  <div style={{ marginTop: isFirst ? 0 : 'auto', display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E8501A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span style={{ fontSize: '0.8rem', color: '#E8501A', fontWeight: 600 }}>
+                      {cat.topic_count} sujet{cat.topic_count !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            )
+          })
+        })()}
       </div>
 
       {!loading && categories.length === 0 && (
