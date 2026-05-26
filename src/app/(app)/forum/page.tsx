@@ -5,16 +5,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-const CATEGORY_ICONS: Record<string, string> = {
-  'Présentations': '👋',
-  'Trouver des clients': '🎯',
-  'Outils & Tech': '⚙️',
-  'Finances & Compta': '💶',
-  'Marketing & Visibilité': '📣',
-  'Mindset & Motivation': '🧠',
-  'Collab & Entraide': '🤝',
-  'Juridique & Administratif': '📋',
-}
 
 interface Category {
   id: string
@@ -70,7 +60,6 @@ export default function ForumPage() {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)' }}
             >
-              <div style={{ fontSize: '1.75rem' }}>{CATEGORY_ICONS[cat.name] || '📌'}</div>
               <div>
                 <div style={{ fontFamily: 'var(--font-clash)', fontWeight: 700, color: '#2D2D2D', fontSize: '1rem', marginBottom: '0.3rem' }}>{cat.name}</div>
                 {cat.description && <p style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5, margin: 0, lineHeight: 1.5 }}>{cat.description}</p>}
