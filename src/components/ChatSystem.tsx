@@ -361,11 +361,33 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
   }
 
-  // Fermer le chat flottant quand on navigue vers /messages
+  // Fermer le chat flottant quand on navigue vers /messages, restaurer en partant
   useEffect(() => {
     if (isOnMessagesPage) {
+      // Sauvegarder la conv active avant de fermer (sans écraser le localStorage)
+      if (activeConvRef.current) {
+        localStorage.setItem('meello:savedConv', JSON.stringify(activeConvRef.current))
+      }
       setActiveConv(null)
       setShowDropdown(false)
+    } else {
+      // On revient d'une autre page — restaurer la conv sauvegardée si elle existe
+      const saved = localStorage.getItem('meello:savedConv')
+      if (saved) {
+        try {
+          const conv = JSON.parse(saved)
+          localStorage.removeItem('meello:savedConv')
+          const supabase = createClient()
+          supabase.from('meello_messages')
+            .select('id, content, sender_id, created_at')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: true })
+            .then(({ data }) => {
+              if (data) setMessages(data)
+              setActiveConv(conv)
+            })
+        } catch { localStorage.removeItem('meello:savedConv') }
+      }
     }
   }, [isOnMessagesPage])
 
