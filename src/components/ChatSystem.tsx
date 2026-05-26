@@ -122,14 +122,13 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
         .eq('type', 'message')
         .eq('from_user_id', conv.other_user.id)
         .eq('read', false)
-      setUnreadConvIds(prev => {
-        const next = new Set(prev)
-        next.delete(conv.id)
-        const newCount = next.size
-        setUnreadCount(newCount)
-        window.dispatchEvent(new CustomEvent('meello:chat-unread', { detail: newCount }))
-        return next
-      })
+
+      const next = new Set(unreadConvIds)
+      next.delete(conv.id)
+      const newCount = next.size
+      setUnreadConvIds(next)
+      setUnreadCount(newCount)
+      window.dispatchEvent(new CustomEvent('meello:chat-unread', { detail: newCount }))
     }
     setTimeout(() => inputRef.current?.focus(), 100)
   }
