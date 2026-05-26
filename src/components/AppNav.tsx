@@ -21,6 +21,7 @@ export default function AppNav() {
   const router = useRouter()
   const [profile, setProfile] = useState<{ first_name: string; last_name: string; avatar_url: string | null } | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+  const [pendingConnections, setPendingConnections] = useState(0)
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -30,6 +31,13 @@ export default function AppNav() {
       setUserId(user.id)
       const { data } = await supabase.from('profiles').select('first_name, last_name, avatar_url').eq('id', user.id).single()
       if (data) setProfile(data)
+      // Compter les demandes de connexion en attente
+      const { count } = await supabase
+        .from('connections')
+        .select('id', { count: 'exact', head: true })
+        .eq('receiver_id', user.id)
+        .eq('status', 'pending')
+      setPendingConnections(count || 0)
     }
     loadProfile()
   }, [pathname])
@@ -84,9 +92,16 @@ export default function AppNav() {
                   transition: 'all 0.15s',
                 }}
               >
-                {item.svg
-                  ? <img src={item.svg} alt={item.label} style={{ width: '20px', height: '20px', filter: active ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(1)', flexShrink: 0 }} />
-                  : <span>{item.icon}</span>}
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  {item.svg
+                    ? <img src={item.svg} alt={item.label} style={{ width: '20px', height: '20px', filter: active ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(1)' }} />
+                    : <span>{item.icon}</span>}
+                  {item.href === '/reseau' && pendingConnections > 0 && (
+                    <span style={{ position: 'absolute', top: '-5px', right: '-6px', backgroundColor: '#E8501A', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #1A1A2E' }}>
+                      {pendingConnections}
+                    </span>
+                  )}
+                </div>
                 <span>{item.label}</span>
               </Link>
             )
@@ -191,9 +206,16 @@ export default function AppNav() {
                 padding: '0.25rem 0.5rem',
               }}
             >
-              {item.svg
-                ? <img src={item.svg} alt={item.label} style={{ width: '22px', height: '22px', filter: active ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(0.6)' }} />
-                : <span style={{ fontSize: '1.3rem' }}>{item.icon}</span>}
+              <div style={{ position: 'relative' }}>
+                {item.svg
+                  ? <img src={item.svg} alt={item.label} style={{ width: '22px', height: '22px', filter: active ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(0.6)' }} />
+                  : <span style={{ fontSize: '1.3rem' }}>{item.icon}</span>}
+                {item.href === '/reseau' && pendingConnections > 0 && (
+                  <span style={{ position: 'absolute', top: '-4px', right: '-6px', backgroundColor: '#E8501A', color: 'white', borderRadius: '50%', width: '15px', height: '15px', fontSize: '0.55rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #1A1A2E' }}>
+                    {pendingConnections}
+                  </span>
+                )}
+              </div>
               <span>{item.label}</span>
             </Link>
           )
