@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 const NAV_ITEMS = [
   { href: '/feed', label: "Fil d'actualité", icon: null, svg: '/icons/feed.svg' },
   { href: '/annuaire', label: 'Annuaire', icon: null, svg: '/icons/annuaire.svg' },
-  { href: '/forum', label: 'Forum', icon: '💬' },
+  { href: '/forum', label: 'La Communauté', icon: '💬' },
   { href: '/messages', label: 'Mes Messages', icon: null, svg: '/icons/chat.svg' },
   { href: '/qg', label: 'Le QG', icon: null, svg: '/icons/megaphone.svg' },
   { href: '/reseau', label: 'Mon Réseau', icon: null, svg: '/icons/network.svg' },

@@ -9,7 +9,6 @@ interface Category {
   id: string
   name: string
   description: string | null
-  slug: string
   topic_count?: number
 }
 
@@ -26,12 +25,12 @@ export default function ForumPage() {
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto' }}>
       <h1 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.75rem', color: '#2D2D2D', marginBottom: '1.5rem' }}>
-        Forum
+        La Communauté
       </h1>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {categories.map(cat => (
-          <Link key={cat.id} href={`/forum/${cat.slug}`} style={{ textDecoration: 'none' }}>
+          <Link key={cat.id} href={`/forum/${cat.id}`} style={{ textDecoration: 'none' }}>
             <div style={{
               backgroundColor: 'white',
               borderRadius: '14px',
