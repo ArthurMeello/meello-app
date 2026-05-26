@@ -1213,7 +1213,13 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                               const tag = `@${r.profiles?.first_name || ''}${r.profiles?.last_name || ''} `
                               setReplyingTo({ id: c.id, first_name: r.profiles?.first_name || '' })
                               setReplyContent(tag)
-                              setTimeout(() => replyInputRef.current?.focus(), 50)
+                              setTimeout(() => {
+                                if (replyInputRef.current) {
+                                  replyInputRef.current.focus()
+                                  const pos = tag.length
+                                  replyInputRef.current.setSelectionRange(pos, pos)
+                                }
+                              }, 50)
                             }}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, padding: '0.15rem 0', marginTop: '0.1rem', fontWeight: 600 }}
                           >
@@ -1266,6 +1272,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                       placeholder={`Répondre à ${replyingTo.first_name}…`}
                       rows={1}
                       autoFocus
+                      onFocus={e => { const len = e.target.value.length; e.target.setSelectionRange(len, len) }}
                       style={{ flex: 1, border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 0.65rem', fontSize: '0.85rem', outline: 'none', fontFamily: 'inherit', resize: 'none', overflow: 'hidden', minHeight: '34px', lineHeight: '1.4' }}
                     />
                     <button type="submit" disabled={!replyContent.trim()} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.4rem 0.85rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', height: '34px', flexShrink: 0 }}>↩</button>
