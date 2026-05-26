@@ -270,6 +270,8 @@ export default function ReseauPage() {
   )
 }
 
+const ADMIN_ID_INFO = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+
 function MemberInfo({ user }: { user: Connection['other_user'] }) {
   const initials = `${(user.first_name || '?')[0]}${(user.last_name || '')[0] || ''}`.toUpperCase()
   return (
@@ -278,7 +280,12 @@ function MemberInfo({ user }: { user: Connection['other_user'] }) {
         {user.avatar_url ? <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
       </div>
       <div>
-        <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.9rem' }}>{user.first_name} {user.last_name}</div>
+        <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          {user.first_name} {user.last_name}
+          {user.id === ADMIN_ID_INFO && (
+            <img src="/icons/badge-check.svg" alt="Fondateur" title="Fondateur Meello" style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+          )}
+        </div>
         {user.activity && <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5 }}>{user.activity}{user.city ? ` · ${user.city}` : ''}</div>}
       </div>
     </div>
