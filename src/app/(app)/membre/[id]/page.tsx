@@ -28,6 +28,7 @@ export default function MembrePublicPage() {
   const [recoText, setRecoText] = useState('')
   const [recoLoading, setRecoLoading] = useState(false)
   const [alreadyRecommended, setAlreadyRecommended] = useState(false)
+  const [proofFile, setProofFile] = useState<File | null>(null)
   const [editingRecoId, setEditingRecoId] = useState<string | null>(null)
   const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
   const router = useRouter()
@@ -64,6 +65,7 @@ export default function MembrePublicPage() {
         .from('recommendations')
         .select('id, content, author_id, profiles!recommendations_author_id_fkey(first_name, last_name, avatar_url, activity)')
         .eq('target_id', id)
+        .eq('status', 'approved')
         .order('created_at', { ascending: false })
       if (recoData) setRecos(recoData)
 
@@ -148,10 +150,21 @@ export default function MembrePublicPage() {
       // Mode édition
       await supabase.from('recommendations').update({ content: recoText.trim() }).eq('id', editingRecoId)
     } else {
-      // Nouvelle reco
-      await supabase.from('recommendations').insert({ target_id: id, author_id: currentUserId, content: recoText.trim() })
+      // Upload justificatif si présent
+      let proof_url = null
+      if (proofFile) {
+        const ext = proofFile.name.split('.').pop()
+        const path = `${currentUserId}/${Date.now()}.${ext}`
+        const { error } = await supabase.storage.from('proofs').upload(path, proofFile, { upsert: true })
+        if (!error) {
+          const { data: urlData } = supabase.storage.from('proofs').getPublicUrl(path)
+          proof_url = urlData.publicUrl
+        }
+      }
+      // Nouvelle reco — status pending par défaut
+      await supabase.from('recommendations').insert({ target_id: id, author_id: currentUserId, content: recoText.trim(), proof_url, status: 'pending' })
       await supabase.from('notifications').insert({
-        user_id: id, type: 'recommendation', content: `t'a laissé une recommandation`,
+        user_id: id, type: 'recommendation', content: `t'a laissé une recommandation (en attente de validation)`,
         link: `/membre/${id}`, from_user_id: currentUserId,
       })
       setAlreadyRecommended(true)
@@ -160,9 +173,9 @@ export default function MembrePublicPage() {
     // Recharger les recos
     const { data: recoData } = await supabase.from('recommendations')
       .select('id, content, author_id, profiles!recommendations_author_id_fkey(first_name, last_name, avatar_url, activity)')
-      .eq('target_id', id).order('created_at', { ascending: false })
+      .eq('target_id', id).eq('status', 'approved').order('created_at', { ascending: false })
     if (recoData) setRecos(recoData)
-    setRecoText(''); setRecoModal(false); setRecoLoading(false); setEditingRecoId(null)
+    setRecoText(''); setRecoModal(false); setRecoLoading(false); setEditingRecoId(null); setProofFile(null)
   }
 
   if (loading) return (
@@ -424,6 +437,20 @@ export default function MembrePublicPage() {
               rows={4}
               style={{ width: '100%', border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.75rem', fontSize: '0.95rem', fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
             />
+            {!editingRecoId && (
+              <div style={{ marginTop: '0.75rem' }}>
+                <label style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.4rem' }}>
+                  📎 Justificatif <span style={{ opacity: 0.5 }}>(facultatif — facture, contrat, email…)</span>
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                  onChange={e => setProofFile(e.target.files?.[0] || null)}
+                  style={{ fontSize: '0.85rem', color: '#2D2D2D', width: '100%' }}
+                />
+                {proofFile && <div style={{ fontSize: '0.78rem', color: '#7A9E7E', marginTop: '0.3rem' }}>✓ {proofFile.name}</div>}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', justifyContent: 'flex-end' }}>
               <button onClick={() => setRecoModal(false)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem' }}>Annuler</button>
               <button onClick={sendReco} disabled={!recoText.trim() || recoLoading} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}>

@@ -35,7 +35,7 @@ interface Member {
 }
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<'candidatures' | 'membres'>('candidatures')
+  const [tab, setTab] = useState<'candidatures' | 'membres' | 'recommandations'>('candidatures')
   const [applications, setApplications] = useState<Application[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(false)
@@ -44,6 +44,7 @@ export default function AdminPage() {
   const [motif, setMotif] = useState('info')
   const [memberSearch, setMemberSearch] = useState('')
   const [memberBadgeFilter, setMemberBadgeFilter] = useState('')
+  const [pendingRecos, setPendingRecos] = useState<any[]>([])
   const router = useRouter()
 
   const MOTIFS = [
@@ -63,6 +64,7 @@ export default function AdminPage() {
       setAuthorized(true)
       fetchApplications()
       fetchMembers()
+      fetchPendingRecos()
     }
     checkAuth()
   }, [])
@@ -164,6 +166,28 @@ export default function AdminPage() {
     await fetchMembers()
   }
 
+  const fetchPendingRecos = async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('recommendations')
+      .select('id, content, status, proof_url, created_at, author:profiles!recommendations_author_id_fkey(first_name, last_name), target:profiles!recommendations_target_id_fkey(first_name, last_name)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+    if (data) setPendingRecos(data)
+  }
+
+  const approveReco = async (id: string) => {
+    const supabase = createClient()
+    await supabase.from('recommendations').update({ status: 'approved' }).eq('id', id)
+    setPendingRecos(prev => prev.filter(r => r.id !== id))
+  }
+
+  const rejectReco = async (id: string) => {
+    const supabase = createClient()
+    await supabase.from('recommendations').update({ status: 'rejected' }).eq('id', id)
+    setPendingRecos(prev => prev.filter(r => r.id !== id))
+  }
+
   const pending = applications.filter(a => a.status === 'pending')
   const processed = applications.filter(a => a.status !== 'pending')
 
@@ -177,10 +201,10 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        {[{ key: 'candidatures', label: `Candidatures (${pending.length} en attente)` }, { key: 'membres', label: `Membres (${members.length})` }].map(t => (
+        {[{ key: 'candidatures', label: `Candidatures (${pending.length} en attente)` }, { key: 'membres', label: `Membres (${members.length})` }, { key: 'recommandations', label: `Recommandations (${pendingRecos.length} en attente)` }].map(t => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key as 'candidatures' | 'membres')}
+            onClick={() => setTab(t.key as 'candidatures' | 'membres' | 'recommandations')}
             style={{
               padding: '0.6rem 1.25rem',
               borderRadius: '10px',
@@ -357,6 +381,56 @@ export default function AdminPage() {
                   Aucune candidature pour le moment.
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Recommandations */}
+      {tab === 'recommandations' && (
+        <div>
+          {pendingRecos.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>
+              Aucune recommandation en attente.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {pendingRecos.map(r => (
+                <div key={r.id} style={{ backgroundColor: 'white', borderRadius: '14px', padding: '1.25rem 1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: '4px solid #E8501A' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5, marginBottom: '0.3rem' }}>
+                        <strong style={{ color: '#E8501A' }}>{r.author?.first_name} {r.author?.last_name}</strong>
+                        {' → '}
+                        <strong>{r.target?.first_name} {r.target?.last_name}</strong>
+                      </div>
+                      <p style={{ margin: '0 0 0.75rem', color: '#2D2D2D', lineHeight: 1.65, fontSize: '0.95rem' }}>{r.content}</p>
+                      {r.proof_url && (
+                        <a href={r.proof_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.82rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          📎 Voir le justificatif
+                        </a>
+                      )}
+                      {!r.proof_url && (
+                        <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.4 }}>Aucun justificatif fourni</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                      <button
+                        onClick={() => approveReco(r.id)}
+                        style={{ backgroundColor: '#7A9E7E', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}
+                      >
+                        Approuver
+                      </button>
+                      <button
+                        onClick={() => rejectReco(r.id)}
+                        style={{ backgroundColor: '#F5F0E8', color: '#E8501A', border: '1.5px solid #E8501A', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}
+                      >
+                        Refuser
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
