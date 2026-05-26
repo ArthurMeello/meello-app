@@ -134,11 +134,19 @@ export default function MembrePublicPage() {
 
   const openMessage = async () => {
     const supabase = createClient()
-    const { data } = await supabase.from('conversations').select('id')
+    let convId: string | null = null
+    const { data: existing } = await supabase.from('conversations').select('id')
       .or(`and(participant1_id.eq.${currentUserId},participant2_id.eq.${id}),and(participant1_id.eq.${id},participant2_id.eq.${currentUserId})`)
       .single()
-    if (data) router.push(`/messages?conv=${data.id}`)
-    else router.push('/messages')
+    if (existing) {
+      convId = existing.id
+    } else {
+      const { data: created } = await supabase.from('conversations').insert({ participant1_id: currentUserId, participant2_id: id }).select('id').single()
+      if (created) convId = created.id
+    }
+    if (convId) {
+      window.dispatchEvent(new CustomEvent('meello:open-conv', { detail: convId }))
+    }
   }
 
   const sendReco = async () => {

@@ -125,6 +125,39 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Ouvrir une conversation depuis n'importe quelle page via event
+  useEffect(() => {
+    if (!userId) return
+    const handler = async (e: CustomEvent) => {
+      const convId = e.detail
+      const supabase = createClient()
+      // Charger la conversation
+      const { data: conv } = await supabase
+        .from('conversations')
+        .select('id, participant1_id, participant2_id, last_message, last_message_at')
+        .eq('id', convId)
+        .single()
+      if (!conv) return
+      const otherId = conv.participant1_id === userId ? conv.participant2_id : conv.participant1_id
+      const { data: otherProfile } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url, activity')
+        .eq('id', otherId)
+        .single()
+      const convObj: Conversation = {
+        id: conv.id,
+        other_user: otherProfile,
+        last_message: conv.last_message || '',
+        last_message_at: conv.last_message_at || '',
+      }
+      await fetchConversations(userId)
+      setShowDropdown(false)
+      openConversation(convObj)
+    }
+    window.addEventListener('meello:open-conv', handler as EventListener)
+    return () => window.removeEventListener('meello:open-conv', handler as EventListener)
+  }, [userId])
+
   // Fermer dropdown en cliquant ailleurs
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

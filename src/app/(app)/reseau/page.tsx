@@ -93,15 +93,20 @@ export default function ReseauPage() {
 
   const openMessage = async (otherUserId: string) => {
     const supabase = createClient()
+    let convId: string | null = null
     const { data: existing } = await supabase
       .from('conversations')
       .select('id')
       .or(`and(participant1_id.eq.${userId},participant2_id.eq.${otherUserId}),and(participant1_id.eq.${otherUserId},participant2_id.eq.${userId})`)
       .single()
     if (existing) {
-      router.push(`/messages?conv=${existing.id}`)
+      convId = existing.id
     } else {
-      router.push('/messages')
+      const { data: created } = await supabase.from('conversations').insert({ participant1_id: userId, participant2_id: otherUserId }).select('id').single()
+      if (created) convId = created.id
+    }
+    if (convId) {
+      window.dispatchEvent(new CustomEvent('meello:open-conv', { detail: convId }))
     }
   }
 

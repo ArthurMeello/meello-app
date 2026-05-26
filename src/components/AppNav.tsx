@@ -128,13 +128,13 @@ export default function AppNav() {
                 padding: '0.65rem 0.75rem',
                 borderRadius: '10px',
                 textDecoration: 'none',
-                color: pathname.startsWith('/admin') ? '#E8501A' : 'rgba(245,240,232,0.5)',
+                color: pathname.startsWith('/admin') ? '#E8501A' : '#F5F0E8',
                 backgroundColor: pathname.startsWith('/admin') ? 'rgba(232,80,26,0.12)' : 'transparent',
                 fontSize: '0.95rem',
               }}
             >
               <div style={{ position: 'relative', flexShrink: 0 }}>
-                <img src="/icons/admin.svg" alt="Admin" style={{ width: '16px', height: '16px', filter: pathname.startsWith('/admin') ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(0.4)' }} />
+                <img src="/icons/admin.svg" alt="Admin" style={{ width: '20px', height: '20px', filter: pathname.startsWith('/admin') ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(1)' }} />
                 {adminActions > 0 && (
                   <span style={{ position: 'absolute', top: '-5px', right: '-6px', backgroundColor: '#E8501A', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #1A1A2E' }}>
                     {adminActions}
@@ -180,14 +180,14 @@ export default function AppNav() {
               borderRadius: '10px',
               background: 'none',
               border: 'none',
-              color: 'rgba(245,240,232,0.5)',
+              color: '#F5F0E8',
               fontSize: '0.95rem',
               cursor: 'pointer',
               textAlign: 'left',
               width: '100%',
             }}
           >
-            <img src="/icons/logout.svg" alt="Déconnexion" style={{ width: '20px', height: '20px', filter: 'brightness(0) invert(1)', flexShrink: 0 }} />
+            <img src="/icons/logout.svg" alt="Déconnexion" style={{ width: '22px', height: '22px', filter: 'brightness(0) invert(1)', flexShrink: 0 }} />
             <span>Déconnexion</span>
           </button>
         </div>
