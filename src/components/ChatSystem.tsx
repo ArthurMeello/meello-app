@@ -658,6 +658,15 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
             <textarea
               ref={inputRef}
               value={newMessage}
+              onFocus={async () => {
+                if (!activeConv || !userId) return
+                const supabase = createClient()
+                await supabase.from('meello_messages')
+                  .update({ read_at: new Date().toISOString() })
+                  .eq('conversation_id', activeConv.id)
+                  .neq('sender_id', userId)
+                  .is('read_at', null)
+              }}
               onChange={e => {
                 setNewMessage(e.target.value)
                 e.target.style.height = 'auto'

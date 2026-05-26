@@ -434,6 +434,16 @@ export default function MessagesPage() {
                 <textarea
                   ref={inputRef}
                   value={newMessage}
+                  onFocus={async () => {
+                    const uid = userIdRef.current || userId
+                    if (!activeConvRef.current || !uid) return
+                    const supabase = createClient()
+                    await supabase.from('meello_messages')
+                      .update({ read_at: new Date().toISOString() })
+                      .eq('conversation_id', activeConvRef.current.id)
+                      .neq('sender_id', uid)
+                      .is('read_at', null)
+                  }}
                   onChange={e => {
                     setNewMessage(e.target.value)
                     e.target.style.height = 'auto'
