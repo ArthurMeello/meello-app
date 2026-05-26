@@ -44,6 +44,72 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   useEffect(() => {
     if (!userId) return
     fetchConversations(userId)
+
+    // Écouter les nouveaux messages en temps réel
+    const supabase = createClient()
+    const msgChannel = supabase
+      .channel(`new-messages:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'meello_messages' },
+        async (payload: any) => {
+          const msg = payload.new
+          // Ignorer ses propres messages
+          if (msg.sender_id === userId) return
+
+          // Rafraîchir les conversations pour mettre à jour l'aperçu
+          fetchConversations(userId)
+
+          // Trouver la conversation concernée
+          const { data: conv } = await supabase
+            .from('conversations')
+            .select('id, participant1_id, participant2_id, last_message, last_message_at')
+            .eq('id', msg.conversation_id)
+            .single()
+
+          if (!conv) return
+
+          // Récupérer le profil de l'expéditeur
+          const { data: senderProfile } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, avatar_url, activity')
+            .eq('id', msg.sender_id)
+            .single()
+
+          const convObj = {
+            id: conv.id,
+            other_user: senderProfile,
+            last_message: msg.content,
+            last_message_at: msg.created_at,
+          }
+
+          setActiveConv(prev => {
+            if (prev?.id === conv.id) {
+              // Conversation déjà ouverte — ajouter le message sans rouvrir
+              setMessages(msgs => [...msgs, {
+                id: msg.id,
+                content: msg.content,
+                sender_id: msg.sender_id,
+                created_at: msg.created_at,
+              }])
+              return prev
+            }
+            // Ouvrir automatiquement la conversation
+            setMessages([{
+              id: msg.id,
+              content: msg.content,
+              sender_id: msg.sender_id,
+              created_at: msg.created_at,
+            }])
+            return convObj
+          })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      msgChannel.unsubscribe()
+    }
   }, [userId])
 
   useEffect(() => {
