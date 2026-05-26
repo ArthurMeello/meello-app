@@ -342,8 +342,8 @@ export default function MembrePublicPage() {
           {/* Localisation + Réseaux */}
           <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
             {profile.city && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#2D2D2D', opacity: 0.5, fontSize: '0.9rem', marginBottom: '1rem' }}>
-                <img src="/icons/pin.svg" alt="" style={{ width: '14px', height: '14px', flexShrink: 0 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#2D2D2D', opacity: 0.5, fontSize: '1rem', marginBottom: '1rem' }}>
+                <img src="/icons/pin.svg" alt="" style={{ width: '18px', height: '18px', flexShrink: 0 }} />
                 {profile.city}
               </div>
             )}
