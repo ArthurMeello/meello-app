@@ -49,35 +49,36 @@ export default function MessagesPage() {
 
   const fetchConversations = async (uid: string) => {
     const supabase = createClient()
+    // Étape 1 : récupérer les conversations
     const { data, error } = await supabase
       .from('conversations')
-      .select(`
-        id,
-        last_message,
-        last_message_at,
-        participant1_id,
-        participant2_id,
-        p1:profiles!conversations_participant1_id_fkey(id, first_name, last_name, avatar_url, activity),
-        p2:profiles!conversations_participant2_id_fkey(id, first_name, last_name, avatar_url, activity)
-      `)
+      .select('id, last_message, last_message_at, participant1_id, participant2_id')
       .or(`participant1_id.eq.${uid},participant2_id.eq.${uid}`)
       .order('last_message_at', { ascending: false })
 
-    console.log('conversations data:', data, 'error:', error, 'uid:', uid)
+    console.log('conversations:', data, 'error:', error)
+    if (!data || data.length === 0) return
 
-    if (data) {
-      const convs = data.map((c: any) => {
-        const other = c.participant1_id === uid ? c.p2 : c.p1
-        return {
-          id: c.id,
-          other_user: other,
-          last_message: c.last_message || '',
-          last_message_at: c.last_message_at || '',
-          unread: false,
-        }
-      })
-      setConversations(convs)
-    }
+    // Étape 2 : récupérer les profils des autres participants
+    const otherIds = data.map((c: any) => c.participant1_id === uid ? c.participant2_id : c.participant1_id)
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, avatar_url, activity')
+      .in('id', otherIds)
+
+    const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, p]))
+
+    const convs = data.map((c: any) => {
+      const otherId = c.participant1_id === uid ? c.participant2_id : c.participant1_id
+      return {
+        id: c.id,
+        other_user: profileMap[otherId] || null,
+        last_message: c.last_message || '',
+        last_message_at: c.last_message_at || '',
+        unread: false,
+      }
+    })
+    setConversations(convs)
   }
 
   const openConversation = async (conv: Conversation) => {
