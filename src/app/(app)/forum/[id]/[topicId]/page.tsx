@@ -23,6 +23,8 @@ interface Topic {
   profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null } | null
 }
 
+const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+
 export default function ForumTopicPage() {
   const { id: categoryId, topicId } = useParams()
   const [category, setCategory] = useState<{ id: string; name: string } | null>(null)
@@ -131,8 +133,9 @@ export default function ForumTopicPage() {
           </Link>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
-              <Link href={`/membre/${topic.author_id}`} style={{ textDecoration: 'none' }}>
+              <Link href={`/membre/${topic.author_id}`} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                 <span style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.92rem' }}>{topic.profiles?.first_name} {topic.profiles?.last_name}</span>
+                {topic.author_id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="Fondateur" style={{ width: '16px', height: '16px' }} />}
               </Link>
               {topic.profiles?.activity && <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.45 }}>{topic.profiles.activity}</span>}
               <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.35 }}>· {formatDate(topic.created_at)}</span>
@@ -157,8 +160,9 @@ export default function ForumTopicPage() {
                   </Link>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                      <Link href={`/membre/${reply.author_id}`} style={{ textDecoration: 'none' }}>
+                      <Link href={`/membre/${reply.author_id}`} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                         <span style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.88rem' }}>{reply.profiles?.first_name} {reply.profiles?.last_name}</span>
+                        {reply.author_id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="Fondateur" style={{ width: '15px', height: '15px' }} />}
                       </Link>
                       {reply.profiles?.activity && <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.45 }}>{reply.profiles.activity}</span>}
                       <span style={{ fontSize: '0.73rem', color: '#2D2D2D', opacity: 0.35 }}>· {formatDate(reply.created_at)}</span>
