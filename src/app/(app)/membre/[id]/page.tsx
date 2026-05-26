@@ -307,22 +307,39 @@ export default function MembrePublicPage() {
         {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 1rem' }}>{profile.bio}</p>}
 
         {/* Réseaux sociaux */}
-        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-          {SOCIAL_LINKS.map(s => profile[s.key] && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {/* Site web en premier avec texte */}
+          {profile.website && (
             <a
-              key={s.key}
-              href={s.key === 'whatsapp' ? `https://wa.me/${profile[s.key].replace(/\D/g, '')}` : profile[s.key]}
+              href={profile.website}
               target="_blank"
               rel="noopener noreferrer"
-              title={s.label}
-              className="social-icon"
-              style={socialLinkStyle}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#2D2D2D', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500 }}
             >
-              {s.svg
-                ? <img src={s.svg} alt={s.label} style={{ width: '20px', height: '20px' }} />
-                : s.icon}
+              <img src="/icons/website.svg" alt="Site web" style={{ width: '16px', height: '16px', opacity: 0.7 }} />
+              <span style={{ textDecoration: 'underline', opacity: 0.7 }}>
+                {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+              </span>
             </a>
-          ))}
+          )}
+          {/* Autres réseaux en icônes */}
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {SOCIAL_LINKS.filter(s => s.key !== 'website').map(s => profile[s.key] && (
+              <a
+                key={s.key}
+                href={s.key === 'whatsapp' ? `https://wa.me/${profile[s.key].replace(/\D/g, '')}` : profile[s.key]}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={s.label}
+                className="social-icon"
+                style={socialLinkStyle}
+              >
+                {s.svg
+                  ? <img src={s.svg} alt={s.label} style={{ width: '20px', height: '20px' }} />
+                  : s.icon}
+              </a>
+            ))}
+          </div>
         </div>
       </div>
 
