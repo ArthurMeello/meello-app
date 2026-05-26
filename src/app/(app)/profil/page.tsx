@@ -62,9 +62,20 @@ export default function ProfilPage() {
   const [serviceFile, setServiceFile] = useState<File | null>(null)
   const [servicePreview, setServicePreview] = useState<string | null>(null)
   const [savingService, setSavingService] = useState(false)
+  const [skillInput, setSkillInput] = useState('')
+  const [skillSuggestions, setSkillSuggestions] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
   const portfolioFileRef = useRef<HTMLInputElement>(null)
   const serviceFileRef = useRef<HTMLInputElement>(null)
+
+  const ALL_SKILLS = [
+    'WordPress', 'Webflow', 'Shopify', 'SEO', 'No-code', 'IA', 'Automatisation', 'React', 'Next.js', 'Python',
+    'Branding', 'Graphisme', 'Vidéo', 'Photo', 'Copywriting', 'UX/UI', 'Motion design', 'Illustration',
+    'Comptabilité', 'Juridique', 'Coaching', 'Formation', 'E-commerce', 'Stratégie',
+    'Réseaux sociaux', 'Emailing', 'Publicité', 'Growth hacking', 'Community management',
+    'Menuiserie', 'Plomberie', 'Électricité', 'BTP', 'Paysagisme', 'Décoration intérieure',
+    'Rédaction web', 'Traduction', 'Podcast', 'Événementiel', 'Recrutement', 'Finance',
+  ]
 
   useEffect(() => {
     loadProfile()
@@ -144,6 +155,7 @@ export default function ProfilPage() {
       x: form.x || null,
       youtube: form.youtube || null,
       whatsapp: form.whatsapp || null,
+      skills: form.skills || [],
     }).eq('id', user.id)
 
     await loadProfile()
@@ -569,6 +581,64 @@ export default function ProfilPage() {
               </div>
             </div>
 
+            {/* Compétences */}
+            <div style={{ borderTop: '1px solid #F5F0E8', paddingTop: '1rem' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.5, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Compétences
+              </div>
+              {/* Tags ajoutés */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                {(form.skills || []).map((skill: string) => (
+                  <span key={skill} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', backgroundColor: '#FFF0ED', color: '#E8501A', borderRadius: '20px', padding: '0.3rem 0.75rem', fontSize: '0.82rem', fontWeight: 600 }}>
+                    {skill}
+                    <button onClick={() => setForm(p => ({ ...p, skills: (p.skills || []).filter((s: string) => s !== skill) }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8501A', fontSize: '0.9rem', lineHeight: 1, padding: 0 }}>×</button>
+                  </span>
+                ))}
+              </div>
+              {/* Input avec autocomplete */}
+              <div style={{ position: 'relative' }}>
+                <input
+                  value={skillInput}
+                  onChange={e => {
+                    setSkillInput(e.target.value)
+                    const val = e.target.value.trim().toLowerCase()
+                    if (val.length > 0) {
+                      setSkillSuggestions(ALL_SKILLS.filter(s => s.toLowerCase().includes(val) && !(form.skills || []).includes(s)).slice(0, 6))
+                    } else {
+                      setSkillSuggestions([])
+                    }
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && skillInput.trim()) {
+                      e.preventDefault()
+                      const val = skillInput.trim()
+                      if (!(form.skills || []).includes(val)) {
+                        setForm(p => ({ ...p, skills: [...(p.skills || []), val] }))
+                      }
+                      setSkillInput('')
+                      setSkillSuggestions([])
+                    }
+                  }}
+                  placeholder="Ajouter une compétence (Entrée pour valider)"
+                  style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+                />
+                {skillSuggestions.length > 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'white', border: '1.5px solid #E8E3D9', borderRadius: '10px', zIndex: 10, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+                    {skillSuggestions.map(s => (
+                      <div key={s} onClick={() => {
+                        setForm(p => ({ ...p, skills: [...(p.skills || []), s] }))
+                        setSkillInput('')
+                        setSkillSuggestions([])
+                      }} style={{ padding: '0.5rem 0.85rem', cursor: 'pointer', fontSize: '0.88rem', color: '#2D2D2D' }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FFF0ED'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'white'}
+                      >{s}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
             <button
               onClick={handleSave}
               disabled={saving}
@@ -600,6 +670,16 @@ export default function ProfilPage() {
               {profile.youtube && <a href={profile.youtube} target="_blank" rel="noopener noreferrer" title="YouTube" className="social-icon" style={socialLinkStyle}><img src="/icons/youtube.svg" alt="YouTube" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.whatsapp && <a href={`https://wa.me/${profile.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp" className="social-icon" style={socialLinkStyle}><img src="/icons/whatsapp.svg" alt="WhatsApp" style={{ width: '20px', height: '20px' }} /></a>}
             </div>
+            {/* Compétences en lecture */}
+            {(profile.skills || []).length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
+                {(profile.skills || []).map((skill: string) => (
+                  <span key={skill} style={{ backgroundColor: '#FFF0ED', color: '#E8501A', borderRadius: '20px', padding: '0.3rem 0.75rem', fontSize: '0.82rem', fontWeight: 600 }}>
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -304,7 +304,18 @@ export default function MembrePublicPage() {
           )
         })()}
 
-        {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 1rem' }}>{profile.bio}</p>}
+        {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem' }}>{profile.bio}</p>}
+
+        {/* Compétences */}
+        {(profile.skills || []).length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
+            {(profile.skills || []).map((skill: string) => (
+              <span key={skill} style={{ backgroundColor: '#FFF0ED', color: '#E8501A', borderRadius: '20px', padding: '0.3rem 0.75rem', fontSize: '0.82rem', fontWeight: 600 }}>
+                {skill}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Réseaux sociaux */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
