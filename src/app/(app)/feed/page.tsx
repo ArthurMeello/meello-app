@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import imageCompression from 'browser-image-compression'
 import type { Post } from '@/types'
 
 const EMOJIS = ['👍', '🔥', '❤️']
@@ -160,12 +161,24 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
     load()
   }, [userId])
 
-  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setMediaFile(file)
-    setMediaPreview(URL.createObjectURL(file))
-    setMediaType(file.type.startsWith('video') ? 'video' : 'image')
+    if (file.type.startsWith('video')) {
+      setMediaFile(file)
+      setMediaPreview(URL.createObjectURL(file))
+      setMediaType('video')
+    } else {
+      // Compression image avant upload
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1400,
+        useWebWorker: true,
+      })
+      setMediaFile(compressed as File)
+      setMediaPreview(URL.createObjectURL(compressed))
+      setMediaType('image')
+    }
   }
 
   const removeMedia = () => {
@@ -988,11 +1001,21 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
               {editImageUrl || editImagePreview ? 'Changer' : 'Ajouter une image'}
             </button>
             <input ref={editFileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }}
-              onChange={e => {
+              onChange={async e => {
                 const f = e.target.files?.[0]
                 if (!f) return
-                setEditImageFile(f)
-                setEditImagePreview(URL.createObjectURL(f))
+                if (f.type.startsWith('video')) {
+                  setEditImageFile(f)
+                  setEditImagePreview(URL.createObjectURL(f))
+                } else {
+                  const compressed = await imageCompression(f, {
+                    maxSizeMB: 0.8,
+                    maxWidthOrHeight: 1400,
+                    useWebWorker: true,
+                  })
+                  setEditImageFile(compressed as File)
+                  setEditImagePreview(URL.createObjectURL(compressed))
+                }
                 setEditImageUrl(null)
               }}
             />
