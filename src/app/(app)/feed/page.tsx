@@ -837,20 +837,22 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     )
   }
 
-  // Rendu d'un texte de commentaire/réponse avec @mentions cliquables
+  // Rendu d'un texte de commentaire/réponse avec @mentions et liens cliquables
   const renderCommentText = (text: string) => {
-    return text.split(/@([^\s]+)/g).map((part, i) => {
-      if (i % 2 === 1) {
-        // C'est un nom après @
-        const tag = part.toLowerCase()
+    return text.split(/(https?:\/\/[^\s]+|@[^\s]+)/g).map((part, i) => {
+      if (/^https?:\/\//.test(part)) {
+        return <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline', wordBreak: 'break-all' }}>{part}</a>
+      }
+      if (/^@/.test(part)) {
+        const tag = part.slice(1).toLowerCase()
         const member = allMembers.find(m =>
           `${m.first_name}${m.last_name}`.toLowerCase() === tag ||
           m.first_name.toLowerCase() === tag
         )
         if (member) {
-          return <a key={i} href={`/membre/${member.id}`} style={{ color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>@{part}</a>
+          return <a key={i} href={`/membre/${member.id}`} style={{ color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>{part}</a>
         }
-        return <span key={i} style={{ color: '#E8501A', fontWeight: 600 }}>@{part}</span>
+        return <span key={i} style={{ color: '#E8501A', fontWeight: 600 }}>{part}</span>
       }
       return part
     })
