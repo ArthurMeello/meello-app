@@ -33,6 +33,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
+  const [unreadConvIds, setUnreadConvIds] = useState<Set<string>>(new Set())
   const dropdownRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -86,8 +87,21 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
     })
     setConversations(convs)
 
-    // Compter les conversations avec messages non lus (last_message non vide)
-    setUnreadCount(convs.filter(c => c.last_message).length)
+    // Récupérer les notifs message non lues pour savoir quelles convs sont non lues
+    const { data: unreadNotifs } = await supabase
+      .from('notifications')
+      .select('from_user_id')
+      .eq('user_id', uid)
+      .eq('type', 'message')
+      .eq('read', false)
+
+    if (unreadNotifs) {
+      const unreadSenderIds = new Set(unreadNotifs.map((n: any) => n.from_user_id))
+      const unreadIds = new Set(convs.filter(c => unreadSenderIds.has(c.other_user?.id)).map(c => c.id))
+      setUnreadConvIds(unreadIds)
+      setUnreadCount(unreadIds.size)
+      window.dispatchEvent(new CustomEvent('meello:chat-unread', { detail: unreadIds.size }))
+    }
   }
 
   const openConversation = async (conv: Conversation) => {
@@ -100,15 +114,22 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       .eq('conversation_id', conv.id)
       .order('created_at', { ascending: true })
     if (data) setMessages(data)
-    // Marquer les notifs message comme lues
-    if (userId) {
+    // Marquer les notifs message de cet expéditeur comme lues
+    if (userId && conv.other_user?.id) {
       await supabase.from('notifications')
         .update({ read: true })
         .eq('user_id', userId)
         .eq('type', 'message')
+        .eq('from_user_id', conv.other_user.id)
         .eq('read', false)
-      setUnreadCount(0)
-      window.dispatchEvent(new CustomEvent('meello:chat-unread', { detail: 0 }))
+      setUnreadConvIds(prev => {
+        const next = new Set(prev)
+        next.delete(conv.id)
+        const newCount = next.size
+        setUnreadCount(newCount)
+        window.dispatchEvent(new CustomEvent('meello:chat-unread', { detail: newCount }))
+        return next
+      })
     }
     setTimeout(() => inputRef.current?.focus(), 100)
   }
@@ -130,16 +151,28 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       last_message_at: new Date().toISOString(),
     }).eq('id', activeConv.id)
 
-    // Notifier le destinataire
+    // Notifier le destinataire — une seule notif par expéditeur (upsert)
     const receiverId = activeConv.other_user?.id
     if (receiverId && receiverId !== userId) {
-      await supabase.from('notifications').insert({
-        user_id: receiverId,
-        type: 'message',
-        content: `t'a envoyé un message`,
-        link: `/messages`,
-        from_user_id: userId,
-      })
+      // Vérifier si une notif non lue existe déjà de cet expéditeur
+      const { data: existing } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', receiverId)
+        .eq('type', 'message')
+        .eq('from_user_id', userId)
+        .eq('read', false)
+        .single()
+
+      if (!existing) {
+        await supabase.from('notifications').insert({
+          user_id: receiverId,
+          type: 'message',
+          content: `t'a envoyé un message`,
+          link: `/messages`,
+          from_user_id: userId,
+        })
+      }
     }
 
     setMessages(prev => [...prev, {
@@ -202,50 +235,57 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
                 Aucune conversation
               </div>
             ) : (
-              conversations.map(conv => (
-                <div
-                  key={conv.id}
-                  onClick={() => openConversation(conv)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.75rem',
-                    padding: '0.85rem 1.25rem',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid #F5F0E8',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  {/* Avatar */}
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '50%',
-                    backgroundColor: '#E8501A', color: 'white', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 700, fontSize: '0.8rem', overflow: 'hidden',
-                  }}>
-                    {conv.other_user?.avatar_url
-                      ? <img src={conv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : `${(conv.other_user?.first_name || '?')[0]}${(conv.other_user?.last_name || '')[0] || ''}`
-                    }
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                      <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        {conv.other_user?.first_name} {conv.other_user?.last_name}
-                        {conv.other_user?.id === ADMIN_ID && (
-                          <img src="/icons/badge-check.svg" alt="" style={{ width: '13px', height: '13px' }} />
-                        )}
+              conversations.map(conv => {
+                const isUnread = unreadConvIds.has(conv.id)
+                return (
+                  <div
+                    key={conv.id}
+                    onClick={() => openConversation(conv)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.75rem',
+                      padding: '0.85rem 1.25rem',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #F5F0E8',
+                      backgroundColor: isUnread ? 'rgba(232,80,26,0.04)' : 'transparent',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = isUnread ? 'rgba(232,80,26,0.04)' : 'transparent')}
+                  >
+                    {/* Avatar */}
+                    <div style={{
+                      width: '40px', height: '40px', borderRadius: '50%',
+                      backgroundColor: '#E8501A', color: 'white', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontWeight: 700, fontSize: '0.8rem', overflow: 'hidden',
+                    }}>
+                      {conv.other_user?.avatar_url
+                        ? <img src={conv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : `${(conv.other_user?.first_name || '?')[0]}${(conv.other_user?.last_name || '')[0] || ''}`
+                      }
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                        <div style={{ fontWeight: isUnread ? 700 : 600, color: '#2D2D2D', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          {conv.other_user?.first_name} {conv.other_user?.last_name}
+                          {conv.other_user?.id === ADMIN_ID && (
+                            <img src="/icons/badge-check.svg" alt="" style={{ width: '13px', height: '13px' }} />
+                          )}
+                        </div>
+                        <span style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, flexShrink: 0 }}>
+                          {formatTime(conv.last_message_at)}
+                        </span>
                       </div>
-                      <span style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, flexShrink: 0 }}>
-                        {formatTime(conv.last_message_at)}
-                      </span>
+                      <div style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: isUnread ? 0.9 : 0.5, fontWeight: isUnread ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {conv.last_message || 'Aucun message'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {conv.last_message || 'Aucun message'}
-                    </div>
+                    {isUnread && (
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#E8501A', flexShrink: 0 }} />
+                    )}
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>
