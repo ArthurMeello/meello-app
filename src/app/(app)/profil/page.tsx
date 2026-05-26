@@ -165,11 +165,11 @@ export default function ProfilPage() {
     setServicePreview(URL.createObjectURL(file))
   }
 
-  const openPortfolioModal = (item?: { id: string; title: string; description: string | null; link: string | null }) => {
+  const openPortfolioModal = (item?: { id: string; title: string; description: string | null; link: string | null; media_url?: string }) => {
     if (item) {
       setPortfolioForm({ title: item.title, description: item.description || '', link: item.link || '' })
       setPortfolioFile(null)
-      setPortfolioPreview(null)
+      setPortfolioPreview(item.media_url || null)
       setPortfolioModal({ open: true, editId: item.id })
     } else {
       setPortfolioForm({ title: '', description: '', link: '' })
@@ -186,11 +186,11 @@ export default function ProfilPage() {
     setPortfolioPreview(null)
   }
 
-  const openServiceModal = (item?: { id: string; title: string; description: string | null; price: string | null; link: string | null; link_label: string | null }) => {
+  const openServiceModal = (item?: { id: string; title: string; description: string | null; price: string | null; link: string | null; link_label: string | null; image_url?: string | null }) => {
     if (item) {
       setServiceForm({ title: item.title, description: item.description || '', price: item.price || '', link: item.link || '', link_label: item.link_label || 'En savoir plus' })
       setServiceFile(null)
-      setServicePreview(null)
+      setServicePreview(item.image_url || null)
       setServiceModal({ open: true, editId: item.id })
     } else {
       setServiceForm({ title: '', description: '', price: '', link: '', link_label: 'En savoir plus' })
@@ -214,10 +214,21 @@ export default function ProfilPage() {
     const supabase = createClient()
 
     if (portfolioModal.editId) {
+      let newMediaUrl: string | undefined
+      if (portfolioFile) {
+        const ext = portfolioFile.name.split('.').pop()
+        const path = `${profile.id}/${Date.now()}.${ext}`
+        const { error: uploadError } = await supabase.storage.from('portfolio').upload(path, portfolioFile, { upsert: true })
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('portfolio').getPublicUrl(path)
+          newMediaUrl = urlData.publicUrl
+        }
+      }
       await supabase.from('portfolio_items').update({
         title: portfolioForm.title,
         description: portfolioForm.description || null,
         link: portfolioForm.link || null,
+        ...(newMediaUrl ? { media_url: newMediaUrl } : {}),
       }).eq('id', portfolioModal.editId)
     } else {
       const ext = portfolioFile!.name.split('.').pop()
@@ -253,12 +264,23 @@ export default function ProfilPage() {
     const supabase = createClient()
 
     if (serviceModal.editId) {
+      let newImageUrl: string | undefined
+      if (serviceFile) {
+        const ext = serviceFile.name.split('.').pop()
+        const path = `${profile.id}/${Date.now()}.${ext}`
+        const { error: uploadError } = await supabase.storage.from('services').upload(path, serviceFile, { upsert: true })
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('services').getPublicUrl(path)
+          newImageUrl = urlData.publicUrl
+        }
+      }
       await supabase.from('service_items').update({
         title: serviceForm.title,
         description: serviceForm.description || null,
         price: serviceForm.price || null,
         link: serviceForm.link || null,
         link_label: serviceForm.link ? (serviceForm.link_label || 'En savoir plus') : null,
+        ...(newImageUrl ? { image_url: newImageUrl } : {}),
       }).eq('id', serviceModal.editId)
     } else {
       let image_url = null
@@ -369,7 +391,7 @@ export default function ProfilPage() {
             <div style={{ color: '#2D2D2D', opacity: 0.6, fontSize: '0.9rem' }}>{profile.activity}</div>
             {profile.city && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.1rem' }}>
-                <img src="/icons/pin.svg" alt="" style={{ width: '18px', height: '18px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)', flexShrink: 0 }} />
+                <img src="/icons/pin.svg" alt="" style={{ width: '22px', height: '22px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)', flexShrink: 0 }} />
                 <span style={{ color: '#E8501A', fontSize: '0.82rem', fontWeight: 500 }}>{profile.city}</span>
               </div>
             )}
@@ -673,17 +695,18 @@ export default function ProfilPage() {
               </h3>
               <button onClick={closePortfolioModal} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}>×</button>
             </div>
-            {!portfolioModal.editId && (
-              <div onClick={() => portfolioFileRef.current?.click()} style={{ border: '2px dashed #E8E3D9', borderRadius: '12px', height: portfolioPreview ? 'auto' : '130px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', backgroundColor: '#FAFAFA' }}>
-                {portfolioPreview ? (
-                  portfolioFile?.type.startsWith('video/')
+            <div onClick={() => portfolioFileRef.current?.click()} style={{ border: '2px dashed #E8E3D9', borderRadius: '12px', height: portfolioPreview ? 'auto' : '130px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', backgroundColor: '#FAFAFA', position: 'relative' }}>
+              {portfolioPreview ? (
+                <>
+                  {portfolioFile?.type.startsWith('video/') || portfolioPreview.includes('.mp4') || portfolioPreview.includes('.mov')
                     ? <video src={portfolioPreview} controls style={{ width: '100%', maxHeight: '220px', objectFit: 'cover' }} />
-                    : <img src={portfolioPreview} alt="" style={{ width: '100%', maxHeight: '220px', objectFit: 'cover' }} />
-                ) : (
-                  <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Cliquer pour ajouter une image ou vidéo</span>
-                )}
-              </div>
-            )}
+                    : <img src={portfolioPreview} alt="" style={{ width: '100%', maxHeight: '220px', objectFit: 'cover' }} />}
+                  <div style={{ position: 'absolute', bottom: '0.5rem', right: '0.5rem', backgroundColor: 'rgba(0,0,0,0.5)', color: 'white', borderRadius: '6px', padding: '0.2rem 0.5rem', fontSize: '0.72rem' }}>Changer</div>
+                </>
+              ) : (
+                <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Cliquer pour ajouter une image ou vidéo</span>
+              )}
+            </div>
             <input ref={portfolioFileRef} type="file" accept="image/*,video/*" onChange={handlePortfolioFileChange} style={{ display: 'none' }} />
             <input value={portfolioForm.title} onChange={e => setPortfolioForm(p => ({ ...p, title: e.target.value }))} placeholder="Titre du projet *" style={inputStyle} />
             <textarea value={portfolioForm.description} onChange={e => setPortfolioForm(p => ({ ...p, description: e.target.value }))} placeholder="Description (facultatif)" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
@@ -709,14 +732,15 @@ export default function ProfilPage() {
               </h3>
               <button onClick={closeServiceModal} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}>×</button>
             </div>
-            {!serviceModal.editId && (
-              <div onClick={() => serviceFileRef.current?.click()} style={{ border: '2px dashed #E8E3D9', borderRadius: '12px', height: servicePreview ? 'auto' : '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', backgroundColor: '#FAFAFA' }}>
-                {servicePreview
-                  ? <img src={servicePreview} alt="" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }} />
-                  : <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Image du produit/service (facultatif)</span>
-                }
-              </div>
-            )}
+            <div onClick={() => serviceFileRef.current?.click()} style={{ border: '2px dashed #E8E3D9', borderRadius: '12px', height: servicePreview ? 'auto' : '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', backgroundColor: '#FAFAFA', position: 'relative' }}>
+              {servicePreview
+                ? <>
+                    <img src={servicePreview} alt="" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }} />
+                    <div style={{ position: 'absolute', bottom: '0.5rem', right: '0.5rem', backgroundColor: 'rgba(0,0,0,0.5)', color: 'white', borderRadius: '6px', padding: '0.2rem 0.5rem', fontSize: '0.72rem' }}>Changer</div>
+                  </>
+                : <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Image du produit/service (facultatif)</span>
+              }
+            </div>
             <input ref={serviceFileRef} type="file" accept="image/*" onChange={handleServiceFileChange} style={{ display: 'none' }} />
             <input value={serviceForm.title} onChange={e => setServiceForm(p => ({ ...p, title: e.target.value }))} placeholder="Titre du produit / service *" style={inputStyle} />
             <textarea value={serviceForm.description} onChange={e => setServiceForm(p => ({ ...p, description: e.target.value }))} placeholder="Description (facultatif)" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
