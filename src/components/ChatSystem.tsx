@@ -30,6 +30,8 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   const [showDropdown, setShowDropdown] = useState(false)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConv, setActiveConv] = useState<Conversation | null>(null)
+  // Sync ref pour accès dans les callbacks Realtime
+  useEffect(() => { activeConvRef.current = activeConv }, [activeConv])
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
@@ -40,6 +42,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const channelRef = useRef<any>(null)
+  const activeConvRef = useRef<Conversation | null>(null)
 
   useEffect(() => {
     if (!userId) return
@@ -76,33 +79,28 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
             .eq('id', msg.sender_id)
             .single()
 
-          const convObj = {
-            id: conv.id,
-            other_user: senderProfile,
-            last_message: msg.content,
-            last_message_at: msg.created_at,
+          const newMsg = {
+            id: msg.id,
+            content: msg.content,
+            sender_id: msg.sender_id,
+            created_at: msg.created_at,
           }
 
-          setActiveConv(prev => {
-            if (prev?.id === conv.id) {
-              // Conversation déjà ouverte — ajouter le message sans rouvrir
-              setMessages(msgs => [...msgs, {
-                id: msg.id,
-                content: msg.content,
-                sender_id: msg.sender_id,
-                created_at: msg.created_at,
-              }])
-              return prev
-            }
+          const currentConv = activeConvRef.current
+          if (currentConv?.id === conv.id) {
+            // Conversation déjà ouverte — ajouter le message en live
+            setMessages(msgs => [...msgs, newMsg])
+          } else {
             // Ouvrir automatiquement la conversation
-            setMessages([{
-              id: msg.id,
-              content: msg.content,
-              sender_id: msg.sender_id,
-              created_at: msg.created_at,
-            }])
-            return convObj
-          })
+            const convObj = {
+              id: conv.id,
+              other_user: senderProfile,
+              last_message: msg.content,
+              last_message_at: msg.created_at,
+            }
+            setActiveConv(convObj)
+            setMessages([newMsg])
+          }
         }
       )
       .subscribe()
