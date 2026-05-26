@@ -40,6 +40,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const [unreadConvIds, setUnreadConvIds] = useState<Set<string>>(new Set())
   const [otherIsTyping, setOtherIsTyping] = useState(false)
+  const [otherIsOnline, setOtherIsOnline] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -234,6 +235,18 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   const openConversation = async (conv: Conversation) => {
     setActiveConv(conv)
     setShowDropdown(false)
+    // Vérifier si l'autre membre est en ligne (présence < 2 min)
+    if (conv.other_user?.id) {
+      const supabasePresence = createClient()
+      const since = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+      const { data: presence } = await supabasePresence
+        .from('qg_presence')
+        .select('last_seen')
+        .eq('user_id', conv.other_user.id)
+        .gte('last_seen', since)
+        .single()
+      setOtherIsOnline(!!presence)
+    }
     const supabase = createClient()
     const { data } = await supabase
       .from('meello_messages')
@@ -512,16 +525,21 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
             backgroundColor: '#1A1A2E',
             cursor: 'pointer',
           }} onClick={() => setShowDropdown(v => !v)}>
-            <div style={{
-              width: '32px', height: '32px', borderRadius: '50%',
-              backgroundColor: '#E8501A', color: 'white', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 700, fontSize: '0.72rem', overflow: 'hidden',
-            }}>
-              {activeConv.other_user?.avatar_url
-                ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`
-              }
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                backgroundColor: '#E8501A', color: 'white',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 700, fontSize: '0.72rem', overflow: 'hidden',
+              }}>
+                {activeConv.other_user?.avatar_url
+                  ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`
+                }
+              </div>
+              {otherIsOnline && (
+                <span style={{ position: 'absolute', bottom: 0, right: 0, width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#22C55E', border: '1.5px solid #1A1A2E' }} />
+              )}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, color: 'white', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
