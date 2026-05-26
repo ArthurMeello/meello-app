@@ -111,7 +111,7 @@ export default function AnnuairePage() {
             // Calculer les scores
             const scored = data
               .map(p => ({ ...p, ...computeScore(me, p, connectedIds) }))
-              .filter(p => p.score > 0)
+              .filter(p => p.score >= 0)
               .sort((a, b) => b.score - a.score)
               .slice(0, 6)
 
@@ -243,15 +243,18 @@ function SuggestionCard({ profile, reasons }: { profile: Profile; reasons: strin
         </div>
 
         {/* Tags de raison */}
-        {reasons.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', justifyContent: 'center' }}>
-            {reasons.slice(0, 3).map(r => (
-              <span key={r} style={{ backgroundColor: '#FFF0ED', color: '#E8501A', borderRadius: '20px', padding: '0.2rem 0.55rem', fontSize: '0.72rem', fontWeight: 600 }}>
-                {r}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', justifyContent: 'center' }}>
+          {reasons.length > 0
+            ? reasons.slice(0, 3).map(r => (
+                <span key={r} style={{ backgroundColor: '#FFF0ED', color: '#E8501A', borderRadius: '20px', padding: '0.2rem 0.55rem', fontSize: '0.72rem', fontWeight: 600 }}>
+                  {r}
+                </span>
+              ))
+            : <span style={{ backgroundColor: '#F5F0E8', color: '#2D2D2D', borderRadius: '20px', padding: '0.2rem 0.55rem', fontSize: '0.72rem', fontWeight: 600, opacity: 0.5 }}>
+                Nouveau membre
               </span>
-            ))}
-          </div>
-        )}
+          }
+        </div>
 
         {/* CTA */}
         <div style={{ fontSize: '0.78rem', color: '#E8501A', fontWeight: 600, marginTop: '0.1rem' }}>
