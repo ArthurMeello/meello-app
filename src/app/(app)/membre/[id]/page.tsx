@@ -15,12 +15,12 @@ const socialLinkStyle: React.CSSProperties = {
 }
 
 function MiniPostCard({ post, isLast }: { post: any; isLast?: boolean }) {
-  // Grouper les réactions par emoji
   const reactionGroups: Record<string, number> = {}
   for (const r of (post.reactions || [])) {
     if (r.emoji) reactionGroups[r.emoji] = (reactionGroups[r.emoji] || 0) + 1
   }
   const reactionEntries = Object.entries(reactionGroups)
+  const isForumTopic = post.source === 'forum'
 
   const formatDate = (d: string) => {
     const date = new Date(d)
@@ -33,8 +33,20 @@ function MiniPostCard({ post, isLast }: { post: any; isLast?: boolean }) {
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
   }
 
-  return (
+  const inner = (
     <div style={{ borderBottom: isLast ? 'none' : '1px solid #F5F0E8', paddingBottom: isLast ? 0 : '1rem', marginBottom: isLast ? 0 : '1rem' }}>
+      {/* Badge forum */}
+      {isForumTopic && (
+        <div style={{ marginBottom: '0.4rem' }}>
+          <span style={{ backgroundColor: '#F5F0E8', color: '#E8501A', borderRadius: '20px', padding: '0.15rem 0.55rem', fontSize: '0.72rem', fontWeight: 600 }}>
+            La Communauté {post.category_name ? `· ${post.category_name}` : ''}
+          </span>
+        </div>
+      )}
+      {/* Titre pour forum */}
+      {isForumTopic && post.title && (
+        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#2D2D2D', marginBottom: '0.25rem' }}>{post.title}</div>
+      )}
       {post.image_url && (
         <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: '160px', objectFit: 'cover', borderRadius: '10px', marginBottom: '0.6rem', display: 'block' }} />
       )}
@@ -63,6 +75,16 @@ function MiniPostCard({ post, isLast }: { post: any; isLast?: boolean }) {
       </div>
     </div>
   )
+
+  // Si c'est un topic forum, on wrappe dans un lien
+  if (isForumTopic) {
+    return (
+      <a href={`/forum/${post.category_id}/${post.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+        {inner}
+      </a>
+    )
+  }
+  return inner
 }
 
 export default function MembrePublicPage() {
@@ -112,18 +134,34 @@ export default function MembrePublicPage() {
       const { data: recoData } = await supabase.from('recommendations').select('id, content, author_id, profiles!recommendations_author_id_fkey(first_name, last_name, avatar_url, activity)').eq('target_id', id).eq('status', 'approved').order('created_at', { ascending: false })
       if (recoData) setRecos(recoData)
 
-      // 2 derniers posts avec réactions et commentaires
-      const { data: postsData } = await supabase.from('posts').select('id, content, image_url, created_at').eq('author_id', id).order('created_at', { ascending: false }).limit(2)
-      if (postsData) {
-        const enriched = await Promise.all(postsData.map(async post => {
-          const [{ count: commentCount }, { data: reactions }] = await Promise.all([
-            supabase.from('comments').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
-            supabase.from('reactions').select('emoji, author_id').eq('post_id', post.id),
-          ])
-          return { ...post, commentCount: commentCount || 0, reactions: reactions || [] }
-        }))
-        setPosts(enriched)
-      }
+      // Posts fil d'actualité
+      const { data: postsData } = await supabase.from('posts').select('id, content, image_url, created_at').eq('author_id', id).order('created_at', { ascending: false })
+      const feedPosts = postsData ? await Promise.all(postsData.map(async post => {
+        const [{ count: commentCount }, { data: reactions }] = await Promise.all([
+          supabase.from('comments').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
+          supabase.from('reactions').select('emoji, author_id').eq('post_id', post.id),
+        ])
+        return { ...post, commentCount: commentCount || 0, reactions: reactions || [], source: 'feed' }
+      })) : []
+
+      // Topics forum
+      const { data: topicsData } = await supabase.from('forum_topics').select('id, title, content, created_at, category_id, forum_categories(name)').eq('author_id', id).order('created_at', { ascending: false })
+      const forumTopics = (topicsData || []).map(t => ({
+        id: t.id,
+        content: t.content,
+        image_url: null,
+        created_at: t.created_at,
+        commentCount: 0,
+        reactions: [],
+        source: 'forum',
+        title: t.title,
+        category_id: t.category_id,
+        category_name: t.forum_categories?.name,
+      }))
+
+      // Fusionner et trier par date, prendre les 2 plus récents pour l'aperçu
+      const all = [...feedPosts, ...forumTopics].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      setPosts(all.slice(0, 2))
 
       if (user && user.id !== id) {
         const { data: existingReco } = await supabase.from('recommendations').select('id').eq('target_id', id).eq('author_id', user.id).single()
@@ -148,19 +186,31 @@ export default function MembrePublicPage() {
     setPostsLoading(true)
     const supabase = createClient()
     const from = postsPage * POSTS_PER_PAGE
-    const { data } = await supabase.from('posts').select('id, content, image_url, created_at').eq('author_id', id).order('created_at', { ascending: false }).range(from, from + POSTS_PER_PAGE - 1)
-    if (data) {
-      const enriched = await Promise.all(data.map(async post => {
-        const [{ count: commentCount }, { data: reactions }] = await Promise.all([
-          supabase.from('comments').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
-          supabase.from('reactions').select('emoji, author_id').eq('post_id', post.id),
-        ])
-        return { ...post, commentCount: commentCount || 0, reactions: reactions || [] }
-      }))
-      setAllPosts(prev => [...prev, ...enriched])
-      if (data.length < POSTS_PER_PAGE) setPostsHasMore(false)
-      setPostsPage(p => p + 1)
-    }
+
+    const [{ data: feedData }, { data: topicsData }] = await Promise.all([
+      supabase.from('posts').select('id, content, image_url, created_at').eq('author_id', id).order('created_at', { ascending: false }),
+      supabase.from('forum_topics').select('id, title, content, created_at, category_id, forum_categories(name)').eq('author_id', id).order('created_at', { ascending: false }),
+    ])
+
+    const feedPosts = feedData ? await Promise.all(feedData.map(async post => {
+      const [{ count: commentCount }, { data: reactions }] = await Promise.all([
+        supabase.from('comments').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
+        supabase.from('reactions').select('emoji, author_id').eq('post_id', post.id),
+      ])
+      return { ...post, commentCount: commentCount || 0, reactions: reactions || [], source: 'feed' }
+    })) : []
+
+    const forumTopics = (topicsData || []).map(t => ({
+      id: t.id, content: t.content, image_url: null, created_at: t.created_at,
+      commentCount: 0, reactions: [], source: 'forum',
+      title: t.title, category_id: t.category_id, category_name: t.forum_categories?.name,
+    }))
+
+    const all = [...feedPosts, ...forumTopics].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    const page = all.slice(from, from + POSTS_PER_PAGE)
+    setAllPosts(prev => postsPage === 0 ? page : [...prev, ...page])
+    if (page.length < POSTS_PER_PAGE) setPostsHasMore(false)
+    setPostsPage(p => p + 1)
     setPostsLoading(false)
   }, [postsPage, postsLoading, postsHasMore, id])
 
@@ -179,23 +229,6 @@ export default function MembrePublicPage() {
     setPostsPage(0)
     setPostsHasMore(true)
     setPostsModal(true)
-    // Déclencher le premier chargement
-    setTimeout(async () => {
-      const supabase = createClient()
-      const { data } = await supabase.from('posts').select('id, content, image_url, created_at').eq('author_id', id).order('created_at', { ascending: false }).range(0, POSTS_PER_PAGE - 1)
-      if (data) {
-        const enriched = await Promise.all(data.map(async post => {
-          const [{ count: commentCount }, { data: reactions }] = await Promise.all([
-            supabase.from('comments').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
-            supabase.from('reactions').select('emoji, author_id').eq('post_id', post.id),
-          ])
-          return { ...post, commentCount: commentCount || 0, reactions: reactions || [] }
-        }))
-        setAllPosts(enriched)
-        if (data.length < POSTS_PER_PAGE) setPostsHasMore(false)
-        setPostsPage(1)
-      }
-    }, 50)
   }
 
   const sendConnectionRequest = async () => {
