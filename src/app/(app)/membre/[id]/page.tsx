@@ -14,6 +14,57 @@ const socialLinkStyle: React.CSSProperties = {
   textDecoration: 'none',
 }
 
+function MiniPostCard({ post, isLast }: { post: any; isLast?: boolean }) {
+  // Grouper les réactions par emoji
+  const reactionGroups: Record<string, number> = {}
+  for (const r of (post.reactions || [])) {
+    if (r.emoji) reactionGroups[r.emoji] = (reactionGroups[r.emoji] || 0) + 1
+  }
+  const reactionEntries = Object.entries(reactionGroups)
+
+  const formatDate = (d: string) => {
+    const date = new Date(d)
+    const now = new Date()
+    const diff = (now.getTime() - date.getTime()) / 1000
+    if (diff < 60) return 'à l\'instant'
+    if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`
+    if (diff < 86400) return `il y a ${Math.floor(diff / 3600)} h`
+    if (diff < 7 * 86400) return `il y a ${Math.floor(diff / 86400)} j`
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  }
+
+  return (
+    <div style={{ borderBottom: isLast ? 'none' : '1px solid #F5F0E8', paddingBottom: isLast ? 0 : '1rem', marginBottom: isLast ? 0 : '1rem' }}>
+      {post.image_url && (
+        <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: '160px', objectFit: 'cover', borderRadius: '10px', marginBottom: '0.6rem', display: 'block' }} />
+      )}
+      <p style={{ fontSize: '0.88rem', color: '#2D2D2D', lineHeight: 1.6, margin: '0 0 0.5rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        {post.content}
+      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4 }}>{formatDate(post.created_at)}</span>
+        {reactionEntries.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+            {reactionEntries.map(([emoji, count]) => (
+              <span key={emoji} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.15rem', backgroundColor: '#F5F0E8', borderRadius: '20px', padding: '0.15rem 0.5rem', fontSize: '0.8rem' }}>
+                {emoji} <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.7, fontWeight: 600 }}>{count}</span>
+              </span>
+            ))}
+          </div>
+        )}
+        {(post.commentCount || 0) > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.5 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            {post.commentCount}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function MembrePublicPage() {
   const { id } = useParams()
   const [profile, setProfile] = useState(null)
@@ -61,9 +112,18 @@ export default function MembrePublicPage() {
       const { data: recoData } = await supabase.from('recommendations').select('id, content, author_id, profiles!recommendations_author_id_fkey(first_name, last_name, avatar_url, activity)').eq('target_id', id).eq('status', 'approved').order('created_at', { ascending: false })
       if (recoData) setRecos(recoData)
 
-      // 2 derniers posts
+      // 2 derniers posts avec réactions et commentaires
       const { data: postsData } = await supabase.from('posts').select('id, content, image_url, created_at').eq('author_id', id).order('created_at', { ascending: false }).limit(2)
-      if (postsData) setPosts(postsData)
+      if (postsData) {
+        const enriched = await Promise.all(postsData.map(async post => {
+          const [{ count: commentCount }, { data: reactions }] = await Promise.all([
+            supabase.from('comments').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
+            supabase.from('reactions').select('emoji, author_id').eq('post_id', post.id),
+          ])
+          return { ...post, commentCount: commentCount || 0, reactions: reactions || [] }
+        }))
+        setPosts(enriched)
+      }
 
       if (user && user.id !== id) {
         const { data: existingReco } = await supabase.from('recommendations').select('id').eq('target_id', id).eq('author_id', user.id).single()
@@ -90,7 +150,14 @@ export default function MembrePublicPage() {
     const from = postsPage * POSTS_PER_PAGE
     const { data } = await supabase.from('posts').select('id, content, image_url, created_at').eq('author_id', id).order('created_at', { ascending: false }).range(from, from + POSTS_PER_PAGE - 1)
     if (data) {
-      setAllPosts(prev => [...prev, ...data])
+      const enriched = await Promise.all(data.map(async post => {
+        const [{ count: commentCount }, { data: reactions }] = await Promise.all([
+          supabase.from('comments').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
+          supabase.from('reactions').select('emoji, author_id').eq('post_id', post.id),
+        ])
+        return { ...post, commentCount: commentCount || 0, reactions: reactions || [] }
+      }))
+      setAllPosts(prev => [...prev, ...enriched])
       if (data.length < POSTS_PER_PAGE) setPostsHasMore(false)
       setPostsPage(p => p + 1)
     }
@@ -113,15 +180,21 @@ export default function MembrePublicPage() {
     setPostsHasMore(true)
     setPostsModal(true)
     // Déclencher le premier chargement
-    setTimeout(() => {
+    setTimeout(async () => {
       const supabase = createClient()
-      supabase.from('posts').select('id, content, image_url, created_at').eq('author_id', id).order('created_at', { ascending: false }).range(0, POSTS_PER_PAGE - 1).then(({ data }) => {
-        if (data) {
-          setAllPosts(data)
-          if (data.length < POSTS_PER_PAGE) setPostsHasMore(false)
-          setPostsPage(1)
-        }
-      })
+      const { data } = await supabase.from('posts').select('id, content, image_url, created_at').eq('author_id', id).order('created_at', { ascending: false }).range(0, POSTS_PER_PAGE - 1)
+      if (data) {
+        const enriched = await Promise.all(data.map(async post => {
+          const [{ count: commentCount }, { data: reactions }] = await Promise.all([
+            supabase.from('comments').select('id', { count: 'exact', head: true }).eq('post_id', post.id),
+            supabase.from('reactions').select('emoji, author_id').eq('post_id', post.id),
+          ])
+          return { ...post, commentCount: commentCount || 0, reactions: reactions || [] }
+        }))
+        setAllPosts(enriched)
+        if (data.length < POSTS_PER_PAGE) setPostsHasMore(false)
+        setPostsPage(1)
+      }
     }, 50)
   }
 
@@ -415,13 +488,9 @@ export default function MembrePublicPage() {
               <p style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.4, margin: 0 }}>Aucune publication pour l'instant.</p>
             ) : (
               <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {posts.map(post => (
-                    <div key={post.id} style={{ borderBottom: '1px solid #F5F0E8', paddingBottom: '0.75rem' }}>
-                      {post.image_url && <img src={post.image_url} alt="" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px', marginBottom: '0.4rem' }} />}
-                      <p style={{ fontSize: '0.82rem', color: '#2D2D2D', lineHeight: 1.5, margin: '0 0 0.3rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{post.content}</p>
-                      <span style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4 }}>{formatDate(post.created_at)}</span>
-                    </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                  {posts.map((post, i) => (
+                    <MiniPostCard key={post.id} post={post} isLast={i === posts.length - 1} />
                   ))}
                 </div>
                 <button onClick={openPostsModal} style={{ marginTop: '0.75rem', background: 'none', border: 'none', color: '#E8501A', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}>
@@ -468,13 +537,9 @@ export default function MembrePublicPage() {
               <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.1rem', color: '#2D2D2D', margin: 0 }}>Publications de {profile.first_name}</h3>
               <button onClick={() => setPostsModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}>×</button>
             </div>
-            <div style={{ overflowY: 'auto', flex: 1, padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {allPosts.map(post => (
-                <div key={post.id} style={{ borderBottom: '1px solid #F5F0E8', paddingBottom: '1rem' }}>
-                  {post.image_url && <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '10px', marginBottom: '0.6rem' }} />}
-                  <p style={{ fontSize: '0.9rem', color: '#2D2D2D', lineHeight: 1.6, margin: '0 0 0.4rem' }}>{post.content}</p>
-                  <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.4 }}>{formatDate(post.created_at)}</span>
-                </div>
+            <div style={{ overflowY: 'auto', flex: 1, padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0' }}>
+              {allPosts.map((post, i) => (
+                <MiniPostCard key={post.id} post={post} isLast={i === allPosts.length - 1} />
               ))}
               {postsLoading && <div style={{ textAlign: 'center', color: '#2D2D2D', opacity: 0.4, fontSize: '0.85rem', padding: '0.5rem' }}>Chargement...</div>}
               {!postsHasMore && allPosts.length > 0 && <div style={{ textAlign: 'center', color: '#2D2D2D', opacity: 0.3, fontSize: '0.82rem', padding: '0.5rem' }}>Toutes les publications ont été chargées</div>}
