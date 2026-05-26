@@ -155,11 +155,12 @@ export default function MessagesPage() {
     if (data) setMessages(data)
 
     // Marquer les messages reçus comme lus
-    if (userId) {
+    const uid = userIdRef.current || userId
+    if (uid) {
       await supabase.from('meello_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('conversation_id', conv.id)
-        .neq('sender_id', userId)
+        .neq('sender_id', uid)
         .is('read_at', null)
     }
 
