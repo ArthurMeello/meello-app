@@ -184,10 +184,12 @@ export default function ReseauPage() {
                 <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                   <button
                     onClick={() => openMessage(c.other_user.id)}
-                    style={{ background: 'none', border: '1.5px solid #E8E3D9', borderRadius: '8px', padding: '0.45rem 0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ background: 'none', border: 'none', padding: '0.45rem 0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     title="Envoyer un message"
+                    onMouseEnter={e => e.currentTarget.querySelector('svg')!.style.stroke = '#E8501A'}
+                    onMouseLeave={e => e.currentTarget.querySelector('svg')!.style.stroke = '#2D2D2D'}
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6, transition: 'stroke 0.15s' }}>
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     </svg>
                   </button>
