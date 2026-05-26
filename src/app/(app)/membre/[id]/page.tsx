@@ -98,7 +98,7 @@ export default function MembrePublicPage() {
       await supabase.from('notifications').insert({
         user_id: id,
         type: 'connection',
-        content: `veut se connecter avec toi`,
+        content: `t'a envoyé une demande de connexion`,
         link: `/reseau`,
         from_user_id: currentUserId,
       })
