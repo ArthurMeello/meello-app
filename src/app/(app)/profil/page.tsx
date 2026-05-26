@@ -62,6 +62,12 @@ export default function ProfilPage() {
   const [serviceFile, setServiceFile] = useState<File | null>(null)
   const [servicePreview, setServicePreview] = useState<string | null>(null)
   const [savingService, setSavingService] = useState(false)
+  const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null)
+  const [editPortfolioForm, setEditPortfolioForm] = useState({ title: '', description: '', link: '' })
+  const [savingEditPortfolio, setSavingEditPortfolio] = useState(false)
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null)
+  const [editServiceForm, setEditServiceForm] = useState({ title: '', description: '', price: '', link: '', link_label: '' })
+  const [savingEditService, setSavingEditService] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const portfolioFileRef = useRef<HTMLInputElement>(null)
   const serviceFileRef = useRef<HTMLInputElement>(null)
@@ -245,6 +251,34 @@ export default function ProfilPage() {
       if (urlParts[1]) await supabase.storage.from('services').remove([urlParts[1]])
     }
     await supabase.from('service_items').delete().eq('id', id)
+    await loadProfile()
+  }
+
+  const handleUpdatePortfolio = async (id: string) => {
+    setSavingEditPortfolio(true)
+    const supabase = createClient()
+    await supabase.from('portfolio_items').update({
+      title: editPortfolioForm.title,
+      description: editPortfolioForm.description || null,
+      link: editPortfolioForm.link || null,
+    }).eq('id', id)
+    setEditingPortfolioId(null)
+    setSavingEditPortfolio(false)
+    await loadProfile()
+  }
+
+  const handleUpdateService = async (id: string) => {
+    setSavingEditService(true)
+    const supabase = createClient()
+    await supabase.from('service_items').update({
+      title: editServiceForm.title,
+      description: editServiceForm.description || null,
+      price: editServiceForm.price || null,
+      link: editServiceForm.link || null,
+      link_label: editServiceForm.link ? (editServiceForm.link_label || 'En savoir plus') : null,
+    }).eq('id', id)
+    setEditingServiceId(null)
+    setSavingEditService(false)
     await loadProfile()
   }
 
@@ -615,23 +649,44 @@ export default function ProfilPage() {
                 ? <video src={item.media_url} controls style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
                 : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
               }
-              <div style={{ padding: '0.75rem' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D', marginBottom: '0.25rem' }}>{item.title}</div>
-                {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.5rem', lineHeight: 1.5 }}>{item.description}</p>}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  {item.link
-                    ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a>
-                    : <span />
-                  }
-                  <button
-                    onClick={() => handleDeletePortfolio(item.id, item.media_url)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.3 }}
-                    title="Supprimer"
-                  >
-                    🗑
-                  </button>
+              {editingPortfolioId === item.id ? (
+                <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <input value={editPortfolioForm.title} onChange={e => setEditPortfolioForm(p => ({ ...p, title: e.target.value }))} placeholder="Titre *" style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem' }} />
+                  <textarea value={editPortfolioForm.description} onChange={e => setEditPortfolioForm(p => ({ ...p, description: e.target.value }))} placeholder="Description" rows={2} style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem', resize: 'vertical' }} />
+                  <input value={editPortfolioForm.link} onChange={e => setEditPortfolioForm(p => ({ ...p, link: e.target.value }))} placeholder="Lien externe" style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem' }} />
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button onClick={() => handleUpdatePortfolio(item.id)} disabled={savingEditPortfolio || !editPortfolioForm.title} style={{ flex: 1, backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.4rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}>
+                      {savingEditPortfolio ? '...' : 'Enregistrer'}
+                    </button>
+                    <button onClick={() => setEditingPortfolioId(null)} style={{ flex: 1, backgroundColor: '#F5F0E8', color: '#2D2D2D', border: 'none', borderRadius: '8px', padding: '0.4rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}>
+                      Annuler
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div style={{ padding: '0.75rem' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D', marginBottom: '0.25rem' }}>{item.title}</div>
+                  {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.5rem', lineHeight: 1.5 }}>{item.description}</p>}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {item.link
+                      ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a>
+                      : <span />
+                    }
+                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                      <button
+                        onClick={() => { setEditingPortfolioId(item.id); setEditPortfolioForm({ title: item.title, description: item.description || '', link: item.link || '' }) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.4 }}
+                        title="Modifier"
+                      >✏️</button>
+                      <button
+                        onClick={() => handleDeletePortfolio(item.id, item.media_url)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.3 }}
+                        title="Supprimer"
+                      >🗑</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -734,30 +789,55 @@ export default function ProfilPage() {
               {item.image_url && (
                 <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
               )}
-              <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D' }}>{item.title}</div>
-                {item.price && (
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#E8501A' }}>{item.price}</div>
-                )}
-                {item.description && (
-                  <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.5 }}>{item.description}</p>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem' }}>
-                  {item.link
-                    ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: 'white', backgroundColor: '#E8501A', fontWeight: 600, textDecoration: 'none', padding: '0.3rem 0.7rem', borderRadius: '6px' }}>
-                        {item.link_label || 'En savoir plus'}
-                      </a>
-                    : <span />
-                  }
-                  <button
-                    onClick={() => handleDeleteService(item.id, item.image_url)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.3 }}
-                    title="Supprimer"
-                  >
-                    🗑
-                  </button>
+              {editingServiceId === item.id ? (
+                <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <input value={editServiceForm.title} onChange={e => setEditServiceForm(p => ({ ...p, title: e.target.value }))} placeholder="Titre *" style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem' }} />
+                  <textarea value={editServiceForm.description} onChange={e => setEditServiceForm(p => ({ ...p, description: e.target.value }))} placeholder="Description" rows={2} style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem', resize: 'vertical' }} />
+                  <input value={editServiceForm.price} onChange={e => setEditServiceForm(p => ({ ...p, price: e.target.value }))} placeholder="Prix" style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem' }} />
+                  <input value={editServiceForm.link} onChange={e => setEditServiceForm(p => ({ ...p, link: e.target.value }))} placeholder="Lien" style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem' }} />
+                  {editServiceForm.link && (
+                    <input value={editServiceForm.link_label} onChange={e => setEditServiceForm(p => ({ ...p, link_label: e.target.value }))} placeholder="Texte du bouton" style={{ ...inputStyle, fontSize: '0.82rem', padding: '0.45rem 0.7rem' }} />
+                  )}
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button onClick={() => handleUpdateService(item.id)} disabled={savingEditService || !editServiceForm.title} style={{ flex: 1, backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.4rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}>
+                      {savingEditService ? '...' : 'Enregistrer'}
+                    </button>
+                    <button onClick={() => setEditingServiceId(null)} style={{ flex: 1, backgroundColor: '#F5F0E8', color: '#2D2D2D', border: 'none', borderRadius: '8px', padding: '0.4rem', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}>
+                      Annuler
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D' }}>{item.title}</div>
+                  {item.price && (
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#E8501A' }}>{item.price}</div>
+                  )}
+                  {item.description && (
+                    <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.5 }}>{item.description}</p>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem' }}>
+                    {item.link
+                      ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: 'white', backgroundColor: '#E8501A', fontWeight: 600, textDecoration: 'none', padding: '0.3rem 0.7rem', borderRadius: '6px' }}>
+                          {item.link_label || 'En savoir plus'}
+                        </a>
+                      : <span />
+                    }
+                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                      <button
+                        onClick={() => { setEditingServiceId(item.id); setEditServiceForm({ title: item.title, description: item.description || '', price: item.price || '', link: item.link || '', link_label: item.link_label || 'En savoir plus' }) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.4 }}
+                        title="Modifier"
+                      >✏️</button>
+                      <button
+                        onClick={() => handleDeleteService(item.id, item.image_url)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.3 }}
+                        title="Supprimer"
+                      >🗑</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
