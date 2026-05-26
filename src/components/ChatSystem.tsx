@@ -79,17 +79,6 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
 
     const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, p]))
 
-    const convs = data.map((c: any) => {
-      const otherId = c.participant1_id === uid ? c.participant2_id : c.participant1_id
-      return {
-        id: c.id,
-        other_user: profileMap[otherId] || null,
-        last_message: c.last_message || '',
-        last_message_at: c.last_message_at || '',
-      }
-    })
-    setConversations(convs)
-
     // Récupérer les notifs message non lues pour savoir quelles convs sont non lues
     const { data: unreadNotifs } = await supabase
       .from('notifications')
@@ -98,13 +87,42 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       .eq('type', 'message')
       .eq('read', false)
 
-    if (unreadNotifs) {
-      const unreadSenderIds = new Set(unreadNotifs.map((n: any) => n.from_user_id))
-      const unreadIds = new Set(convs.filter(c => unreadSenderIds.has(c.other_user?.id)).map(c => c.id))
-      setUnreadConvIds(unreadIds)
-      setUnreadCount(unreadIds.size)
-      window.dispatchEvent(new CustomEvent('meello:chat-unread', { detail: unreadIds.size }))
+    const unreadSenderIds = new Set((unreadNotifs || []).map((n: any) => n.from_user_id))
+
+    // Récupérer le dernier message reçu (de l'autre) pour les convs non lues
+    const convIds = data.map((c: any) => c.id)
+    const { data: lastReceivedMsgs } = await supabase
+      .from('meello_messages')
+      .select('conversation_id, content, created_at')
+      .in('conversation_id', convIds)
+      .neq('sender_id', uid)
+      .order('created_at', { ascending: false })
+
+    // Garder uniquement le dernier message reçu par conversation
+    const lastReceivedMap: Record<string, string> = {}
+    for (const msg of (lastReceivedMsgs || [])) {
+      if (!lastReceivedMap[msg.conversation_id]) {
+        lastReceivedMap[msg.conversation_id] = msg.content
+      }
     }
+
+    const convs = data.map((c: any) => {
+      const otherId = c.participant1_id === uid ? c.participant2_id : c.participant1_id
+      const isUnread = unreadSenderIds.has(otherId)
+      return {
+        id: c.id,
+        other_user: profileMap[otherId] || null,
+        // Si non lu : afficher le dernier message reçu, sinon le last_message général
+        last_message: isUnread ? (lastReceivedMap[c.id] || c.last_message || '') : (c.last_message || ''),
+        last_message_at: c.last_message_at || '',
+      }
+    })
+    setConversations(convs)
+
+    const unreadIds = new Set(convs.filter(c => unreadSenderIds.has(c.other_user?.id)).map(c => c.id))
+    setUnreadConvIds(unreadIds)
+    setUnreadCount(unreadIds.size)
+    window.dispatchEvent(new CustomEvent('meello:chat-unread', { detail: unreadIds.size }))
   }
 
   const openConversation = async (conv: Conversation) => {
