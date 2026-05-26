@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 interface Topic {
@@ -14,19 +14,48 @@ interface Topic {
   author_id: string
   profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null } | null
   reply_count?: number
+  last_reply_at?: string
 }
+
+type SortMode = 'recent' | 'actif'
 
 export default function ForumCategoryPage() {
   const { id } = useParams()
-  const router = useRouter()
   const [category, setCategory] = useState<{ id: string; name: string; description: string | null } | null>(null)
   const [topics, setTopics] = useState<Topic[]>([])
   const [loading, setLoading] = useState(true)
+  const [sort, setSort] = useState<SortMode>('recent')
   const [newTopicModal, setNewTopicModal] = useState(false)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadTopics = async (supabase: any) => {
+    const { data: topicsData, error: err } = await supabase
+      .from('forum_topics')
+      .select('id, title, content, created_at, author_id, profiles!forum_topics_author_id_fkey(first_name, last_name, avatar_url, activity)')
+      .eq('category_id', id)
+      .order('created_at', { ascending: false })
+
+    if (err) { console.error('topics error', err); return }
+
+    if (topicsData) {
+      // Enrichir avec le nombre de réponses et la date de la dernière réponse
+      const enriched = await Promise.all(topicsData.map(async (topic: any) => {
+        const { count, data: replies } = await supabase
+          .from('forum_replies')
+          .select('created_at', { count: 'exact' })
+          .eq('topic_id', topic.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+        const last_reply_at = replies?.[0]?.created_at || topic.created_at
+        return { ...topic, reply_count: count || 0, last_reply_at }
+      }))
+      setTopics(enriched)
+    }
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -37,30 +66,34 @@ export default function ForumCategoryPage() {
       const { data: cat } = await supabase.from('forum_categories').select('*').eq('id', id).single()
       if (cat) setCategory(cat)
 
-      const { data: topicsData } = await supabase
-        .from('forum_topics')
-        .select('id, title, content, created_at, author_id, profiles!forum_topics_author_id_fkey(first_name, last_name, avatar_url, activity)')
-        .eq('category_id', id)
-        .order('created_at', { ascending: false })
-
-      if (topicsData) {
-        setTopics(topicsData)
-      }
+      await loadTopics(supabase)
       setLoading(false)
     }
     load()
   }, [id])
 
+  const sortedTopics = [...topics].sort((a, b) => {
+    if (sort === 'actif') return new Date(b.last_reply_at).getTime() - new Date(a.last_reply_at).getTime()
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
+
   const submitTopic = async () => {
     if (!title.trim() || !content.trim() || !currentUserId) return
     setSubmitting(true)
+    setError(null)
     const supabase = createClient()
-    const { data } = await supabase
+    const { data, error: insertError } = await supabase
       .from('forum_topics')
       .insert({ category_id: id, author_id: currentUserId, title: title.trim(), content: content.trim() })
       .select('id, title, content, created_at, author_id, profiles!forum_topics_author_id_fkey(first_name, last_name, avatar_url, activity)')
       .single()
-    if (data) setTopics(prev => [data, ...prev])
+
+    if (insertError) {
+      setError('Erreur lors de la publication. Vérifie les permissions Supabase.')
+      setSubmitting(false)
+      return
+    }
+    if (data) setTopics(prev => [{ ...data, reply_count: 0, last_reply_at: data.created_at }, ...prev])
     setTitle(''); setContent(''); setNewTopicModal(false); setSubmitting(false)
   }
 
@@ -77,38 +110,43 @@ export default function ForumCategoryPage() {
 
   return (
     <div style={{ maxWidth: '760px', margin: '0 auto' }}>
+
       {/* Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.45, marginBottom: '1.25rem' }}>
-        <Link href="/forum" style={{ color: '#E8501A', textDecoration: 'none', fontWeight: 600, opacity: 1 }}>La Communauté</Link>
-        <span>→</span>
-        <span>{category?.name || '...'}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+        <Link href="/forum" style={{ color: '#E8501A', textDecoration: 'none', fontWeight: 600 }}>La Communauté</Link>
+        <span style={{ color: '#2D2D2D', opacity: 0.4 }}>→</span>
+        <span style={{ color: '#2D2D2D', opacity: 0.5 }}>{category?.name || '...'}</span>
       </div>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.5rem', color: '#2D2D2D', margin: 0 }}>
-            {category?.name}
-          </h1>
-          {category?.description && (
-            <p style={{ color: '#2D2D2D', opacity: 0.45, fontSize: '0.88rem', margin: '0.3rem 0 0' }}>{category.description}</p>
-          )}
+          <h1 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.5rem', color: '#2D2D2D', margin: 0 }}>{category?.name}</h1>
+          {category?.description && <p style={{ color: '#2D2D2D', opacity: 0.45, fontSize: '0.88rem', margin: '0.3rem 0 0' }}>{category.description}</p>}
         </div>
         {currentUserId && (
-          <button
-            onClick={() => setNewTopicModal(true)}
-            style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '10px', padding: '0.6rem 1.25rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', flexShrink: 0 }}
-          >
+          <button onClick={() => setNewTopicModal(true)} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '10px', padding: '0.6rem 1.25rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
             + Nouveau sujet
           </button>
         )}
       </div>
 
-      {/* Liste des sujets */}
+      {/* Tri */}
+      {topics.length > 0 && (
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+          {(['recent', 'actif'] as SortMode[]).map(s => (
+            <button key={s} onClick={() => setSort(s)} style={{ padding: '0.35rem 0.9rem', borderRadius: '20px', border: `1.5px solid ${sort === s ? '#E8501A' : '#E8E3D9'}`, backgroundColor: sort === s ? '#FFF0ED' : 'white', color: sort === s ? '#E8501A' : '#2D2D2D', fontWeight: sort === s ? 700 : 400, fontSize: '0.82rem', cursor: 'pointer', opacity: sort !== s ? 0.6 : 1 }}>
+              {s === 'recent' ? 'Les plus récents' : 'Les plus actifs'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Liste */}
       {loading && <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>Chargement...</div>}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {topics.map(topic => {
+        {sortedTopics.map(topic => {
           const initials = `${(topic.profiles?.first_name || '?')[0]}${(topic.profiles?.last_name || '')[0] || ''}`.toUpperCase()
           return (
             <Link key={topic.id} href={`/forum/${id}/${topic.id}`} style={{ textDecoration: 'none' }}>
@@ -117,21 +155,24 @@ export default function ForumCategoryPage() {
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateX(4px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)' }}
               >
-                <div style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.95rem', marginBottom: '0.4rem' }}>{topic.title}</div>
+                <div style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.97rem', marginBottom: '0.35rem' }}>{topic.title}</div>
                 <p style={{ fontSize: '0.83rem', color: '#2D2D2D', opacity: 0.5, margin: '0 0 0.75rem', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {topic.content}
                 </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700, overflow: 'hidden', flexShrink: 0 }}>
-                    {topic.profiles?.avatar_url
-                      ? <img src={topic.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : initials}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 700, overflow: 'hidden', flexShrink: 0 }}>
+                      {topic.profiles?.avatar_url ? <img src={topic.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+                    </div>
+                    <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.55 }}>{topic.profiles?.first_name} {topic.profiles?.last_name}</span>
                   </div>
-                  <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5 }}>
-                    {topic.profiles?.first_name} {topic.profiles?.last_name}
-                  </span>
                   <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.3 }}>·</span>
                   <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.4 }}>{formatDate(topic.created_at)}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.3 }}>·</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.78rem', color: '#E8501A', fontWeight: 600 }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    {topic.reply_count} réponse{topic.reply_count !== 1 ? 's' : ''}
+                  </span>
                 </div>
               </div>
             </Link>
@@ -152,6 +193,7 @@ export default function ForumCategoryPage() {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setNewTopicModal(false)}>
           <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.75rem', width: '100%', maxWidth: '540px' }}>
             <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: '0 0 1.25rem' }}>Nouveau sujet</h3>
+            {error && <div style={{ backgroundColor: '#FFF0ED', color: '#E8501A', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem' }}>{error}</div>}
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
@@ -166,9 +208,9 @@ export default function ForumCategoryPage() {
               style={{ width: '100%', border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.75rem 1rem', fontSize: '0.95rem', fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', justifyContent: 'flex-end' }}>
-              <button onClick={() => setNewTopicModal(false)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem' }}>Annuler</button>
+              <button onClick={() => { setNewTopicModal(false); setError(null) }} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem' }}>Annuler</button>
               <button onClick={submitTopic} disabled={!title.trim() || !content.trim() || submitting} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', opacity: (!title.trim() || !content.trim()) ? 0.5 : 1 }}>
-                {submitting ? '...' : 'Publier'}
+                {submitting ? 'Publication...' : 'Publier'}
               </button>
             </div>
           </div>
