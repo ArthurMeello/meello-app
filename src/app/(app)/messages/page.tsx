@@ -143,10 +143,19 @@ export default function MessagesPage() {
 
     const { data } = await supabase
       .from('meello_messages')
-      .select('id, content, sender_id, created_at')
+      .select('id, content, sender_id, created_at, read_at')
       .eq('conversation_id', conv.id)
       .order('created_at', { ascending: true })
     if (data) setMessages(data)
+
+    // Marquer les messages reçus comme lus
+    if (userId) {
+      await supabase.from('meello_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('conversation_id', conv.id)
+        .neq('sender_id', userId)
+        .is('read_at', null)
+    }
 
     // Marquer notifs comme lues
     if (userId && conv.other_user?.id) {
@@ -219,7 +228,7 @@ export default function MessagesPage() {
 
     setMessages(prev => [...prev, {
       id: Date.now().toString(), content: msgContent,
-      sender_id: userId, created_at: new Date().toISOString(),
+      sender_id: userId, created_at: new Date().toISOString(), read_at: null,
     }])
     setNewMessage('')
     if (inputRef.current) inputRef.current.style.height = 'auto'
@@ -335,25 +344,33 @@ export default function MessagesPage() {
                   const isMe = msg.sender_id === userId
                   const prevMsg = messages[i - 1]
                   const showAvatar = !isMe && (!prevMsg || prevMsg.sender_id !== msg.sender_id)
+                  const isLastMine = isMe && (i === messages.length - 1 || messages.slice(i + 1).every(m => m.sender_id !== userId))
                   return (
-                    <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '0.5rem' }}>
-                      {!isMe && (
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.6rem', overflow: 'hidden', flexShrink: 0, opacity: showAvatar ? 1 : 0 }}>
-                          {activeConv.other_user?.avatar_url
-                            ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`}
+                    <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                      <div style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '0.5rem' }}>
+                        {!isMe && (
+                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.6rem', overflow: 'hidden', flexShrink: 0, opacity: showAvatar ? 1 : 0 }}>
+                            {activeConv.other_user?.avatar_url
+                              ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`}
+                          </div>
+                        )}
+                        <div style={{
+                          backgroundColor: isMe ? '#E8501A' : '#F5F0E8',
+                          color: isMe ? 'white' : '#2D2D2D',
+                          padding: '0.55rem 0.85rem',
+                          borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                          maxWidth: '65%', fontSize: '0.9rem', lineHeight: 1.5,
+                          wordBreak: 'break-word', whiteSpace: 'pre-wrap',
+                        }}>
+                          {renderContent(msg.content, isMe)}
                         </div>
-                      )}
-                      <div style={{
-                        backgroundColor: isMe ? '#E8501A' : '#F5F0E8',
-                        color: isMe ? 'white' : '#2D2D2D',
-                        padding: '0.55rem 0.85rem',
-                        borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                        maxWidth: '65%', fontSize: '0.9rem', lineHeight: 1.5,
-                        wordBreak: 'break-word', whiteSpace: 'pre-wrap',
-                      }}>
-                        {renderContent(msg.content, isMe)}
                       </div>
+                      {isMe && isLastMine && (
+                        <span style={{ fontSize: '0.68rem', color: '#2D2D2D', opacity: 0.4, marginTop: '2px' }}>
+                          {msg.read_at ? 'Lu' : 'Envoyé'}
+                        </span>
+                      )}
                     </div>
                   )
                 })}

@@ -237,10 +237,19 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
     const supabase = createClient()
     const { data } = await supabase
       .from('meello_messages')
-      .select('id, content, sender_id, created_at')
+      .select('id, content, sender_id, created_at, read_at')
       .eq('conversation_id', conv.id)
       .order('created_at', { ascending: true })
     if (data) setMessages(data)
+
+    // Marquer les messages reçus comme lus
+    if (userId) {
+      await supabase.from('meello_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('conversation_id', conv.id)
+        .neq('sender_id', userId)
+        .is('read_at', null)
+    }
     // Ouvrir canal Realtime pour le typing indicator
     if (channelRef.current) {
       channelRef.current.unsubscribe()
@@ -334,6 +343,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       content: msgContent,
       sender_id: userId,
       created_at: new Date().toISOString(),
+      read_at: null,
     }])
     setNewMessage('')
     if (inputRef.current) {
@@ -379,7 +389,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
           localStorage.removeItem('meello:savedConv')
           const supabase = createClient()
           supabase.from('meello_messages')
-            .select('id, content, sender_id, created_at')
+            .select('id, content, sender_id, created_at, read_at')
             .eq('conversation_id', conv.id)
             .order('created_at', { ascending: true })
             .then(({ data }) => {
@@ -542,10 +552,12 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
                 Commencez la conversation
               </div>
             )}
-            {messages.map(msg => {
+            {messages.map((msg, i) => {
               const isMe = msg.sender_id === userId
+              const isLast = i === messages.length - 1
+              const isLastMine = isMe && (isLast || messages.slice(i + 1).every(m => m.sender_id !== userId))
               return (
-                <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                   <div style={{
                     backgroundColor: isMe ? '#E8501A' : '#F5F0E8',
                     color: isMe ? 'white' : '#2D2D2D',
@@ -559,6 +571,11 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
                   }}>
                     {renderMessageContent(msg.content, isMe)}
                   </div>
+                  {isMe && isLastMine && (
+                    <span style={{ fontSize: '0.65rem', color: '#2D2D2D', opacity: 0.4, marginTop: '2px' }}>
+                      {msg.read_at ? 'Lu' : 'Envoyé'}
+                    </span>
+                  )}
                 </div>
               )
             })}
