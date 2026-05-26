@@ -158,6 +158,13 @@ export default function ProfilPage() {
     setPortfolioPreview(URL.createObjectURL(file))
   }
 
+  const handleServiceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setServiceFile(file)
+    setServicePreview(URL.createObjectURL(file))
+  }
+
   const openPortfolioModal = (item?: { id: string; title: string; description: string | null; link: string | null }) => {
     if (item) {
       setPortfolioForm({ title: item.title, description: item.description || '', link: item.link || '' })
@@ -362,7 +369,7 @@ export default function ProfilPage() {
             <div style={{ color: '#2D2D2D', opacity: 0.6, fontSize: '0.9rem' }}>{profile.activity}</div>
             {profile.city && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.1rem' }}>
-                <img src="/icons/pin.svg" alt="" style={{ width: '13px', height: '13px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)', flexShrink: 0 }} />
+                <img src="/icons/pin.svg" alt="" style={{ width: '18px', height: '18px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)', flexShrink: 0 }} />
                 <span style={{ color: '#E8501A', fontSize: '0.82rem', fontWeight: 500 }}>{profile.city}</span>
               </div>
             )}
