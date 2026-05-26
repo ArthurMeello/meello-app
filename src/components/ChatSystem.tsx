@@ -35,7 +35,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (!userId) return
@@ -149,7 +149,18 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       created_at: new Date().toISOString(),
     }])
     setNewMessage('')
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+    }
     fetchConversations(userId)
+  }
+
+  const renderMessageContent = (text: string, isMe: boolean) => {
+    return text.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+      /^https?:\/\//.test(part)
+        ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: isMe ? 'rgba(255,255,255,0.9)' : '#E8501A', textDecoration: 'underline', wordBreak: 'break-all' }}>{part}</a>
+        : <span key={i}>{part}</span>
+    )
   }
 
   const formatTime = (d: string) => {
@@ -246,8 +257,8 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
           position: 'fixed',
           bottom: 0,
           right: '2rem',
-          width: '320px',
-          height: '420px',
+          width: '340px',
+          height: '520px',
           backgroundColor: 'white',
           borderRadius: '16px 16px 0 0',
           boxShadow: '0 -4px 32px rgba(0,0,0,0.12)',
@@ -311,8 +322,9 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
                     fontSize: '0.88rem',
                     lineHeight: 1.5,
                     wordBreak: 'break-word',
+                    whiteSpace: 'pre-wrap',
                   }}>
-                    {msg.content}
+                    {renderMessageContent(msg.content, isMe)}
                   </div>
                 </div>
               )
@@ -321,16 +333,28 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
           </div>
 
           {/* Input */}
-          <form onSubmit={sendMessage} style={{ padding: '0.65rem 0.75rem', borderTop: '1px solid #F5F0E8', display: 'flex', gap: '0.4rem' }}>
-            <input
+          <form onSubmit={sendMessage} style={{ padding: '0.65rem 0.75rem', borderTop: '1px solid #F5F0E8', display: 'flex', gap: '0.4rem', alignItems: 'flex-end' }}>
+            <textarea
               ref={inputRef}
               value={newMessage}
-              onChange={e => setNewMessage(e.target.value)}
-              placeholder="Envoie un message..."
+              onChange={e => {
+                setNewMessage(e.target.value)
+                e.target.style.height = 'auto'
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  sendMessage(e as any)
+                }
+              }}
+              placeholder="Envoie un message…"
+              rows={1}
               style={{
                 flex: 1, border: '1.5px solid #E8E3D9', borderRadius: '8px',
                 padding: '0.5rem 0.75rem', fontSize: '0.88rem', outline: 'none',
-                fontFamily: 'inherit',
+                fontFamily: 'inherit', resize: 'none', overflow: 'hidden',
+                minHeight: '36px', lineHeight: '1.4',
               }}
             />
             <button
@@ -343,7 +367,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
                 padding: '0.5rem 0.85rem',
                 fontWeight: 600, cursor: newMessage.trim() ? 'pointer' : 'default',
                 fontSize: '0.85rem', flexShrink: 0,
-                transition: 'all 0.15s',
+                transition: 'all 0.15s', height: '36px',
               }}
             >
               ↩
