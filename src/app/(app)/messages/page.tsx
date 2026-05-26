@@ -346,40 +346,47 @@ export default function MessagesPage() {
 
               {/* Messages */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', paddingBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {messages.map((msg, i) => {
-                  const isMe = msg.sender_id === userId
-                  const prevMsg = messages[i - 1]
-                  const showAvatar = !isMe && (!prevMsg || prevMsg.sender_id !== msg.sender_id)
-                  const isLastMine = isMe && (i === messages.length - 1 || messages.slice(i + 1).every(m => m.sender_id !== userId))
-                  return (
-                    <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                      <div style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '0.5rem' }}>
-                        {!isMe && (
-                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.6rem', overflow: 'hidden', flexShrink: 0, opacity: showAvatar ? 1 : 0 }}>
-                            {activeConv.other_user?.avatar_url
-                              ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`}
+                {(() => {
+                  const myMsgs = messages.filter(m => m.sender_id === userId)
+                  const lastReadMsg = [...myMsgs].reverse().find(m => m.read_at)
+                  const lastSentMsg = myMsgs[myMsgs.length - 1]
+                  const showLuId = lastReadMsg?.id
+                  const showEnvoyeId = (!lastReadMsg || lastSentMsg?.id !== lastReadMsg?.id) ? lastSentMsg?.id : null
+                  return messages.map((msg, i) => {
+                    const isMe = msg.sender_id === userId
+                    const prevMsg = messages[i - 1]
+                    const showAvatar = !isMe && (!prevMsg || prevMsg.sender_id !== msg.sender_id)
+                    return (
+                      <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                        <div style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '0.5rem' }}>
+                          {!isMe && (
+                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.6rem', overflow: 'hidden', flexShrink: 0, opacity: showAvatar ? 1 : 0 }}>
+                              {activeConv.other_user?.avatar_url
+                                ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`}
+                            </div>
+                          )}
+                          <div style={{
+                            backgroundColor: isMe ? '#E8501A' : '#F5F0E8',
+                            color: isMe ? 'white' : '#2D2D2D',
+                            padding: '0.55rem 0.85rem',
+                            borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                            maxWidth: '65%', fontSize: '0.9rem', lineHeight: 1.5,
+                            wordBreak: 'break-word', whiteSpace: 'pre-wrap',
+                          }}>
+                            {renderContent(msg.content, isMe)}
                           </div>
-                        )}
-                        <div style={{
-                          backgroundColor: isMe ? '#E8501A' : '#F5F0E8',
-                          color: isMe ? 'white' : '#2D2D2D',
-                          padding: '0.55rem 0.85rem',
-                          borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                          maxWidth: '65%', fontSize: '0.9rem', lineHeight: 1.5,
-                          wordBreak: 'break-word', whiteSpace: 'pre-wrap',
-                        }}>
-                          {renderContent(msg.content, isMe)}
                         </div>
+                        {isMe && msg.id === showLuId && (
+                          <span style={{ fontSize: '0.68rem', color: '#2D2D2D', opacity: 0.4, marginTop: '2px' }}>Lu</span>
+                        )}
+                        {isMe && msg.id === showEnvoyeId && (
+                          <span style={{ fontSize: '0.68rem', color: '#2D2D2D', opacity: 0.4, marginTop: '2px' }}>Envoyé</span>
+                        )}
                       </div>
-                      {isMe && isLastMine && (
-                        <span style={{ fontSize: '0.68rem', color: '#2D2D2D', opacity: 0.4, marginTop: '2px' }}>
-                          {msg.read_at ? 'Lu' : 'Envoyé'}
-                        </span>
-                      )}
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                })()}
 
                 {/* Typing indicator */}
                 {otherIsTyping && (

@@ -580,33 +580,40 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
                 Commencez la conversation
               </div>
             )}
-            {messages.map((msg, i) => {
-              const isMe = msg.sender_id === userId
-              const isLast = i === messages.length - 1
-              const isLastMine = isMe && (isLast || messages.slice(i + 1).every(m => m.sender_id !== userId))
-              return (
-                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                  <div style={{
-                    backgroundColor: isMe ? '#E8501A' : '#F5F0E8',
-                    color: isMe ? 'white' : '#2D2D2D',
-                    padding: '0.5rem 0.8rem',
-                    borderRadius: isMe ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                    maxWidth: '75%',
-                    fontSize: '0.88rem',
-                    lineHeight: 1.5,
-                    wordBreak: 'break-word',
-                    whiteSpace: 'pre-wrap',
-                  }}>
-                    {renderMessageContent(msg.content, isMe)}
+            {(() => {
+              const myMsgs = messages.filter(m => m.sender_id === userId)
+              const lastReadMsg = [...myMsgs].reverse().find(m => m.read_at)
+              const lastSentMsg = myMsgs[myMsgs.length - 1]
+              // On affiche "Lu" sur le dernier message lu, "Envoyé" sur le dernier envoyé si pas encore lu
+              const showLuId = lastReadMsg?.id
+              const showEnvoyeId = (!lastReadMsg || lastSentMsg?.id !== lastReadMsg?.id) ? lastSentMsg?.id : null
+              return messages.map((msg, i) => {
+                const isMe = msg.sender_id === userId
+                return (
+                  <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                    <div style={{
+                      backgroundColor: isMe ? '#E8501A' : '#F5F0E8',
+                      color: isMe ? 'white' : '#2D2D2D',
+                      padding: '0.5rem 0.8rem',
+                      borderRadius: isMe ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                      maxWidth: '75%',
+                      fontSize: '0.88rem',
+                      lineHeight: 1.5,
+                      wordBreak: 'break-word',
+                      whiteSpace: 'pre-wrap',
+                    }}>
+                      {renderMessageContent(msg.content, isMe)}
+                    </div>
+                    {isMe && msg.id === showLuId && (
+                      <span style={{ fontSize: '0.65rem', color: '#2D2D2D', opacity: 0.4, marginTop: '2px' }}>Lu</span>
+                    )}
+                    {isMe && msg.id === showEnvoyeId && (
+                      <span style={{ fontSize: '0.65rem', color: '#2D2D2D', opacity: 0.4, marginTop: '2px' }}>Envoyé</span>
+                    )}
                   </div>
-                  {isMe && isLastMine && (
-                    <span style={{ fontSize: '0.65rem', color: '#2D2D2D', opacity: 0.4, marginTop: '2px' }}>
-                      {msg.read_at ? 'Lu' : 'Envoyé'}
-                    </span>
-                  )}
-                </div>
-              )
-            })}
+                )
+              })
+            })()}
             {otherIsTyping && (
               <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                 <div style={{
