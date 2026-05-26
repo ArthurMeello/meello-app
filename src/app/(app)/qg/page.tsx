@@ -140,7 +140,7 @@ export default function QGPage() {
   }
 
   const loadOnlineMembers = async (supabase: any) => {
-    const since = new Date(Date.now() - 2 * 60 * 1000).toISOString() // 2 minutes
+    const since = new Date(Date.now() - 30 * 1000).toISOString() // 30 secondes
     const { data } = await supabase
       .from('qg_presence')
       .select('user_id, last_seen')

@@ -249,7 +249,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
     // Vérifier si l'autre membre est en ligne (présence < 2 min)
     if (conv.other_user?.id) {
       const supabasePresence = createClient()
-      const since = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+      const since = new Date(Date.now() - 30 * 1000).toISOString()
       const { data: presence } = await supabasePresence
         .from('qg_presence')
         .select('last_seen')

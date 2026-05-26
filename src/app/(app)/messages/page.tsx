@@ -152,7 +152,7 @@ export default function MessagesPage() {
 
     // Vérifier si l'autre membre est en ligne
     if (conv.other_user?.id) {
-      const since = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+      const since = new Date(Date.now() - 30 * 1000).toISOString()
       const { data: presence } = await supabase
         .from('qg_presence')
         .select('last_seen')
