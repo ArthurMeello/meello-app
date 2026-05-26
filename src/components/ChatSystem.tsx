@@ -91,15 +91,21 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
             // Conversation déjà ouverte — ajouter le message en live
             setMessages(msgs => [...msgs, newMsg])
           } else {
-            // Ouvrir automatiquement la conversation
+            // Ouvrir automatiquement la conversation avec tout l'historique
             const convObj = {
               id: conv.id,
               other_user: senderProfile,
               last_message: msg.content,
               last_message_at: msg.created_at,
             }
+            // Charger tout l'historique puis ajouter le nouveau message
+            const { data: history } = await supabase
+              .from('meello_messages')
+              .select('id, content, sender_id, created_at')
+              .eq('conversation_id', conv.id)
+              .order('created_at', { ascending: true })
+            setMessages(history || [newMsg])
             setActiveConv(convObj)
-            setMessages([newMsg])
           }
         }
       )
