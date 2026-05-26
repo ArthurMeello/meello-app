@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   })
 
   // 3. Créer le profil
-  const badges = memberCount < 200 ? ['fondateur'] : []
+  const badges = []
   await supabase.from('profiles').insert({
     id: authData.user.id,
     first_name: app.first_name,
