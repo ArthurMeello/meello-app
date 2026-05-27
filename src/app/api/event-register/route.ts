@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { emailTemplate } from '@/lib/emailTemplate'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 function generateIcs(event: any): string {
   const start = new Date(event.event_date)
@@ -40,6 +41,18 @@ export async function POST(req: NextRequest) {
   const durationStr = event.duration_minutes ? ` (${event.duration_minutes} min)` : ''
 
   const icsBase64 = Buffer.from(generateIcs(event)).toString('base64')
+
+  // Notification au créateur de l'événement (sauf s'il s'inscrit lui-même)
+  if (event.author_id && event.author_id !== user.id) {
+    const supabase = createAdminClient()
+    await supabase.from('notifications').insert({
+      user_id: event.author_id,
+      type: 'event_new_participant',
+      content: `${user.first_name} ${user.last_name} s'est inscrit(e) à ton événement "${event.title}"`,
+      link: '/evenements',
+      from_user_id: user.id,
+    })
+  }
 
   // Mail 1 : confirmation de participation avec lien visio + fichier .ics
   await fetch('https://api.brevo.com/v3/smtp/email', {
