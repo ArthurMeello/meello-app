@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 
 export default function EvenementsPage() {
-  const [tab, setTab] = useState<'a-venir' | 'passes' | 'en-attente'>('a-venir')
+  const [tab, setTab] = useState<'a-venir' | 'passes' | 'en-attente' | 'mes-events' | 'je-participe'>('a-venir')
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -68,7 +68,13 @@ export default function EvenementsPage() {
   const upcoming = events.filter(e => new Date(e.event_date) >= now && e.status === 'published')
   const past = events.filter(e => new Date(e.event_date) < now && e.status === 'published')
   const myPending = events.filter(e => e.status === 'pending' && e.author_id === currentUserId)
-  const displayed = tab === 'a-venir' ? upcoming : tab === 'passes' ? past : myPending
+  const myEvents = events.filter(e => e.author_id === currentUserId && e.status === 'published')
+  const myParticipations = events.filter(e => (participants[e.id] || []).some(p => p.id === currentUserId))
+  const displayed = tab === 'a-venir' ? upcoming
+    : tab === 'passes' ? past
+    : tab === 'en-attente' ? myPending
+    : tab === 'mes-events' ? myEvents
+    : myParticipations
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -174,14 +180,24 @@ export default function EvenementsPage() {
       </div>
 
       {/* Onglets */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: '1.5rem', borderBottom: '2px solid #F0EBE1' }}>
+      <div style={{ display: 'flex', gap: 0, marginBottom: '1.5rem', borderBottom: '2px solid #F0EBE1', overflowX: 'auto' }}>
         {([['a-venir', `À venir (${upcoming.length})`], ['passes', `Passés (${past.length})`]] as const).map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.6rem 1.25rem', fontWeight: tab === key ? 700 : 400, color: tab === key ? '#E8501A' : '#2D2D2D', opacity: tab === key ? 1 : 0.45, fontSize: '0.92rem', borderBottom: tab === key ? '2px solid #E8501A' : '2px solid transparent', marginBottom: '-2px', transition: 'all 0.15s' }}>
+          <button key={key} onClick={() => setTab(key)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.6rem 1.25rem', fontWeight: tab === key ? 700 : 400, color: tab === key ? '#E8501A' : '#2D2D2D', opacity: tab === key ? 1 : 0.45, fontSize: '0.92rem', borderBottom: tab === key ? '2px solid #E8501A' : '2px solid transparent', marginBottom: '-2px', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
             {label}
           </button>
         ))}
+        {currentUserId && myEvents.length > 0 && (
+          <button onClick={() => setTab('mes-events')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.6rem 1.25rem', fontWeight: tab === 'mes-events' ? 700 : 400, color: tab === 'mes-events' ? '#E8501A' : '#2D2D2D', opacity: tab === 'mes-events' ? 1 : 0.45, fontSize: '0.92rem', borderBottom: tab === 'mes-events' ? '2px solid #E8501A' : '2px solid transparent', marginBottom: '-2px', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
+            Mes events
+          </button>
+        )}
+        {currentUserId && myParticipations.length > 0 && (
+          <button onClick={() => setTab('je-participe')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.6rem 1.25rem', fontWeight: tab === 'je-participe' ? 700 : 400, color: tab === 'je-participe' ? '#E8501A' : '#2D2D2D', opacity: tab === 'je-participe' ? 1 : 0.45, fontSize: '0.92rem', borderBottom: tab === 'je-participe' ? '2px solid #E8501A' : '2px solid transparent', marginBottom: '-2px', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
+            Je participe
+          </button>
+        )}
         {myPending.length > 0 && (
-          <button onClick={() => setTab('en-attente')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.6rem 1.25rem', fontWeight: tab === 'en-attente' ? 700 : 400, color: tab === 'en-attente' ? '#856404' : '#856404', opacity: tab === 'en-attente' ? 1 : 0.6, fontSize: '0.92rem', borderBottom: tab === 'en-attente' ? '2px solid #FFD54F' : '2px solid transparent', marginBottom: '-2px', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <button onClick={() => setTab('en-attente')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.6rem 1.25rem', fontWeight: tab === 'en-attente' ? 700 : 400, color: '#856404', opacity: tab === 'en-attente' ? 1 : 0.6, fontSize: '0.92rem', borderBottom: tab === 'en-attente' ? '2px solid #FFD54F' : '2px solid transparent', marginBottom: '-2px', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
             En attente ({myPending.length})
           </button>
         )}
