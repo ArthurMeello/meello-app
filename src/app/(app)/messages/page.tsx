@@ -338,9 +338,8 @@ export default function MessagesPage() {
             justify-content: center !important;
             position: relative !important;
             flex-shrink: 0 !important;
-            padding: 0.85rem 1rem !important;
-            padding-top: calc(0.85rem + env(safe-area-inset-top)) !important;
-            border-bottom: 1px solid #F5F0E8 !important;
+            padding: 1.25rem 1rem !important;
+            padding-top: calc(1.25rem + env(safe-area-inset-top)) !important;
             min-height: 56px !important;
           }
           .msg-list-header h2 {
@@ -353,6 +352,7 @@ export default function MessagesPage() {
             flex: 1 !important;
             overflow-y: auto !important;
             -webkit-overflow-scrolling: touch !important;
+            padding-top: 0.75rem !important;
           }
           .msg-conv {
             position: absolute !important;
