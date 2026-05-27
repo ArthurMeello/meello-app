@@ -195,7 +195,7 @@ export default function AdminPage() {
     const supabase = createClient()
     const { data } = await supabase
       .from('events')
-      .select('*, profiles!events_author_id_fkey(first_name, last_name, email)')
+      .select('*, profiles!events_author_id_fkey(first_name, last_name, email, avatar_url)')
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
     if (data) setPendingEvents(data)
@@ -649,10 +649,16 @@ export default function AdminPage() {
                     <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
                         <div>
-                          <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1rem', color: '#2D2D2D', margin: '0 0 0.25rem' }}>{event.title}</h3>
-                          <div style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.5 }}>
-                            Proposé par <strong>{event.profiles?.first_name} {event.profiles?.last_name}</strong> · {event.profiles?.email}
-                          </div>
+                          <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1rem', color: '#2D2D2D', margin: '0 0 0.5rem' }}>{event.title}</h3>
+                          <a href={`/membre/${event.author_id}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, overflow: 'hidden', flexShrink: 0 }}>
+                              {event.profiles?.avatar_url
+                                ? <img src={event.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                : `${(event.profiles?.first_name || '?')[0]}${(event.profiles?.last_name || '')[0] || ''}`}
+                            </div>
+                            <span style={{ fontSize: '0.82rem', color: '#E8501A', fontWeight: 600 }}>{event.profiles?.first_name} {event.profiles?.last_name}</span>
+                            <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.4 }}>{event.profiles?.email}</span>
+                          </a>
                         </div>
                         <span style={{ backgroundColor: '#FFF3CD', color: '#856404', borderRadius: '20px', padding: '0.2rem 0.6rem', fontSize: '0.72rem', fontWeight: 600, flexShrink: 0 }}>En attente</span>
                       </div>
