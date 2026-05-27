@@ -348,24 +348,11 @@ export default function MessagesPage() {
           }
           .msg-conv {
             position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
+            inset: 0 !important;
             z-index: 300 !important;
             border-radius: 0 !important;
-            display: flex !important;
-            flex-direction: column !important;
-            overflow: hidden !important;
-          }
-          .msg-conv-messages {
-            flex: 1 !important;
-            overflow-y: auto !important;
-            min-height: 0 !important;
-          }
-          .msg-conv form {
-            flex-shrink: 0 !important;
-            padding-bottom: calc(0.85rem + env(safe-area-inset-bottom)) !important;
+            height: -webkit-fill-available !important;
+            width: -webkit-fill-available !important;
           }
           .msg-conv-fullscreen-header { display: flex !important; }
           .msg-conv-desktop-header { display: none !important; }
