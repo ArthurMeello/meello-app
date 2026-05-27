@@ -217,20 +217,18 @@ export default function AdminPage() {
       from_user_id: ADMIN_ID,
     })
 
-    // Envoyer un mail à l'auteur via Brevo
+    // Envoyer un mail à l'auteur via route API serveur
     if (event.profiles?.email) {
-      const eventDate = new Date(event.event_date)
-      const dateStr = eventDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-      const timeStr = eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-
-      await fetch('https://api.brevo.com/v3/smtp/email', {
+      await fetch('/api/event-approved', {
         method: 'POST',
-        headers: { 'api-key': process.env.NEXT_PUBLIC_BREVO_API_KEY || '', 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'Meello', email: 'hello@meello.fr' },
-          to: [{ email: event.profiles.email, name: `${event.profiles.first_name} ${event.profiles.last_name}` }],
-          subject: `Ton événement "${event.title}" est en ligne ! 🎉`,
-          htmlContent: `<p>Bonjour ${event.profiles.first_name},</p><p>Ton événement <strong>${event.title}</strong> a été validé et est maintenant visible par tous les membres de Meello.<br><br>📅 ${dateStr} à ${timeStr}</p><p>— L'équipe Meello</p>`,
+          event: {
+            ...event,
+            author_email: event.profiles.email,
+            author_name: `${event.profiles.first_name} ${event.profiles.last_name}`,
+            author_first_name: event.profiles.first_name,
+          },
         }),
       }).catch(() => {})
     }
