@@ -338,15 +338,16 @@ export default function MessagesPage() {
             justify-content: center !important;
             position: relative !important;
             flex-shrink: 0 !important;
-            padding: 1.25rem 1rem !important;
-            padding-top: calc(1.25rem + env(safe-area-inset-top)) !important;
-            min-height: 56px !important;
+            height: 78px !important;
+            padding: 0 1rem !important;
           }
           .msg-list-header h2 {
             position: absolute !important;
             left: 50% !important;
             transform: translateX(-50%) !important;
             margin: 0 !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
           }
           .msg-list-scroll {
             flex: 1 !important;
