@@ -288,7 +288,7 @@ export default function AppNav() {
               boxShadow: '0 4px 16px rgba(232,80,26,0.45)',
               border: '3px solid #1A1A2E',
             }}>
-              <img src="/favicon-meello.webp" alt="Meello" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+              <img src="/favicon-meello.png" alt="Meello" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
             </div>
           </Link>
 

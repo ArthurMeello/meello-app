@@ -14,8 +14,8 @@ export const metadata: Metadata = {
   title: "Meello — La communauté des entrepreneurs francophones",
   description: "Meello est une communauté sélective pour entrepreneurs et freelances francophones. Recommandations, entraide, mise en relation.",
   icons: {
-    icon: "/favicon-meello.webp",
-    apple: "/favicon-meello.webp",
+    icon: "/favicon-meello.png",
+    apple: "/favicon-meello.png",
   },
 };
 
