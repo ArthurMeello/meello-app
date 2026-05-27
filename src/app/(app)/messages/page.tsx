@@ -35,6 +35,7 @@ export default function MessagesPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [otherIsTyping, setOtherIsTyping] = useState(false)
   const [otherIsOnline, setOtherIsOnline] = useState(false)
+  const [mobileView, setMobileView] = useState<'list' | 'conv'>('list')
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const typingChannelRef = useRef<any>(null)
@@ -146,6 +147,7 @@ export default function MessagesPage() {
 
   const openConversation = async (conv: Conversation) => {
     setActiveConv({ ...conv, unread: false })
+    setMobileView('conv')
     setOtherIsTyping(false)
     setOtherIsOnline(false)
     const supabase = createClient()
@@ -303,12 +305,20 @@ export default function MessagesPage() {
           0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
           30% { opacity: 1; transform: translateY(-3px); }
         }
+        @media (max-width: 768px) {
+          .msg-layout { flex-direction: column !important; height: calc(100vh - 9rem) !important; }
+          .msg-list { width: 100% !important; display: flex; border-radius: 12px !important; }
+          .msg-conv { border-radius: 12px !important; }
+          .msg-list-mobile-hidden { display: none !important; }
+          .msg-conv-mobile-hidden { display: none !important; }
+          .msg-back-btn { display: flex !important; }
+        }
       `}</style>
 
-      <div style={{ height: 'calc(100vh - 4rem)', display: 'flex', gap: '1rem', maxWidth: '960px', margin: '0 auto' }}>
+      <div className="msg-layout" style={{ height: 'calc(100vh - 4rem)', display: 'flex', gap: '1rem', maxWidth: '960px', margin: '0 auto' }}>
 
         {/* Liste conversations */}
-        <div style={{
+        <div className={`msg-list${mobileView === 'conv' ? ' msg-list-mobile-hidden' : ''}`} style={{
           width: '300px', flexShrink: 0, backgroundColor: 'white',
           borderRadius: '16px', overflow: 'hidden',
           boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column',
@@ -358,7 +368,7 @@ export default function MessagesPage() {
         </div>
 
         {/* Conversation active */}
-        <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className={`msg-conv${mobileView === 'list' ? ' msg-conv-mobile-hidden' : ''}`} style={{ flex: 1, backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {!activeConv ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2D2D2D', opacity: 0.3, fontSize: '0.95rem' }}>
               Sélectionne une conversation
@@ -367,6 +377,9 @@ export default function MessagesPage() {
             <>
               {/* Header */}
               <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button className="msg-back-btn" onClick={() => { setMobileView('list'); setActiveConv(null) }} style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.25rem 0 0', color: '#E8501A', flexShrink: 0 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', overflow: 'hidden' }}>
                     {activeConv.other_user?.avatar_url
