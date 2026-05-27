@@ -316,18 +316,46 @@ export default function MessagesPage() {
           30% { opacity: 1; transform: translateY(-3px); }
         }
         @media (max-width: 768px) {
-          .msg-layout { flex-direction: column !important; height: calc(100vh - 9rem) !important; }
-          .msg-list { width: 100% !important; flex: 1 !important; border-radius: 12px !important; }
+          .msg-layout {
+            flex-direction: column !important;
+            position: fixed !important;
+            inset: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 100vh !important;
+            background: white !important;
+            z-index: 10 !important;
+          }
+          .msg-list {
+            width: 100% !important;
+            flex: 1 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            background: white !important;
+          }
+          .msg-list-header {
+            text-align: center !important;
+            padding: 1rem !important;
+            padding-top: calc(1rem + env(safe-area-inset-top)) !important;
+            border-bottom: 1px solid #F5F0E8 !important;
+          }
           .msg-conv {
             position: fixed !important; inset: 0 !important;
             z-index: 300 !important; border-radius: 0 !important;
-            height: 100vh !important; width: 100vw !important;
+            height: 100dvh !important; width: 100vw !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .msg-conv form {
+            padding-bottom: calc(0.85rem + env(safe-area-inset-bottom)) !important;
+            flex-shrink: 0 !important;
           }
           .msg-conv-fullscreen-header { display: flex !important; }
           .msg-conv-desktop-header { display: none !important; }
           .msg-list-mobile-hidden { display: none !important; }
           .msg-conv-mobile-hidden { display: none !important; }
           .msg-back-btn { display: flex !important; }
+          body.msg-conv-open .mobile-only { display: none !important; }
         }
       `}</style>
 
@@ -339,7 +367,7 @@ export default function MessagesPage() {
           borderRadius: '16px', overflow: 'hidden',
           boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column',
         }}>
-          <div style={{ padding: '1.25rem', borderBottom: '1px solid #F5F0E8' }}>
+          <div className="msg-list-header" style={{ padding: '1.25rem', borderBottom: '1px solid #F5F0E8' }}>
             <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>Conversations</h2>
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
