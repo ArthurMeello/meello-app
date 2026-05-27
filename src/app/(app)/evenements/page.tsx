@@ -236,7 +236,7 @@ export default function EvenementsPage() {
             <div key={event.id} style={{ backgroundColor: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' }}>
               {/* Cover */}
               {event.cover_url ? (
-                <div style={{ height: '180px', overflow: 'hidden' }}>
+                <div style={{ height: '270px', overflow: 'hidden' }}>
                   <img src={event.cover_url} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                 </div>
               ) : (
