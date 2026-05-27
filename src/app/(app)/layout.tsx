@@ -36,8 +36,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </main>
       <style>{`
         @media (max-width: 768px) {
-          main { margin-left: 0 !important; padding-bottom: 5rem !important; }
-          .mobile-nav { display: flex !important; }
+          main { margin-left: 0 !important; padding: 1rem !important; padding-bottom: 5.5rem !important; padding-top: 5rem !important; }
+          .desktop-nav { display: none !important; }
+          .topbar { left: 0 !important; }
         }
       `}</style>
     </div>
