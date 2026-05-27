@@ -280,16 +280,8 @@ export default function AppNav() {
           </Link>
 
           {/* Logo Meello — centre */}
-          <Link href="/feed" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', marginTop: '-18px' }}>
-            <div style={{
-              width: '52px', height: '52px', borderRadius: '50%',
-              backgroundColor: '#E8501A',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 16px rgba(232,80,26,0.45)',
-              border: '3px solid #1A1A2E',
-            }}>
-              <img src="/favicon-meello.png" alt="Meello" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-            </div>
+          <Link href="/feed" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none' }}>
+            <img src="/favicon-meello.png" alt="Meello" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
           </Link>
 
           {/* Notifications */}
