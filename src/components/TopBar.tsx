@@ -128,7 +128,7 @@ export default function TopBar() {
   }
 
   return (
-    <div style={{
+    <div className="topbar" style={{
       position: 'fixed', top: '1rem', right: '1.5rem', zIndex: 200,
       display: 'flex', alignItems: 'center',
     }} ref={ref}>

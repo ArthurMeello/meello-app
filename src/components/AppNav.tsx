@@ -26,6 +26,8 @@ export default function AppNav() {
   const [adminActions, setAdminActions] = useState(0)
   const [notifications, setNotifications] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [notifsOpen, setNotifsOpen] = useState(false)
+  const [notifsList, setNotifsList] = useState<any[]>([])
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -51,7 +53,29 @@ export default function AppNav() {
   }, [pathname])
 
   // Fermer le menu quand on change de page
-  useEffect(() => { setMenuOpen(false) }, [pathname])
+  useEffect(() => { setMenuOpen(false); setNotifsOpen(false) }, [pathname])
+
+  const loadNotifs = async () => {
+    const supabase = createClient()
+    if (!userId) return
+    const { data } = await supabase.from('notifications').select('*, profiles!notifications_from_user_id_fkey(first_name, last_name, avatar_url)').eq('user_id', userId).neq('type', 'message').order('created_at', { ascending: false }).limit(20)
+    if (data) setNotifsList(data)
+  }
+
+  const markAllRead = async () => {
+    const supabase = createClient()
+    if (!userId) return
+    await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false)
+    setNotifsList(prev => prev.map(n => ({ ...n, read: true })))
+    setNotifications(0)
+  }
+
+  const handleNotifClick = async (n: any) => {
+    const supabase = createClient()
+    await supabase.from('notifications').update({ read: true }).eq('id', n.id)
+    setNotifsList(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
+    if (n.link) { setNotifsOpen(false); window.location.href = n.link }
+  }
 
   const initials = profile
     ? `${(profile.first_name || '')[0] || ''}${(profile.last_name || '')[0] || ''}`.toUpperCase()
@@ -192,6 +216,38 @@ export default function AppNav() {
           )}
         </button>
 
+        {/* ── PANNEAU NOTIFICATIONS ── */}
+        {notifsOpen && (
+          <>
+            <div onClick={() => setNotifsOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 198, backgroundColor: 'rgba(0,0,0,0.3)' }} />
+            <div style={{ position: 'fixed', bottom: 'calc(60px + env(safe-area-inset-bottom))', left: 0, right: 0, zIndex: 199, backgroundColor: 'white', borderRadius: '20px 20px 0 0', maxHeight: '70vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -4px 32px rgba(0,0,0,0.15)', animation: 'slideUp 0.25s ease' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', borderBottom: '1px solid #F5F0E8' }}>
+                <span style={{ fontWeight: 700, fontSize: '1rem', color: '#2D2D2D' }}>Notifications</span>
+                {notifsList.some(n => !n.read) && (
+                  <button onClick={markAllRead} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#E8501A', fontWeight: 600 }}>Tout marquer lu</button>
+                )}
+              </div>
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                {notifsList.length === 0 ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Aucune notification</div>
+                ) : notifsList.map(n => (
+                  <div key={n.id} onClick={() => handleNotifClick(n)} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.85rem 1.25rem', backgroundColor: n.read ? 'transparent' : 'rgba(232,80,26,0.05)', borderBottom: '1px solid #F5F0E8', cursor: 'pointer' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.75rem', overflow: 'hidden' }}>
+                      {n.profiles?.avatar_url ? <img src={n.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : n.profiles ? `${n.profiles.first_name[0]}${n.profiles.last_name[0]}` : '🔔'}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      {n.profiles && <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#2D2D2D', marginBottom: '0.1rem' }}>{n.profiles.first_name} {n.profiles.last_name}</div>}
+                      <div style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.75, lineHeight: 1.45 }}>{n.content}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, marginTop: '0.2rem' }}>{new Date(n.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                    {!n.read && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#E8501A', flexShrink: 0, marginTop: '0.35rem' }} />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
         {/* ── BOTTOM BAR MOBILE ── */}
         <nav style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
@@ -207,7 +263,7 @@ export default function AppNav() {
           </Link>
 
           {/* Notifications */}
-          <Link href="/notifications" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', color: pathname.startsWith('/notifications') ? '#E8501A' : 'rgba(245,240,232,0.6)', fontSize: '0.65rem', position: 'relative' }}>
+          <button onClick={() => { setNotifsOpen(o => !o); if (!notifsOpen) loadNotifs() }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', color: notifsOpen ? '#E8501A' : 'rgba(245,240,232,0.6)', fontSize: '0.65rem', padding: '0.25rem 0.5rem' }}>
             <div style={{ position: 'relative' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -218,7 +274,7 @@ export default function AppNav() {
               )}
             </div>
             <span>Notifs</span>
-          </Link>
+          </button>
 
           {/* Profil */}
           <Link href="/profil" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', color: pathname.startsWith('/profil') ? '#E8501A' : 'rgba(245,240,232,0.6)', fontSize: '0.65rem' }}>
@@ -234,6 +290,10 @@ export default function AppNav() {
         @keyframes slideIn {
           from { opacity: 0; transform: translateX(-16px); }
           to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         @media (max-width: 768px) {
           .desktop-nav { display: none !important; }

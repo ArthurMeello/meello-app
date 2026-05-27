@@ -35,9 +35,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Masquer topbar + mobile nav quand conversation ouverte */
 @media (max-width: 768px) {
-  body.msg-conv-open .topbar,
+  /* Masquer la topbar entièrement sur mobile */
+  .topbar {
+    display: none !important;
+  }
+  /* Masquer topbar + mobile nav quand conversation ouverte */
   body.msg-conv-open .mobile-only {
     display: none !important;
   }
