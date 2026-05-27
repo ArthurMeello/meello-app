@@ -98,15 +98,7 @@ export default function EvenementsPage() {
     }).select().single()
 
     if (data) {
-      // Notifier l'admin
-      await supabase.from('notifications').insert({
-        user_id: ADMIN_ID,
-        type: 'event_pending',
-        content: `a soumis un nouvel événement : "${form.title}"`,
-        link: '/admin',
-        from_user_id: currentUserId,
-      })
-      alert('Ton événement a été soumis et sera publié après validation. 🎉')
+      alert('Ton événement a été soumis et sera publié après validation par l\'équipe Meello. 🎉')
       setCreateModal(false)
       setForm({ title: '', description: '', event_date: '', event_time: '10:00', duration_minutes: '', visio_link: '', max_participants: '' })
       setCoverFile(null); setCoverPreview(null)
@@ -134,20 +126,6 @@ export default function EvenementsPage() {
       })
     }
     setJoining(null)
-  }
-
-  const publishEvent = async (eventId: string) => {
-    const supabase = createClient()
-    await supabase.from('events').update({ status: 'published' }).eq('id', eventId)
-    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, status: 'published' } : e))
-  }
-
-  const deleteEvent = async (eventId: string) => {
-    if (!confirm('Supprimer cet événement ?')) return
-    const supabase = createClient()
-    await supabase.from('event_participants').delete().eq('event_id', eventId)
-    await supabase.from('events').delete().eq('id', eventId)
-    setEvents(prev => prev.filter(e => e.id !== eventId))
   }
 
   const formatDate = (d: string) => {
@@ -273,19 +251,6 @@ export default function EvenementsPage() {
                     </a>
                   )}
 
-                  {/* Actions admin */}
-                  {isAdmin && (
-                    <div style={{ display: 'flex', gap: '0.35rem' }}>
-                      {event.status === 'pending' && (
-                        <button onClick={() => publishEvent(event.id)} style={{ padding: '0.5rem 0.85rem', borderRadius: '8px', border: 'none', backgroundColor: '#7A9E7E', color: 'white', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}>
-                          Publier
-                        </button>
-                      )}
-                      <button onClick={() => deleteEvent(event.id)} style={{ padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid #E8E3D9', backgroundColor: 'white', color: '#2D2D2D', fontSize: '0.82rem', cursor: 'pointer', opacity: 0.5 }}>
-                        Supprimer
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

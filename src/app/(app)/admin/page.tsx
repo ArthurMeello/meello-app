@@ -35,7 +35,7 @@ interface Member {
 }
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<'candidatures' | 'membres' | 'recommandations'>('candidatures')
+  const [tab, setTab] = useState<'candidatures' | 'membres' | 'recommandations' | 'evenements'>('candidatures')
   const [applications, setApplications] = useState<Application[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(false)
@@ -44,6 +44,8 @@ export default function AdminPage() {
   const [motif, setMotif] = useState('info')
   const [memberSearch, setMemberSearch] = useState('')
   const [memberBadgeFilter, setMemberBadgeFilter] = useState('')
+  const [pendingEvents, setPendingEvents] = useState<any[]>([])
+  const [publishingEvent, setPublishingEvent] = useState<string | null>(null)
   const [pendingRecos, setPendingRecos] = useState<any[]>([])
   const router = useRouter()
 
@@ -65,6 +67,7 @@ export default function AdminPage() {
       fetchApplications()
       fetchMembers()
       fetchPendingRecos()
+      fetchPendingEvents()
     }
     checkAuth()
   }, [])
@@ -188,6 +191,68 @@ export default function AdminPage() {
     setPendingRecos(prev => prev.filter(r => r.id !== id))
   }
 
+  const fetchPendingEvents = async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('events')
+      .select('*, profiles!events_author_id_fkey(first_name, last_name, email)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+    if (data) setPendingEvents(data)
+  }
+
+  const publishEvent = async (event: any) => {
+    setPublishingEvent(event.id)
+    const supabase = createClient()
+
+    // Publier l'événement
+    await supabase.from('events').update({ status: 'published' }).eq('id', event.id)
+
+    // Envoyer une notification à l'auteur
+    await supabase.from('notifications').insert({
+      user_id: event.author_id,
+      type: 'event_approved',
+      content: `Ton événement "${event.title}" a été validé et est maintenant visible !`,
+      link: '/evenements',
+      from_user_id: ADMIN_ID,
+    })
+
+    // Envoyer un mail à l'auteur via Brevo
+    if (event.profiles?.email) {
+      const eventDate = new Date(event.event_date)
+      const dateStr = eventDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      const timeStr = eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+
+      await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': process.env.NEXT_PUBLIC_BREVO_API_KEY || '', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: { name: 'Meello', email: 'hello@meello.fr' },
+          to: [{ email: event.profiles.email, name: `${event.profiles.first_name} ${event.profiles.last_name}` }],
+          subject: `Ton événement "${event.title}" est en ligne ! 🎉`,
+          htmlContent: `<p>Bonjour ${event.profiles.first_name},</p><p>Ton événement <strong>${event.title}</strong> a été validé et est maintenant visible par tous les membres de Meello.<br><br>📅 ${dateStr} à ${timeStr}</p><p>— L'équipe Meello</p>`,
+        }),
+      }).catch(() => {})
+    }
+
+    setPendingEvents(prev => prev.filter(e => e.id !== event.id))
+    setPublishingEvent(null)
+  }
+
+  const rejectEvent = async (eventId: string, authorId: string, title: string) => {
+    if (!confirm('Refuser et supprimer cet événement ?')) return
+    const supabase = createClient()
+    await supabase.from('events').delete().eq('id', eventId)
+    await supabase.from('notifications').insert({
+      user_id: authorId,
+      type: 'event_rejected',
+      content: `Ton événement "${title}" n'a pas été validé.`,
+      link: '/evenements',
+      from_user_id: ADMIN_ID,
+    })
+    setPendingEvents(prev => prev.filter(e => e.id !== eventId))
+  }
+
   const pending = applications.filter(a => a.status === 'pending')
   const processed = applications.filter(a => a.status !== 'pending')
 
@@ -201,7 +266,7 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        {[{ key: 'candidatures', label: `Candidatures (${pending.length} en attente)` }, { key: 'membres', label: `Membres (${members.length})` }, { key: 'recommandations', label: `Recommandations (${pendingRecos.length} en attente)` }].map(t => (
+        {[{ key: 'candidatures', label: `Candidatures (${pending.length} en attente)` }, { key: 'membres', label: `Membres (${members.length})` }, { key: 'recommandations', label: `Recommandations (${pendingRecos.length} en attente)` }, { key: 'evenements', label: `Événements (${pendingEvents.length} en attente)` }].map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key as 'candidatures' | 'membres' | 'recommandations')}
@@ -558,6 +623,75 @@ export default function AdminPage() {
               </>
             )
           })()}
+        </div>
+      )}
+
+      {/* Événements en attente */}
+      {tab === 'evenements' && (
+        <div>
+          {pendingEvents.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4, backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              Aucun événement en attente de validation.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {pendingEvents.map(event => {
+                const eventDate = new Date(event.event_date)
+                const dateStr = eventDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                const timeStr = eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                return (
+                  <div key={event.id} style={{ backgroundColor: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', gap: 0 }}>
+                    {event.cover_url && (
+                      <div style={{ width: '160px', flexShrink: 0 }}>
+                        <img src={event.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      </div>
+                    )}
+                    <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+                        <div>
+                          <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1rem', color: '#2D2D2D', margin: '0 0 0.25rem' }}>{event.title}</h3>
+                          <div style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.5 }}>
+                            Proposé par <strong>{event.profiles?.first_name} {event.profiles?.last_name}</strong> · {event.profiles?.email}
+                          </div>
+                        </div>
+                        <span style={{ backgroundColor: '#FFF3CD', color: '#856404', borderRadius: '20px', padding: '0.2rem 0.6rem', fontSize: '0.72rem', fontWeight: 600, flexShrink: 0 }}>En attente</span>
+                      </div>
+
+                      <div style={{ fontSize: '0.85rem', color: '#E8501A', fontWeight: 600 }}>
+                        📅 {dateStr} à {timeStr}
+                        {event.duration_minutes && <span style={{ color: '#2D2D2D', opacity: 0.5, fontWeight: 400 }}> · {event.duration_minutes} min</span>}
+                      </div>
+
+                      {event.description && (
+                        <p style={{ fontSize: '0.83rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.5 }}>{event.description}</p>
+                      )}
+
+                      <div style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5 }}>
+                        🔗 <a href={event.visio_link} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A' }}>{event.visio_link}</a>
+                        {event.max_participants && <span> · {event.max_participants} places max</span>}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <button
+                          onClick={() => publishEvent(event)}
+                          disabled={publishingEvent === event.id}
+                          style={{ backgroundColor: '#7A9E7E', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}
+                        >
+                          {publishingEvent === event.id ? '...' : '✓ Valider et publier'}
+                        </button>
+                        <button
+                          onClick={() => rejectEvent(event.id, event.author_id, event.title)}
+                          style={{ background: 'none', border: '1.5px solid #E8501A', color: '#E8501A', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}
+                        >
+                          Refuser
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
