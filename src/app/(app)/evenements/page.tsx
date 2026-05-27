@@ -7,12 +7,13 @@ import { createClient } from '@/lib/supabase/client'
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 
 export default function EvenementsPage() {
-  const [tab, setTab] = useState<'a-venir' | 'passes'>('a-venir')
+  const [tab, setTab] = useState<'a-venir' | 'passes' | 'en-attente'>('a-venir')
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentProfile, setCurrentProfile] = useState<any>(null)
-  const [participants, setParticipants] = useState<Record<string, string[]>>({})
+  const [participants, setParticipants] = useState<Record<string, { id: string; first_name: string; last_name: string; avatar_url: string | null }[]>>({})
+  const [participantsModal, setParticipantsModal] = useState<string | null>(null) // event_id
   const [createModal, setCreateModal] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', event_date: '', event_time: '10:00', duration_minutes: '', visio_link: '', max_participants: '' })
   const [coverFile, setCoverFile] = useState<File | null>(null)
@@ -40,13 +41,20 @@ export default function EvenementsPage() {
 
       if (data) {
         setEvents(data)
-        // Charger les participants pour chaque event
-        const { data: parts } = await supabase.from('event_participants').select('event_id, user_id')
+        // Charger les participants + leurs profils pour chaque event
+        const { data: parts } = await supabase
+          .from('event_participants')
+          .select('event_id, user_id, profiles(first_name, last_name, avatar_url)')
         if (parts) {
-          const map: Record<string, string[]> = {}
+          const map: Record<string, { id: string; first_name: string; last_name: string; avatar_url: string | null }[]> = {}
           for (const p of parts) {
             if (!map[p.event_id]) map[p.event_id] = []
-            map[p.event_id].push(p.user_id)
+            map[p.event_id].push({
+              id: p.user_id,
+              first_name: p.profiles?.first_name || '',
+              last_name: p.profiles?.last_name || '',
+              avatar_url: p.profiles?.avatar_url || null,
+            })
           }
           setParticipants(map)
         }
@@ -57,9 +65,10 @@ export default function EvenementsPage() {
   }, [])
 
   const now = new Date()
-  const upcoming = events.filter(e => new Date(e.event_date) >= now)
-  const past = events.filter(e => new Date(e.event_date) < now)
-  const displayed = tab === 'a-venir' ? upcoming : past
+  const upcoming = events.filter(e => new Date(e.event_date) >= now && e.status === 'published')
+  const past = events.filter(e => new Date(e.event_date) < now && e.status === 'published')
+  const myPending = events.filter(e => e.status === 'pending' && e.author_id === currentUserId)
+  const displayed = tab === 'a-venir' ? upcoming : tab === 'passes' ? past : myPending
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -110,14 +119,22 @@ export default function EvenementsPage() {
     if (!currentUserId || !currentProfile) return
     setJoining(event.id)
     const supabase = createClient()
-    const isParticipating = (participants[event.id] || []).includes(currentUserId)
+    const isParticipating = (participants[event.id] || []).some(p => p.id === currentUserId)
 
     if (isParticipating) {
       await supabase.from('event_participants').delete().eq('event_id', event.id).eq('user_id', currentUserId)
-      setParticipants(prev => ({ ...prev, [event.id]: (prev[event.id] || []).filter(id => id !== currentUserId) }))
+      setParticipants(prev => ({ ...prev, [event.id]: (prev[event.id] || []).filter(p => p.id !== currentUserId) }))
     } else {
       await supabase.from('event_participants').insert({ event_id: event.id, user_id: currentUserId })
-      setParticipants(prev => ({ ...prev, [event.id]: [...(prev[event.id] || []), currentUserId] }))
+      setParticipants(prev => ({
+        ...prev,
+        [event.id]: [...(prev[event.id] || []), {
+          id: currentUserId,
+          first_name: currentProfile.first_name,
+          last_name: currentProfile.last_name,
+          avatar_url: currentProfile.avatar_url,
+        }],
+      }))
       // Envoyer les mails via API
       await fetch('/api/event-register', {
         method: 'POST',
@@ -163,6 +180,11 @@ export default function EvenementsPage() {
             {label}
           </button>
         ))}
+        {myPending.length > 0 && (
+          <button onClick={() => setTab('en-attente')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.6rem 1.25rem', fontWeight: tab === 'en-attente' ? 700 : 400, color: tab === 'en-attente' ? '#856404' : '#856404', opacity: tab === 'en-attente' ? 1 : 0.6, fontSize: '0.92rem', borderBottom: tab === 'en-attente' ? '2px solid #FFD54F' : '2px solid transparent', marginBottom: '-2px', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            ⏳ En attente ({myPending.length})
+          </button>
+        )}
       </div>
 
       {/* Liste événements */}
@@ -185,7 +207,7 @@ export default function EvenementsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.25rem' }}>
         {displayed.map(event => {
           const parts = participants[event.id] || []
-          const isParticipating = parts.includes(currentUserId || '')
+          const isParticipating = parts.some(p => p.id === currentUserId)
           const isFull = event.max_participants && parts.length >= event.max_participants
           const isPast = new Date(event.event_date) < now
 
@@ -203,10 +225,11 @@ export default function EvenementsPage() {
               )}
 
               <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {event.status === 'pending' && (
-                  <span style={{ alignSelf: 'flex-start', backgroundColor: '#FFF3CD', color: '#856404', borderRadius: '20px', padding: '0.2rem 0.65rem', fontSize: '0.72rem', fontWeight: 600 }}>
-                    ⏳ En attente de validation
-                  </span>
+                {tab === 'en-attente' && (
+                  <div style={{ backgroundColor: '#FFF8E1', border: '1.5px solid #FFD54F', borderRadius: '10px', padding: '0.5rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.9rem' }}>⏳</span>
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#856404', lineHeight: 1.4 }}>Ton événement sera publié dès qu'il aura été validé par l'équipe Meello.</p>
+                  </div>
                 )}
                 <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.05rem', color: '#2D2D2D', margin: 0 }}>{event.title}</h3>
 
@@ -229,6 +252,34 @@ export default function EvenementsPage() {
                   {parts.length} participant{parts.length !== 1 ? 's' : ''}
                   {event.max_participants && <span>· {event.max_participants - parts.length} place{event.max_participants - parts.length !== 1 ? 's' : ''} restante{event.max_participants - parts.length !== 1 ? 's' : ''}</span>}
                 </div>
+
+                {/* Avatar stack cliquable */}
+                {parts.length > 0 && (
+                  <button
+                    onClick={() => setParticipantsModal(event.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      {parts.slice(0, 4).map((p, i) => (
+                        <div key={p.id} style={{ width: '28px', height: '28px', borderRadius: '50%', overflow: 'hidden', border: '2px solid white', marginLeft: i === 0 ? 0 : '-8px', zIndex: 4 - i, position: 'relative', flexShrink: 0 }}>
+                          {p.avatar_url ? (
+                            <img src={p.avatar_url} alt={p.first_name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', backgroundColor: '#E8501A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: 'white' }}>
+                              {p.first_name?.[0]?.toUpperCase()}{p.last_name?.[0]?.toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {parts.length > 4 && (
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#F5F0E8', border: '2px solid white', marginLeft: '-8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: '#2D2D2D', opacity: 0.7, flexShrink: 0, position: 'relative', zIndex: 0 }}>
+                          +{parts.length - 4}
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.4 }}>Voir la liste</span>
+                  </button>
+                )}
 
                 <div style={{ marginTop: 'auto', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.5rem' }}>
                   {/* Bouton participation */}
@@ -255,6 +306,39 @@ export default function EvenementsPage() {
           )
         })}
       </div>
+
+      {/* Modal participants */}
+      {participantsModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setParticipantsModal(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '420px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.1rem', color: '#2D2D2D', margin: 0 }}>
+                Participants ({(participants[participantsModal] || []).length})
+              </h3>
+              <button onClick={() => setParticipantsModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {(participants[participantsModal] || []).map(p => (
+                <a key={p.id} href={`/membre/${p.id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.5rem', borderRadius: '10px', textDecoration: 'none', color: '#2D2D2D', transition: 'background 0.1s' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F0E8')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+                    {p.avatar_url ? (
+                      <img src={p.avatar_url} alt={p.first_name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', backgroundColor: '#E8501A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: 'white' }}>
+                        {p.first_name?.[0]?.toUpperCase()}{p.last_name?.[0]?.toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>{p.first_name} {p.last_name}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal création */}
       {createModal && (
