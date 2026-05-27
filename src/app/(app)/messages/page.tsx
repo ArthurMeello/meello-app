@@ -563,7 +563,7 @@ export default function MessagesPage() {
                   rows={1}
                   style={{
                     flex: 1, border: '2px solid #E8E3D9', borderRadius: '10px',
-                    padding: '0.6rem 0.9rem', fontSize: '0.95rem', outline: 'none',
+                    padding: '0.6rem 0.9rem', fontSize: '16px', outline: 'none',
                     fontFamily: 'inherit', resize: 'none', overflow: 'hidden',
                     minHeight: '42px', lineHeight: '1.4',
                   }}
