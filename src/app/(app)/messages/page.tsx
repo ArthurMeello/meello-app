@@ -357,14 +357,11 @@ export default function MessagesPage() {
             display: flex !important;
             flex-direction: column !important;
             overflow: hidden !important;
-            box-sizing: border-box !important;
-            transform: translateZ(0) !important;
           }
           .msg-conv-messages {
             flex: 1 !important;
             overflow-y: auto !important;
             min-height: 0 !important;
-            overscroll-behavior: contain !important;
           }
           .msg-conv form {
             flex-shrink: 0 !important;
@@ -375,7 +372,6 @@ export default function MessagesPage() {
           .msg-list-mobile-hidden { display: none !important; }
           .msg-conv-mobile-hidden { display: none !important; }
           .msg-back-btn { display: flex !important; }
-          body.msg-conv-open { overflow: hidden !important; position: fixed !important; width: 100% !important; }
           body.msg-conv-open .mobile-only { display: none !important; }
         }
       `}</style>

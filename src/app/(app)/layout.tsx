@@ -39,6 +39,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           main { margin-left: 0 !important; padding: 1rem !important; padding-bottom: 5.5rem !important; padding-top: 5rem !important; }
           .desktop-nav { display: none !important; }
           .topbar { left: 0 !important; }
+          /* Page messages : annuler tout le padding du main */
+          main:has(.msg-layout) { padding: 0 !important; overflow: hidden !important; }
         }
       `}</style>
     </div>
