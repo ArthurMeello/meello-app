@@ -328,18 +328,31 @@ export default function MessagesPage() {
             flex: 1 !important;
             border-radius: 0 !important;
             box-shadow: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
           }
           .msg-list-header {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             position: relative !important;
-            padding-top: calc(1rem + env(safe-area-inset-top)) !important;
+            flex-shrink: 0 !important;
+            padding: 0.85rem 1rem !important;
+            padding-top: calc(0.85rem + env(safe-area-inset-top)) !important;
+            border-bottom: 1px solid #F5F0E8 !important;
+            min-height: 56px !important;
           }
           .msg-list-header h2 {
             position: absolute !important;
             left: 50% !important;
             transform: translateX(-50%) !important;
+            margin: 0 !important;
+          }
+          .msg-list-scroll {
+            flex: 1 !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
           }
           .msg-conv {
             position: absolute !important;
@@ -379,7 +392,7 @@ export default function MessagesPage() {
           <div className="msg-list-header" style={{ padding: '1.25rem', borderBottom: '1px solid #F5F0E8' }}>
             <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>Conversations</h2>
           </div>
-          <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="msg-list-scroll" style={{ flex: 1, overflowY: 'auto' }}>
             {conversations.length === 0 && (
               <div style={{ padding: '2rem', textAlign: 'center', color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>
                 Aucune conversation pour l&apos;instant.
