@@ -35,7 +35,7 @@ export default function EvenementsPage() {
       const { data } = await supabase
         .from('events')
         .select('*')
-        .in('status', user?.id === ADMIN_ID ? ['published', 'pending'] : ['published'])
+        .eq('status', 'published')
         .order('event_date', { ascending: true })
 
       if (data) {
@@ -203,13 +203,6 @@ export default function EvenementsPage() {
               )}
 
               <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {/* Badge statut pending pour admin */}
-                {isAdmin && event.status === 'pending' && (
-                  <span style={{ alignSelf: 'flex-start', backgroundColor: '#FFF3CD', color: '#856404', borderRadius: '20px', padding: '0.2rem 0.6rem', fontSize: '0.72rem', fontWeight: 600 }}>
-                    En attente de validation
-                  </span>
-                )}
-
                 <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.05rem', color: '#2D2D2D', margin: 0 }}>{event.title}</h3>
 
                 {/* Date + heure */}
