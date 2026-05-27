@@ -353,7 +353,7 @@ export default function MessagesPage() {
             flex: 1 !important;
             overflow-y: auto !important;
             -webkit-overflow-scrolling: touch !important;
-            padding-top: 0.75rem !important;
+            padding-top: 1.5rem !important;
           }
           .msg-conv {
             position: absolute !important;
