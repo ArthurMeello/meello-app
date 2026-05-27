@@ -313,7 +313,7 @@ export default function EvenementsPage() {
                     <button
                       onClick={() => toggleParticipation(event)}
                       disabled={!!joining || (!isParticipating && !!isFull)}
-                      style={{ flex: 1, padding: '0.55rem 1rem', borderRadius: '8px', border: isParticipating ? '1.5px solid #E8501A' : 'none', backgroundColor: isParticipating ? 'white' : '#E8501A', color: isParticipating ? '#E8501A' : 'white', fontWeight: 600, fontSize: '0.88rem', cursor: (!!joining || (!isParticipating && !!isFull)) ? 'default' : 'pointer', opacity: (!isParticipating && isFull) ? 0.4 : 1 }}
+                      style={{ flex: 0, padding: '0.55rem 1rem', borderRadius: '8px', border: isParticipating ? '1.5px solid #E8501A' : 'none', backgroundColor: isParticipating ? 'white' : '#E8501A', color: isParticipating ? '#E8501A' : 'white', fontWeight: 600, fontSize: '0.88rem', cursor: (!!joining || (!isParticipating && !!isFull)) ? 'default' : 'pointer', opacity: (!isParticipating && isFull) ? 0.4 : 1, whiteSpace: 'nowrap' }}
                     >
                       {joining === event.id ? '...' : isParticipating ? 'Annuler ma participation' : isFull ? 'Complet' : 'Je participe'}
                     </button>
