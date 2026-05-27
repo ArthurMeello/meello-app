@@ -35,6 +35,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Masquer topbar + mobile nav quand conversation ouverte */
+@media (max-width: 768px) {
+  body.msg-conv-open .topbar,
+  body.msg-conv-open .mobile-only {
+    display: none !important;
+  }
+}
+
 /* Reset dark mode — Meello est light only */
 @media (prefers-color-scheme: dark) {
   body {

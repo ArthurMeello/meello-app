@@ -47,6 +47,16 @@ export default function MessagesPage() {
   useEffect(() => { activeConvRef.current = activeConv }, [activeConv])
   useEffect(() => { userIdRef.current = userId }, [userId])
 
+  // Masquer topbar + bottom nav quand conversation ouverte sur mobile
+  useEffect(() => {
+    if (mobileView === 'conv') {
+      document.body.classList.add('msg-conv-open')
+    } else {
+      document.body.classList.remove('msg-conv-open')
+    }
+    return () => document.body.classList.remove('msg-conv-open')
+  }, [mobileView])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, otherIsTyping])
@@ -307,8 +317,14 @@ export default function MessagesPage() {
         }
         @media (max-width: 768px) {
           .msg-layout { flex-direction: column !important; height: calc(100vh - 9rem) !important; }
-          .msg-list { width: 100% !important; display: flex; border-radius: 12px !important; }
-          .msg-conv { border-radius: 12px !important; }
+          .msg-list { width: 100% !important; flex: 1 !important; border-radius: 12px !important; }
+          .msg-conv {
+            position: fixed !important; inset: 0 !important;
+            z-index: 300 !important; border-radius: 0 !important;
+            height: 100vh !important; width: 100vw !important;
+          }
+          .msg-conv-fullscreen-header { display: flex !important; }
+          .msg-conv-desktop-header { display: none !important; }
           .msg-list-mobile-hidden { display: none !important; }
           .msg-conv-mobile-hidden { display: none !important; }
           .msg-back-btn { display: flex !important; }
@@ -375,20 +391,38 @@ export default function MessagesPage() {
             </div>
           ) : (
             <>
-              {/* Header */}
-              <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <button className="msg-back-btn" onClick={() => { setMobileView('list'); setActiveConv(null) }} style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.25rem 0 0', color: '#E8501A', flexShrink: 0 }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              {/* Header mobile plein écran */}
+              <div className="msg-conv-fullscreen-header" style={{ display: 'none', padding: '0.75rem 1rem', alignItems: 'center', gap: '0.75rem', backgroundColor: 'white', borderBottom: '1px solid #F5F0E8', paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}>
+                <button onClick={() => { setMobileView('list'); setActiveConv(null) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8501A', flexShrink: 0, padding: '0.25rem', display: 'flex', alignItems: 'center' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.82rem', overflow: 'hidden' }}>
+                    {activeConv.other_user?.avatar_url
+                      ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`}
+                  </div>
+                  {otherIsOnline && <span style={{ position: 'absolute', bottom: 0, right: 0, width: '11px', height: '11px', borderRadius: '50%', backgroundColor: '#22C55E', border: '2px solid white' }} />}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    {activeConv.other_user?.first_name} {activeConv.other_user?.last_name}
+                    {activeConv.other_user?.id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="" style={{ width: '16px', height: '16px' }} />}
+                  </div>
+                  {otherIsOnline && <div style={{ fontSize: '0.75rem', color: '#22C55E', fontWeight: 600 }}>En ligne</div>}
+                  {!otherIsOnline && activeConv.other_user?.activity && <div style={{ fontSize: '0.75rem', opacity: 0.45, color: '#2D2D2D' }}>{activeConv.other_user.activity}</div>}
+                </div>
+              </div>
+
+              {/* Header desktop */}
+              <div className="msg-conv-desktop-header" style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', overflow: 'hidden' }}>
                     {activeConv.other_user?.avatar_url
                       ? <img src={activeConv.other_user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : `${(activeConv.other_user?.first_name || '?')[0]}${(activeConv.other_user?.last_name || '')[0] || ''}`}
                   </div>
-                  {otherIsOnline && (
-                    <span style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#22C55E', border: '2px solid white' }} />
-                  )}
+                  {otherIsOnline && <span style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#22C55E', border: '2px solid white' }} />}
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, color: '#2D2D2D', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
