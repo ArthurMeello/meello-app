@@ -182,7 +182,7 @@ export default function EvenementsPage() {
         ))}
         {myPending.length > 0 && (
           <button onClick={() => setTab('en-attente')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.6rem 1.25rem', fontWeight: tab === 'en-attente' ? 700 : 400, color: tab === 'en-attente' ? '#856404' : '#856404', opacity: tab === 'en-attente' ? 1 : 0.6, fontSize: '0.92rem', borderBottom: tab === 'en-attente' ? '2px solid #FFD54F' : '2px solid transparent', marginBottom: '-2px', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            ⏳ En attente ({myPending.length})
+            En attente ({myPending.length})
           </button>
         )}
       </div>
