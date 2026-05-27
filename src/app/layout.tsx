@@ -17,6 +17,12 @@ export const metadata: Metadata = {
     icon: "/favicon-meello.png",
     apple: "/favicon-meello.png",
   },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    interactiveWidget: 'resizes-visual',
+  },
 };
 
 export default function RootLayout({

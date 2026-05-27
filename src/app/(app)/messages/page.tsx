@@ -316,13 +316,14 @@ export default function MessagesPage() {
           30% { opacity: 1; transform: translateY(-3px); }
         }
         @media (max-width: 768px) {
+          /* Layout liste : plein écran, dans le flux */
           .msg-layout {
             flex-direction: column !important;
             position: fixed !important;
             inset: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
-            height: 100vh !important;
+            height: 100% !important;
             background: white !important;
             z-index: 10 !important;
           }
@@ -334,21 +335,43 @@ export default function MessagesPage() {
             background: white !important;
           }
           .msg-list-header {
-            text-align: center !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            position: relative !important;
             padding: 1rem !important;
             padding-top: calc(1rem + env(safe-area-inset-top)) !important;
             border-bottom: 1px solid #F5F0E8 !important;
           }
+          .msg-list-header h2 {
+            position: absolute !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+          }
+          /* Conversation : dans le flux, pas de fixed */
           .msg-conv {
-            position: fixed !important; inset: 0 !important;
-            z-index: 300 !important; border-radius: 0 !important;
-            height: 100dvh !important; width: 100vw !important;
+            position: fixed !important;
+            top: 0 !important; left: 0 !important; right: 0 !important;
+            bottom: 0 !important;
+            z-index: 300 !important;
+            border-radius: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
             display: flex !important;
             flex-direction: column !important;
+            overflow: hidden !important;
           }
+          /* Zone messages scrollable */
+          .msg-conv-messages {
+            flex: 1 !important;
+            overflow-y: auto !important;
+            min-height: 0 !important;
+            -webkit-overflow-scrolling: touch !important;
+          }
+          /* Formulaire collé en bas, jamais caché */
           .msg-conv form {
-            padding-bottom: calc(0.85rem + env(safe-area-inset-bottom)) !important;
             flex-shrink: 0 !important;
+            padding-bottom: calc(0.85rem + env(safe-area-inset-bottom)) !important;
           }
           .msg-conv-fullscreen-header { display: flex !important; }
           .msg-conv-desktop-header { display: none !important; }
@@ -462,7 +485,7 @@ export default function MessagesPage() {
               </div>
 
               {/* Messages */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', paddingBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div className="msg-conv-messages" style={{ flex: 1, overflowY: 'auto', padding: '1rem', paddingBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {(() => {
                   const myMsgs = messages.filter(m => m.sender_id === userId)
                   const lastReadMsg = [...myMsgs].reverse().find(m => m.read_at)
