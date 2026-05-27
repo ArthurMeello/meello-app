@@ -41,6 +41,7 @@ export default function AppNav() {
       setPendingConnections(connCount || 0)
       const { count: notifCount } = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('read', false)
       setNotifications(notifCount || 0)
+      loadNotifs(user.id)
       if (user.id === ADMIN_ID) {
         const [{ count: appCount }, { count: recoCount }] = await Promise.all([
           supabase.from('applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -55,10 +56,17 @@ export default function AppNav() {
   // Fermer le menu quand on change de page
   useEffect(() => { setMenuOpen(false); setNotifsOpen(false) }, [pathname])
 
-  const loadNotifs = async () => {
+  const loadNotifs = async (uid?: string) => {
     const supabase = createClient()
-    if (!userId) return
-    const { data } = await supabase.from('notifications').select('*, profiles!notifications_from_user_id_fkey(first_name, last_name, avatar_url)').eq('user_id', userId).neq('type', 'message').order('created_at', { ascending: false }).limit(20)
+    const targetUid = uid || userId
+    if (!targetUid) return
+    const { data } = await supabase
+      .from('notifications')
+      .select('id, type, content, read, created_at, link, from_user_id, profiles!notifications_from_user_id_fkey(first_name, last_name, avatar_url)')
+      .eq('user_id', targetUid)
+      .neq('type', 'message')
+      .order('created_at', { ascending: false })
+      .limit(20)
     if (data) setNotifsList(data)
   }
 
@@ -263,7 +271,7 @@ export default function AppNav() {
           </Link>
 
           {/* Notifications */}
-          <button onClick={() => { setNotifsOpen(o => !o); if (!notifsOpen) loadNotifs() }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', color: notifsOpen ? '#E8501A' : 'rgba(245,240,232,0.6)', fontSize: '0.65rem', padding: '0.25rem 0.5rem' }}>
+          <button onClick={() => { setNotifsOpen(o => !o); if (!notifsOpen) loadNotifs(userId || undefined) }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', background: 'none', border: 'none', cursor: 'pointer', color: notifsOpen ? '#E8501A' : 'rgba(245,240,232,0.6)', fontSize: '0.65rem', padding: '0.25rem 0.5rem' }}>
             <div style={{ position: 'relative' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
