@@ -176,17 +176,17 @@ export default function AppNav() {
                     display: 'flex', alignItems: 'center', gap: '12px',
                     padding: '12px 20px', borderRadius: '50px',
                     textDecoration: 'none',
-                    background: active ? 'rgba(232,80,26,0.85)' : 'rgba(255,255,255,0.18)',
+                    background: active ? 'rgba(232,80,26,0.85)' : '#1A1A2E',
                     backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                    border: active ? 'none' : '1px solid rgba(255,255,255,0.3)',
-                    color: active ? 'white' : '#1A1A2E',
-                    fontWeight: active ? 700 : 600,
+                    border: 'none',
+                    color: 'white',
+                    fontWeight: active ? 700 : 500,
                     fontSize: '0.95rem',
                     boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
                     animation: `slideIn 0.2s ease ${i * 0.04}s both`,
                   }}
                 >
-                  <img src={item.svg} alt="" style={{ width: '20px', height: '20px', filter: active ? 'brightness(0) invert(1)' : 'brightness(0) saturate(100%)' }} />
+                  <img src={item.svg} alt="" style={{ width: '20px', height: '20px', filter: 'brightness(0) invert(1)' }} />
                   {item.label}
                 </Link>
               )
