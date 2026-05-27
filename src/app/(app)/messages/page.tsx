@@ -318,28 +318,23 @@ export default function MessagesPage() {
         @media (max-width: 768px) {
           .msg-layout {
             flex-direction: column !important;
-            position: fixed !important;
-            inset: 0 !important;
+            height: 100% !important;
+            width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
-            background: white !important;
-            z-index: 10 !important;
           }
           .msg-list {
             width: 100% !important;
             flex: 1 !important;
             border-radius: 0 !important;
             box-shadow: none !important;
-            background: white !important;
           }
           .msg-list-header {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             position: relative !important;
-            padding: 1rem !important;
             padding-top: calc(1rem + env(safe-area-inset-top)) !important;
-            border-bottom: 1px solid #F5F0E8 !important;
           }
           .msg-list-header h2 {
             position: absolute !important;
@@ -347,12 +342,22 @@ export default function MessagesPage() {
             transform: translateX(-50%) !important;
           }
           .msg-conv {
-            position: fixed !important;
+            position: absolute !important;
             inset: 0 !important;
-            z-index: 300 !important;
+            z-index: 10 !important;
             border-radius: 0 !important;
-            height: -webkit-fill-available !important;
-            width: -webkit-fill-available !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+          }
+          .msg-conv-messages {
+            flex: 1 !important;
+            overflow-y: auto !important;
+            min-height: 0 !important;
+          }
+          .msg-conv form {
+            flex-shrink: 0 !important;
+            padding-bottom: calc(0.85rem + env(safe-area-inset-bottom)) !important;
           }
           .msg-conv-fullscreen-header { display: flex !important; }
           .msg-conv-desktop-header { display: none !important; }
