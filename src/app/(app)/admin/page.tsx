@@ -45,7 +45,9 @@ export default function AdminPage() {
   const [memberSearch, setMemberSearch] = useState('')
   const [memberBadgeFilter, setMemberBadgeFilter] = useState('')
   const [pendingEvents, setPendingEvents] = useState<any[]>([])
+  const [publishedEvents, setPublishedEvents] = useState<any[]>([])
   const [publishingEvent, setPublishingEvent] = useState<string | null>(null)
+  const [eventAdminTab, setEventAdminTab] = useState<'pending' | 'published'>('pending')
   const [pendingRecos, setPendingRecos] = useState<any[]>([])
   const router = useRouter()
 
@@ -68,6 +70,7 @@ export default function AdminPage() {
       fetchMembers()
       fetchPendingRecos()
       fetchPendingEvents()
+      fetchPublishedEvents()
     }
     checkAuth()
   }, [])
@@ -199,6 +202,39 @@ export default function AdminPage() {
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
     if (data) setPendingEvents(data)
+  }
+
+  const fetchPublishedEvents = async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('events')
+      .select('*, profiles!events_author_id_fkey(first_name, last_name, email, avatar_url)')
+      .eq('status', 'published')
+      .order('event_date', { ascending: true })
+    if (data) setPublishedEvents(data)
+  }
+
+  const cancelEvent = async (event: any) => {
+    if (!confirm(`Annuler l'événement "${event.title}" ? Les participants seront notifiés.`)) return
+    const supabase = createClient()
+    await supabase.from('events').update({ status: 'cancelled' }).eq('id', event.id)
+    await supabase.from('notifications').insert({
+      user_id: event.author_id,
+      type: 'event_cancelled',
+      content: `Ton événement "${event.title}" a été annulé par l'administration.`,
+      link: '/evenements',
+      from_user_id: ADMIN_ID,
+    })
+    setPublishedEvents(prev => prev.filter(e => e.id !== event.id))
+  }
+
+  const deleteEvent = async (event: any) => {
+    if (!confirm(`Supprimer définitivement "${event.title}" ? Cette action est irréversible.`)) return
+    const supabase = createClient()
+    await supabase.from('event_participants').delete().eq('event_id', event.id)
+    await supabase.from('events').delete().eq('id', event.id)
+    setPublishedEvents(prev => prev.filter(e => e.id !== event.id))
+    setPendingEvents(prev => prev.filter(e => e.id !== event.id))
   }
 
   const publishEvent = async (event: any) => {
@@ -624,77 +660,106 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Événements en attente */}
+      {/* Événements */}
       {tab === 'evenements' && (
         <div>
-          {pendingEvents.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4, backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              Aucun événement en attente de validation.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {pendingEvents.map(event => {
-                const eventDate = new Date(event.event_date)
-                const dateStr = eventDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-                const timeStr = eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-                return (
-                  <div key={event.id} style={{ backgroundColor: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', gap: 0 }}>
-                    {event.cover_url && (
-                      <div style={{ width: '160px', flexShrink: 0 }}>
-                        <img src={event.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                      </div>
-                    )}
-                    <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
-                        <div>
-                          <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1rem', color: '#2D2D2D', margin: '0 0 0.5rem' }}>{event.title}</h3>
-                          <a href={`/membre/${event.author_id}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, overflow: 'hidden', flexShrink: 0 }}>
-                              {event.profiles?.avatar_url
-                                ? <img src={event.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                : `${(event.profiles?.first_name || '?')[0]}${(event.profiles?.last_name || '')[0] || ''}`}
-                            </div>
-                            <span style={{ fontSize: '0.82rem', color: '#E8501A', fontWeight: 600 }}>{event.profiles?.first_name} {event.profiles?.last_name}</span>
-                            <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.4 }}>{event.profiles?.email}</span>
-                          </a>
+          {/* Sous-onglets */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            <button onClick={() => setEventAdminTab('pending')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: 'none', backgroundColor: eventAdminTab === 'pending' ? '#E8501A' : 'white', color: eventAdminTab === 'pending' ? 'white' : '#2D2D2D', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              En attente ({pendingEvents.length})
+            </button>
+            <button onClick={() => setEventAdminTab('published')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: 'none', backgroundColor: eventAdminTab === 'published' ? '#E8501A' : 'white', color: eventAdminTab === 'published' ? 'white' : '#2D2D2D', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              Publiés ({publishedEvents.length})
+            </button>
+          </div>
+
+          {/* En attente */}
+          {eventAdminTab === 'pending' && (
+            pendingEvents.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4, backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                Aucun événement en attente de validation.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {pendingEvents.map(event => {
+                  const eventDate = new Date(event.event_date)
+                  const dateStr = eventDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                  const timeStr = eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                  return (
+                    <div key={event.id} style={{ backgroundColor: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', gap: 0 }}>
+                      {event.cover_url && <div style={{ width: '160px', flexShrink: 0 }}><img src={event.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /></div>}
+                      <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+                          <div>
+                            <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1rem', color: '#2D2D2D', margin: '0 0 0.5rem' }}>{event.title}</h3>
+                            <a href={`/membre/${event.author_id}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, overflow: 'hidden', flexShrink: 0 }}>
+                                {event.profiles?.avatar_url ? <img src={event.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : `${(event.profiles?.first_name || '?')[0]}${(event.profiles?.last_name || '')[0] || ''}`}
+                              </div>
+                              <span style={{ fontSize: '0.82rem', color: '#E8501A', fontWeight: 600 }}>{event.profiles?.first_name} {event.profiles?.last_name}</span>
+                              <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.4 }}>{event.profiles?.email}</span>
+                            </a>
+                          </div>
+                          <span style={{ backgroundColor: '#FFF3CD', color: '#856404', borderRadius: '20px', padding: '0.2rem 0.6rem', fontSize: '0.72rem', fontWeight: 600, flexShrink: 0 }}>En attente</span>
                         </div>
-                        <span style={{ backgroundColor: '#FFF3CD', color: '#856404', borderRadius: '20px', padding: '0.2rem 0.6rem', fontSize: '0.72rem', fontWeight: 600, flexShrink: 0 }}>En attente</span>
-                      </div>
-
-                      <div style={{ fontSize: '0.85rem', color: '#E8501A', fontWeight: 600 }}>
-                        📅 {dateStr} à {timeStr}
-                        {event.duration_minutes && <span style={{ color: '#2D2D2D', opacity: 0.5, fontWeight: 400 }}> · {event.duration_minutes} min</span>}
-                      </div>
-
-                      {event.description && (
-                        <p style={{ fontSize: '0.83rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.5 }}>{event.description}</p>
-                      )}
-
-                      <div style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5 }}>
-                        🔗 <a href={event.visio_link} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A' }}>{event.visio_link}</a>
-                        {event.max_participants && <span> · {event.max_participants} places max</span>}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                        <button
-                          onClick={() => publishEvent(event)}
-                          disabled={publishingEvent === event.id}
-                          style={{ backgroundColor: '#7A9E7E', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}
-                        >
-                          {publishingEvent === event.id ? '...' : '✓ Valider et publier'}
-                        </button>
-                        <button
-                          onClick={() => rejectEvent(event.id, event.author_id, event.title)}
-                          style={{ background: 'none', border: '1.5px solid #E8501A', color: '#E8501A', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}
-                        >
-                          Refuser
-                        </button>
+                        <div style={{ fontSize: '0.85rem', color: '#E8501A', fontWeight: 600 }}>📅 {dateStr} à {timeStr}{event.duration_minutes && <span style={{ color: '#2D2D2D', opacity: 0.5, fontWeight: 400 }}> · {event.duration_minutes} min</span>}</div>
+                        {event.description && <p style={{ fontSize: '0.83rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.5 }}>{event.description}</p>}
+                        <div style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5 }}>🔗 <a href={event.visio_link} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A' }}>{event.visio_link}</a>{event.max_participants && <span> · {event.max_participants} places max</span>}</div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                          <button onClick={() => publishEvent(event)} disabled={publishingEvent === event.id} style={{ backgroundColor: '#7A9E7E', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>
+                            {publishingEvent === event.id ? '...' : '✓ Valider et publier'}
+                          </button>
+                          <button onClick={() => rejectEvent(event.id, event.author_id, event.title)} style={{ background: 'none', border: '1.5px solid #E8501A', color: '#E8501A', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>Refuser</button>
+                          <button onClick={() => deleteEvent(event)} style={{ background: 'none', border: '1.5px solid #cc0000', color: '#cc0000', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>Supprimer</button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            )
+          )}
+
+          {/* Publiés */}
+          {eventAdminTab === 'published' && (
+            publishedEvents.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4, backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                Aucun événement publié.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {publishedEvents.map(event => {
+                  const eventDate = new Date(event.event_date)
+                  const dateStr = eventDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                  const timeStr = eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                  return (
+                    <div key={event.id} style={{ backgroundColor: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', gap: 0 }}>
+                      {event.cover_url && <div style={{ width: '160px', flexShrink: 0 }}><img src={event.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /></div>}
+                      <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+                          <div>
+                            <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1rem', color: '#2D2D2D', margin: '0 0 0.5rem' }}>{event.title}</h3>
+                            <a href={`/membre/${event.author_id}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, overflow: 'hidden', flexShrink: 0 }}>
+                                {event.profiles?.avatar_url ? <img src={event.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : `${(event.profiles?.first_name || '?')[0]}${(event.profiles?.last_name || '')[0] || ''}`}
+                              </div>
+                              <span style={{ fontSize: '0.82rem', color: '#E8501A', fontWeight: 600 }}>{event.profiles?.first_name} {event.profiles?.last_name}</span>
+                            </a>
+                          </div>
+                          <span style={{ backgroundColor: '#E8F5E9', color: '#2E7D32', borderRadius: '20px', padding: '0.2rem 0.6rem', fontSize: '0.72rem', fontWeight: 600, flexShrink: 0 }}>Publié</span>
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: '#E8501A', fontWeight: 600 }}>📅 {dateStr} à {timeStr}{event.duration_minutes && <span style={{ color: '#2D2D2D', opacity: 0.5, fontWeight: 400 }}> · {event.duration_minutes} min</span>}</div>
+                        {event.description && <p style={{ fontSize: '0.83rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.5 }}>{event.description}</p>}
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                          <button onClick={() => cancelEvent(event)} style={{ background: 'none', border: '1.5px solid #856404', color: '#856404', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>Annuler l'événement</button>
+                          <button onClick={() => deleteEvent(event)} style={{ background: 'none', border: '1.5px solid #cc0000', color: '#cc0000', borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>Supprimer</button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
           )}
         </div>
       )}
