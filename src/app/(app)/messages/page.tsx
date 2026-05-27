@@ -36,7 +36,6 @@ export default function MessagesPage() {
   const [otherIsTyping, setOtherIsTyping] = useState(false)
   const [otherIsOnline, setOtherIsOnline] = useState(false)
   const [mobileView, setMobileView] = useState<'list' | 'conv'>('list')
-  const [convHeight, setConvHeight] = useState<string>('100%')
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const typingChannelRef = useRef<any>(null)
@@ -47,23 +46,6 @@ export default function MessagesPage() {
 
   useEffect(() => { activeConvRef.current = activeConv }, [activeConv])
   useEffect(() => { userIdRef.current = userId }, [userId])
-
-  // iOS Safari : ajuster la hauteur de la conv selon le visual viewport (clavier)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const vv = (window as any).visualViewport
-    if (!vv) return
-    const onResize = () => {
-      setConvHeight(`${vv.height}px`)
-    }
-    vv.addEventListener('resize', onResize)
-    vv.addEventListener('scroll', onResize)
-    onResize()
-    return () => {
-      vv.removeEventListener('resize', onResize)
-      vv.removeEventListener('scroll', onResize)
-    }
-  }, [])
 
   // Masquer topbar + bottom nav quand conversation ouverte sur mobile
   useEffect(() => {
@@ -334,14 +316,12 @@ export default function MessagesPage() {
           30% { opacity: 1; transform: translateY(-3px); }
         }
         @media (max-width: 768px) {
-          /* Layout liste : plein écran, dans le flux */
           .msg-layout {
             flex-direction: column !important;
             position: fixed !important;
             inset: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
-            height: 100% !important;
             background: white !important;
             z-index: 10 !important;
           }
@@ -366,23 +346,20 @@ export default function MessagesPage() {
             left: 50% !important;
             transform: translateX(-50%) !important;
           }
-          /* Conversation : position fixed avec hauteur pilotée par visualViewport */
           .msg-conv {
             position: fixed !important;
-            top: 0 !important; left: 0 !important; right: 0 !important;
+            top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
             z-index: 300 !important;
             border-radius: 0 !important;
             width: 100vw !important;
+            height: 100% !important;
             display: flex !important;
             flex-direction: column !important;
-            overflow: hidden !important;
-            /* hauteur injectée via style inline par visualViewport */
           }
           .msg-conv-messages {
             flex: 1 !important;
             overflow-y: auto !important;
             min-height: 0 !important;
-            -webkit-overflow-scrolling: touch !important;
           }
           .msg-conv form {
             flex-shrink: 0 !important;
@@ -450,7 +427,7 @@ export default function MessagesPage() {
         </div>
 
         {/* Conversation active */}
-        <div className={`msg-conv${mobileView === 'list' ? ' msg-conv-mobile-hidden' : ''}`} style={{ flex: 1, backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: convHeight }}>
+        <div className={`msg-conv${mobileView === 'list' ? ' msg-conv-mobile-hidden' : ''}`} style={{ flex: 1, backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {!activeConv ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2D2D2D', opacity: 0.3, fontSize: '0.95rem' }}>
               Sélectionne une conversation
