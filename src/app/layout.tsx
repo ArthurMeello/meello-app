@@ -21,7 +21,6 @@ export const metadata: Metadata = {
     width: 'device-width',
     initialScale: 1,
     maximumScale: 1,
-    interactiveWidget: 'resizes-visual',
   },
 };
 

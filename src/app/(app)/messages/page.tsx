@@ -348,11 +348,11 @@ export default function MessagesPage() {
           }
           .msg-conv {
             position: fixed !important;
-            top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+            top: 0 !important; left: 0 !important; right: 0 !important;
+            bottom: 0 !important;
             z-index: 300 !important;
             border-radius: 0 !important;
-            width: 100vw !important;
-            height: 100% !important;
+            width: 100% !important;
             display: flex !important;
             flex-direction: column !important;
           }
