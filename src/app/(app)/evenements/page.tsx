@@ -85,6 +85,11 @@ export default function EvenementsPage() {
 
   const handleSubmit = async () => {
     if (!form.title || !form.event_date || !form.visio_link || !currentUserId) return
+    const selectedDatetime = new Date(`${form.event_date}T${form.event_time}:00`)
+    if (selectedDatetime <= new Date()) {
+      alert('La date et l\'heure de l\'événement doivent être dans le futur.')
+      return
+    }
     setSubmitting(true)
     const supabase = createClient()
 
@@ -389,11 +394,11 @@ export default function EvenementsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
                   <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.55, display: 'block', marginBottom: '0.3rem' }}>Date *</label>
-                  <input type="date" value={form.event_date} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} style={{ border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.65rem 0.9rem', fontSize: '0.92rem', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+                  <input type="date" value={form.event_date} min={new Date().toISOString().split('T')[0]} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} style={{ border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.65rem 0.9rem', fontSize: '0.92rem', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
                 </div>
                 <div>
                   <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.55, display: 'block', marginBottom: '0.3rem' }}>Heure *</label>
-                  <input type="time" value={form.event_time} onChange={e => setForm(f => ({ ...f, event_time: e.target.value }))} style={{ border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.65rem 0.9rem', fontSize: '0.92rem', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+                  <input type="time" value={form.event_time} min={form.event_date === new Date().toISOString().split('T')[0] ? `${String(new Date().getHours()).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}` : undefined} onChange={e => setForm(f => ({ ...f, event_time: e.target.value }))} style={{ border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.65rem 0.9rem', fontSize: '0.92rem', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
                 </div>
               </div>
 
