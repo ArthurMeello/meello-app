@@ -293,12 +293,6 @@ export default function EvenementsPage() {
                     </button>
                   )}
 
-                  {/* Lien visio si participant ou admin */}
-                  {(isParticipating || isAdmin) && event.visio_link && (
-                    <a href={event.visio_link} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '0.55rem 1rem', borderRadius: '8px', border: '1.5px solid #E8E3D9', backgroundColor: 'white', color: '#2D2D2D', fontWeight: 600, fontSize: '0.88rem', textDecoration: 'none', textAlign: 'center' }}>
-                      Rejoindre →
-                    </a>
-                  )}
 
                 </div>
               </div>

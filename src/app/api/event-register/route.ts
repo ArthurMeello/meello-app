@@ -2,6 +2,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { emailTemplate } from '@/lib/emailTemplate'
 
+function generateIcs(event: any): string {
+  const start = new Date(event.event_date)
+  const end = event.duration_minutes
+    ? new Date(start.getTime() + event.duration_minutes * 60000)
+    : new Date(start.getTime() + 60 * 60000)
+
+  const fmt = (d: Date) =>
+    d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Meello//FR',
+    'CALSCALE:GREGORIAN',
+    'METHOD:REQUEST',
+    'BEGIN:VEVENT',
+    `UID:event-${event.id}@meello.fr`,
+    `DTSTAMP:${fmt(new Date())}`,
+    `DTSTART:${fmt(start)}`,
+    `DTEND:${fmt(end)}`,
+    `SUMMARY:${event.title}`,
+    event.description ? `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}` : '',
+    event.visio_link ? `URL:${event.visio_link}` : '',
+    event.visio_link ? `LOCATION:${event.visio_link}` : '',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].filter(Boolean).join('\r\n')
+}
+
 export async function POST(req: NextRequest) {
   const { event, user } = await req.json()
 
@@ -10,7 +39,9 @@ export async function POST(req: NextRequest) {
   const timeStr = eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
   const durationStr = event.duration_minutes ? ` (${event.duration_minutes} min)` : ''
 
-  // Mail 1 : confirmation de participation
+  const icsBase64 = Buffer.from(generateIcs(event)).toString('base64')
+
+  // Mail 1 : confirmation de participation avec lien visio + fichier .ics
   await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
@@ -25,10 +56,17 @@ export async function POST(req: NextRequest) {
         firstName: user.first_name,
         body: `Ta participation à l'événement <strong>${event.title}</strong> a bien été enregistrée !<br><br>
         📅 <strong>${dateStr} à ${timeStr}${durationStr}</strong><br><br>
-        Le lien pour rejoindre la visio sera disponible le jour J directement sur la plateforme Meello. Tu recevras également un rappel le matin même.<br><br>
-        À très vite !`,
+        ${event.visio_link ? `🔗 Lien pour rejoindre la visio : <a href="${event.visio_link}" style="color:#E8501A;">${event.visio_link}</a><br><br>` : ''}
+        Un fichier .ics est joint à cet email pour ajouter l'événement directement à ton calendrier (Google, Outlook, Apple…).<br><br>
+        Tu recevras également un rappel le matin même. À très vite !`,
         cta: { label: 'Voir l\'événement →', href: 'https://app.meello.fr/evenements' },
       }),
+      attachment: [
+        {
+          name: `${event.title.replace(/[^a-z0-9]/gi, '_')}.ics`,
+          content: icsBase64,
+        },
+      ],
     }),
   })
 
