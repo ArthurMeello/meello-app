@@ -496,7 +496,7 @@ export default function MessagesPage() {
               </div>
 
               {/* Input */}
-              <form onSubmit={sendMessage} style={{ padding: '0.85rem 1rem', borderTop: '1px solid #F5F0E8', display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+              <form onSubmit={sendMessage} style={{ padding: '0.85rem 1rem', paddingBottom: 'calc(0.85rem + env(safe-area-inset-bottom))', borderTop: '1px solid #F5F0E8', display: 'flex', gap: '0.5rem', alignItems: 'flex-end', backgroundColor: 'white', flexShrink: 0 }}>
                 <textarea
                   ref={inputRef}
                   value={newMessage}

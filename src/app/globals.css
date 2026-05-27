@@ -41,6 +41,13 @@ body {
   body.msg-conv-open .mobile-only {
     display: none !important;
   }
+  body.msg-conv-open {
+    overflow: hidden;
+  }
+  /* Conversation plein écran — utilise dvh pour respecter le clavier virtuel */
+  .msg-conv {
+    height: 100dvh !important;
+  }
 }
 
 /* Reset dark mode — Meello est light only */
