@@ -130,6 +130,11 @@ export default function EvenementsPage() {
     if (isParticipating) {
       await supabase.from('event_participants').delete().eq('event_id', event.id).eq('user_id', currentUserId)
       setParticipants(prev => ({ ...prev, [event.id]: (prev[event.id] || []).filter(p => p.id !== currentUserId) }))
+      await fetch('/api/event-cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event, user: { ...currentProfile, id: currentUserId } }),
+      })
     } else {
       await supabase.from('event_participants').insert({ event_id: event.id, user_id: currentUserId })
       setParticipants(prev => ({
@@ -305,7 +310,7 @@ export default function EvenementsPage() {
                       disabled={!!joining || (!isParticipating && !!isFull)}
                       style={{ flex: 1, padding: '0.55rem 1rem', borderRadius: '8px', border: isParticipating ? '1.5px solid #E8501A' : 'none', backgroundColor: isParticipating ? 'white' : '#E8501A', color: isParticipating ? '#E8501A' : 'white', fontWeight: 600, fontSize: '0.88rem', cursor: (!!joining || (!isParticipating && !!isFull)) ? 'default' : 'pointer', opacity: (!isParticipating && isFull) ? 0.4 : 1 }}
                     >
-                      {joining === event.id ? '...' : isParticipating ? '✓ Je participe' : isFull ? 'Complet' : 'Je participe'}
+                      {joining === event.id ? '...' : isParticipating ? 'Annuler ma participation' : isFull ? 'Complet' : 'Je participe'}
                     </button>
                   )}
 

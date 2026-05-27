@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      sender: { name: 'Meello', email: 'hello@meello.fr' },
+      sender: { name: 'Meello', email: 'noreply@meello.fr' },
       to: [{ email: app.email, name: `${app.first_name} ${app.last_name}` }],
       subject: `Bienvenue dans Meello, ${app.first_name} !`,
       htmlContent: emailTemplate({

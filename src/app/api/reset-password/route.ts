@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      sender: { name: 'Meello', email: 'hello@meello.fr' },
+      sender: { name: 'Meello', email: 'noreply@meello.fr' },
       to: [{ email }],
       subject: 'Réinitialisation de ton mot de passe Meello',
       htmlContent: `
