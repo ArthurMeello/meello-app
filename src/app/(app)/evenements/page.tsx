@@ -185,7 +185,7 @@ export default function EvenementsPage() {
       </div>
 
       {/* Onglets */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: '1.5rem', borderBottom: '2px solid #F0EBE1', overflowX: 'auto' }}>
+      <div style={{ display: 'flex', gap: 0, marginBottom: '1.5rem', borderBottom: '2px solid #F0EBE1', overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {([['a-venir', `À venir (${upcoming.length})`], ['passes', `Passés (${past.length})`]] as const).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.6rem 1.25rem', fontWeight: tab === key ? 700 : 400, color: tab === key ? '#E8501A' : '#2D2D2D', opacity: tab === key ? 1 : 0.45, fontSize: '0.92rem', borderBottom: tab === key ? '2px solid #E8501A' : '2px solid transparent', marginBottom: '-2px', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
             {label}

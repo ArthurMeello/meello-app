@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      sender: { name: 'Meello', email: 'noreply@meello.fr' },
+      sender: { name: 'Meello', email: 'hello@meello.fr' },
       to: [{ email: user.email, name: `${user.first_name} ${user.last_name}` }],
       subject: `Ta participation à "${event.title}" est confirmée !`,
       htmlContent: emailTemplate({
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender: { name: 'Meello', email: 'noreply@meello.fr' },
+        sender: { name: 'Meello', email: 'hello@meello.fr' },
         to: [{ email: user.email, name: `${user.first_name} ${user.last_name}` }],
         subject: `Rappel : "${event.title}" c'est aujourd'hui ! 🎉`,
         scheduledAt: reminderDate.toISOString(),

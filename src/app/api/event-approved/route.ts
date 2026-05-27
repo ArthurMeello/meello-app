@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      sender: { name: 'Meello', email: 'noreply@meello.fr' },
+      sender: { name: 'Meello', email: 'hello@meello.fr' },
       to: [{ email: event.author_email, name: event.author_name }],
       subject: `Ton événement "${event.title}" est en ligne ! 🎉`,
       htmlContent: emailTemplate({
