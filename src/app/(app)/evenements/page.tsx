@@ -69,7 +69,7 @@ export default function EvenementsPage() {
   const past = events.filter(e => new Date(e.event_date) < now && e.status === 'published')
   const myPending = events.filter(e => e.status === 'pending' && e.author_id === currentUserId)
   const myEvents = events.filter(e => e.author_id === currentUserId && e.status === 'published')
-  const myParticipations = events.filter(e => (participants[e.id] || []).some(p => p.id === currentUserId))
+  const myParticipations = events.filter(e => new Date(e.event_date) >= now && (participants[e.id] || []).some(p => p.id === currentUserId))
   const displayed = tab === 'a-venir' ? upcoming
     : tab === 'passes' ? past
     : tab === 'en-attente' ? myPending
@@ -198,7 +198,7 @@ export default function EvenementsPage() {
         )}
         {currentUserId && myParticipations.length > 0 && (
           <button onClick={() => setTab('je-participe')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.6rem 1.25rem', fontWeight: tab === 'je-participe' ? 700 : 400, color: tab === 'je-participe' ? '#E8501A' : '#2D2D2D', opacity: tab === 'je-participe' ? 1 : 0.45, fontSize: '0.92rem', borderBottom: tab === 'je-participe' ? '2px solid #E8501A' : '2px solid transparent', marginBottom: '-2px', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
-            Je participe
+            Mes participations à venir ({myParticipations.length})
           </button>
         )}
         {myPending.length > 0 && (
