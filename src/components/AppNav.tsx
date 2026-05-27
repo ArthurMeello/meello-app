@@ -264,10 +264,32 @@ export default function AppNav() {
           padding: '0.6rem 0 calc(0.6rem + env(safe-area-inset-bottom))',
           boxShadow: '0 -1px 0 rgba(255,255,255,0.06)',
         }}>
+          {/* Fil d'actualité */}
+          <Link href="/feed" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', color: pathname.startsWith('/feed') ? '#E8501A' : 'rgba(245,240,232,0.6)', fontSize: '0.65rem' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            <span>Fil</span>
+          </Link>
+
           {/* Messages */}
           <Link href="/messages" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', color: pathname.startsWith('/messages') ? '#E8501A' : 'rgba(245,240,232,0.6)', fontSize: '0.65rem' }}>
             <img src="/icons/chat.svg" alt="Messages" style={{ width: '24px', height: '24px', filter: pathname.startsWith('/messages') ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(0.6)' }} />
             <span>Messages</span>
+          </Link>
+
+          {/* Logo Meello — centre */}
+          <Link href="/feed" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', marginTop: '-18px' }}>
+            <div style={{
+              width: '52px', height: '52px', borderRadius: '50%',
+              backgroundColor: '#E8501A',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 16px rgba(232,80,26,0.45)',
+              border: '3px solid #1A1A2E',
+            }}>
+              <img src="/favicon-meello.webp" alt="Meello" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+            </div>
           </Link>
 
           {/* Notifications */}
