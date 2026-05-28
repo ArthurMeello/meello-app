@@ -701,46 +701,6 @@ export default function ProfilPage() {
         )}
       </div>
 
-      {/* Portfolio */}
-      <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>Portfolio</h2>
-          <button onClick={() => openPortfolioModal()} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '10px', padding: '0.45rem 1rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
-            + Ajouter un projet
-          </button>
-        </div>
-        {portfolio.length === 0 && (
-          <p style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem', textAlign: 'center', margin: '1rem 0' }}>
-            Aucun projet pour l'instant — ajoutes-en un !
-          </p>
-        )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-          {portfolio.map(item => (
-            <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', position: 'relative' }}>
-              {item.media_url.match(/\.(mp4|mov|webm)$/i)
-                ? <video src={item.media_url} controls style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
-                : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
-              }
-              <div style={{ padding: '0.75rem' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D', marginBottom: '0.25rem' }}>{item.title}</div>
-                {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.5rem', lineHeight: 1.5 }}>{item.description}</p>}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  {item.link ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a> : <span />}
-                  <div style={{ display: 'flex', gap: '0.35rem' }}>
-                    <button onClick={() => openPortfolioModal(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: 0.5 }} title="Modifier">
-                      <img src="/icons/pen-edit.svg" alt="Modifier" style={{ width: '15px', height: '15px' }} />
-                    </button>
-                    <button onClick={() => handleDeletePortfolio(item.id, item.media_url)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: 0.35 }} title="Supprimer">
-                      <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '15px', height: '15px' }} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Produits & Services */}
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
@@ -772,6 +732,46 @@ export default function ProfilPage() {
                       <img src="/icons/pen-edit.svg" alt="Modifier" style={{ width: '15px', height: '15px' }} />
                     </button>
                     <button onClick={() => handleDeleteService(item.id, item.image_url)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: 0.35 }} title="Supprimer">
+                      <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '15px', height: '15px' }} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Portfolio */}
+      <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: 0 }}>Portfolio</h2>
+          <button onClick={() => openPortfolioModal()} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '10px', padding: '0.45rem 1rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+            + Ajouter un projet
+          </button>
+        </div>
+        {portfolio.length === 0 && (
+          <p style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem', textAlign: 'center', margin: '1rem 0' }}>
+            Aucun projet pour l'instant — ajoutes-en un !
+          </p>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+          {portfolio.map(item => (
+            <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', position: 'relative' }}>
+              {item.media_url.match(/\.(mp4|mov|webm)$/i)
+                ? <video src={item.media_url} controls style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
+                : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
+              }
+              <div style={{ padding: '0.75rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D', marginBottom: '0.25rem' }}>{item.title}</div>
+                {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.5rem', lineHeight: 1.5 }}>{item.description}</p>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {item.link ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a> : <span />}
+                  <div style={{ display: 'flex', gap: '0.35rem' }}>
+                    <button onClick={() => openPortfolioModal(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: 0.5 }} title="Modifier">
+                      <img src="/icons/pen-edit.svg" alt="Modifier" style={{ width: '15px', height: '15px' }} />
+                    </button>
+                    <button onClick={() => handleDeletePortfolio(item.id, item.media_url)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: 0.35 }} title="Supprimer">
                       <img src="/icons/trash.svg" alt="Supprimer" style={{ width: '15px', height: '15px' }} />
                     </button>
                   </div>

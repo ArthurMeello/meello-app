@@ -401,27 +401,6 @@ export default function MembrePublicPage() {
             )}
           </div>
 
-          {/* Portfolio */}
-          {portfolio.length > 0 && (
-            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>Portfolio</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
-                {portfolio.map(item => (
-                  <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA' }}>
-                    {item.media_url.match(/\.(mp4|mov|webm)$/i)
-                      ? <video src={item.media_url} controls style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />
-                      : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />}
-                    <div style={{ padding: '0.75rem' }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#2D2D2D', marginBottom: '0.2rem' }}>{item.title}</div>
-                      {item.description && <p style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.4rem', lineHeight: 1.4 }}>{item.description}</p>}
-                      {item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Produits & Services */}
           {services.length > 0 && (
             <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
@@ -439,6 +418,27 @@ export default function MembrePublicPage() {
                           {item.link_label || 'En savoir plus'}
                         </a>
                       )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Portfolio */}
+          {portfolio.length > 0 && (
+            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>Portfolio</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
+                {portfolio.map(item => (
+                  <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA' }}>
+                    {item.media_url.match(/\.(mp4|mov|webm)$/i)
+                      ? <video src={item.media_url} controls style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />
+                      : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />}
+                    <div style={{ padding: '0.75rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#2D2D2D', marginBottom: '0.2rem' }}>{item.title}</div>
+                      {item.description && <p style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.4rem', lineHeight: 1.4 }}>{item.description}</p>}
+                      {item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a>}
                     </div>
                   </div>
                 ))}
