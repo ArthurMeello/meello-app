@@ -49,16 +49,12 @@ export async function POST(req: NextRequest) {
   // 4. Mettre à jour le statut de la candidature
   await supabase.from('applications').update({ status: 'approved' }).eq('id', app.id)
 
-  // 6. Auto-connexion avec Arthur
+  // 6. Auto-connexion avec Arthur (sans conversation automatique)
   const ARTHUR_ID = process.env.NEXT_PUBLIC_CREATOR_ID || ADMIN_ID
   if (ARTHUR_ID !== authData.user.id) {
     await supabase.from('connections').insert([
       { requester_id: ARTHUR_ID, receiver_id: authData.user.id, status: 'accepted' },
     ])
-    await supabase.from('conversations').insert({
-      participant1_id: ARTHUR_ID,
-      participant2_id: authData.user.id,
-    })
   }
 
   // 6. Envoyer l'email de bienvenue via Brevo avec le lien magique
