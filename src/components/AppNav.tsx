@@ -166,7 +166,7 @@ export default function AppNav() {
         {/* Pills du menu */}
         {menuOpen && (
           <div style={{ position: 'fixed', top: '80px', left: '16px', zIndex: 200, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {NAV_ITEMS.map((item, i) => {
+            {NAV_ITEMS.filter(item => item.href !== '/messages').map((item, i) => {
               const active = pathname.startsWith(item.href)
               return (
                 <Link
