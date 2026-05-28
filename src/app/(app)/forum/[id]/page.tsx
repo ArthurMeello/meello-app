@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
+const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+
 interface Topic {
   id: string
   title: string
@@ -149,7 +151,22 @@ export default function ForumCategoryPage() {
         {sortedTopics.map(topic => {
           const initials = `${(topic.profiles?.first_name || '?')[0]}${(topic.profiles?.last_name || '')[0] || ''}`.toUpperCase()
           return (
-            <Link key={topic.id} href={`/forum/${id}/${topic.id}`} style={{ textDecoration: 'none' }}>
+            <div key={topic.id} style={{ position: 'relative' }}>
+              {currentUserId === ADMIN_ID && (
+                <button
+                  onClick={async (e) => {
+                    e.preventDefault()
+                    if (!confirm('Supprimer ce topic ?')) return
+                    const supabase = createClient()
+                    await supabase.from('forum_replies').delete().eq('topic_id', topic.id)
+                    await supabase.from('forum_topics').delete().eq('id', topic.id)
+                    setTopics(prev => prev.filter(t => t.id !== topic.id))
+                  }}
+                  style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', zIndex: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', fontSize: '1rem', lineHeight: 1, padding: '0.25rem' }}
+                  title="Supprimer"
+                >✕</button>
+              )}
+            <Link href={`/forum/${id}/${topic.id}`} style={{ textDecoration: 'none' }}>
               <div
                 style={{ backgroundColor: 'white', borderRadius: '14px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateX(4px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)' }}
@@ -176,6 +193,7 @@ export default function ForumCategoryPage() {
                 </div>
               </div>
             </Link>
+            </div>
           )
         })}
       </div>
