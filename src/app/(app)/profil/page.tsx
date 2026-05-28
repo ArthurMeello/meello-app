@@ -421,6 +421,11 @@ export default function ProfilPage() {
                 <span style={{ color: '#E8501A', fontSize: '0.82rem', fontWeight: 500 }}>{profile.city}</span>
               </div>
             )}
+            {profile.member_since && (
+              <div style={{ marginTop: '0.2rem', fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.4 }}>
+                Membre depuis {new Date(profile.member_since).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <a

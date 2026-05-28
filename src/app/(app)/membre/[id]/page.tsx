@@ -329,6 +329,11 @@ export default function MembrePublicPage() {
                   {id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="Admin" title="Fondateur Meello" style={{ width: '20px', height: '20px', flexShrink: 0 }} />}
                 </div>
                 <div style={{ color: '#2D2D2D', opacity: 0.6, fontSize: '0.9rem' }}>{profile.activity}</div>
+                {profile.member_since && (
+                  <div style={{ marginTop: '0.2rem', fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.4 }}>
+                    Membre depuis {new Date(profile.member_since).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                  </div>
+                )}
               </div>
             </div>
 
