@@ -83,9 +83,9 @@ export async function POST(req: NextRequest) {
     }),
   })
 
-  // Mail 2 : rappel le jour J — planifié via Brevo transactionnel avec sendAt
+  // Mail 2 : rappel 4h avant l'événement — planifié via Brevo avec scheduledAt
   const reminderDate = new Date(eventDate)
-  reminderDate.setHours(8, 0, 0, 0) // 8h le matin du jour J
+  reminderDate.setTime(reminderDate.getTime() - 4 * 60 * 60 * 1000) // 4h avant
 
   // On n'envoie le rappel que si c'est dans le futur
   if (reminderDate > new Date()) {
