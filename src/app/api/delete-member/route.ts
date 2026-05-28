@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   const supabase = createAdminClient()
 
-  // Supprimer les données liées (Supabase CASCADE gère le reste si les FK sont configurées)
+  // Supprimer toutes les données liées avant le profil
   await supabase.from('notifications').delete().eq('user_id', userId)
   await supabase.from('notifications').delete().eq('from_user_id', userId)
   await supabase.from('reactions').delete().eq('author_id', userId)
@@ -29,6 +29,24 @@ export async function POST(req: NextRequest) {
   await supabase.from('messages').delete().eq('receiver_id', userId)
   await supabase.from('connections').delete().or(`requester_id.eq.${userId},receiver_id.eq.${userId}`)
   await supabase.from('conversations').delete().or(`participant1_id.eq.${userId},participant2_id.eq.${userId}`)
+  // Forum
+  await supabase.from('forum_replies').delete().eq('author_id', userId)
+  await supabase.from('forum_topics').delete().eq('author_id', userId)
+  // Portfolio & services
+  await supabase.from('portfolio_items').delete().eq('profile_id', userId)
+  await supabase.from('service_items').delete().eq('profile_id', userId)
+  // Recommandations (données et reçues)
+  await supabase.from('recommendations').delete().eq('author_id', userId)
+  await supabase.from('recommendations').delete().eq('recommended_id', userId)
+  await supabase.from('recommendations').delete().eq('target_id', userId)
+  // Candidatures
+  await supabase.from('applications').delete().eq('user_id', userId)
+  // Événements
+  await supabase.from('event_participants').delete().eq('user_id', userId)
+  await supabase.from('events').delete().eq('author_id', userId)
+  // Parrainage
+  await supabase.from('referrals').delete().or(`referrer_id.eq.${userId},referred_id.eq.${userId}`)
+  // Profil en dernier
   await supabase.from('profiles').delete().eq('id', userId)
 
   // Supprimer le compte auth (doit être en dernier)
