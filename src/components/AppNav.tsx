@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: '/forum', label: 'La Communauté', svg: '/icons/communaute.svg' },
   { href: '/qg', label: 'Le QG', svg: '/icons/megaphone.svg' },
   { href: '/evenements', label: 'Événements', svg: '/icons/evenements.svg' },
+  { href: '/messages', label: 'Mes conversations', svg: '/icons/chat.svg' },
   { href: '/reseau', label: 'Mon Réseau', svg: '/icons/network.svg' },
 ]
 
