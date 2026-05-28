@@ -6,39 +6,37 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 
 const COMPLETION_FIELDS = [
-  { key: 'avatar_url', label: 'Photo de profil', points: 5 },
+  { key: 'avatar_url', label: 'Photo de profil', points: 10 },
   { key: 'bio', label: 'Bio complète', points: 20 },
   { key: 'activity', label: 'Secteur d activite', points: 10 },
   { key: 'city', label: 'Ville', points: 5 },
   { key: 'website', label: 'Site web', points: 10 },
-  { key: 'company_number', label: "Numéro d'entreprise", points: 5 },
+  { key: 'company_number', label: "Numéro d'entreprise", points: 10 },
 ]
 
 const SOCIAL_KEYS = ['linkedin', 'instagram', 'facebook', 'pinterest', 'tiktok']
 
-function getCompletion(profile: Profile, hasReco: boolean, hasPortfolio: boolean, hasServices: boolean) {
+function getCompletion(profile: Profile, hasPortfolio: boolean, hasServices: boolean) {
   let total = 0
   for (const f of COMPLETION_FIELDS) {
     if (profile[f.key as keyof Profile]) total += f.points
   }
   if (SOCIAL_KEYS.some(k => profile[k as keyof Profile])) total += 5
-  if (hasReco) total += 10
   if (hasPortfolio) total += 15
   if (hasServices) total += 15
   return Math.min(total, 100)
 }
 
-function getCompletionTip(profile: Profile, hasReco: boolean, hasPortfolio: boolean, hasServices: boolean): string | null {
+function getCompletionTip(profile: Profile, hasPortfolio: boolean, hasServices: boolean): string | null {
   if (!profile.bio) return 'Rédige ta bio pour gagner 20% : c\'est ce que les membres lisent en premier.'
   if (!hasPortfolio) return 'Ajoute un projet à ton portfolio pour gagner 15% et montrer concrètement ce que tu fais.'
   if (!hasServices) return 'Présente tes services pour gagner 15% : c\'est ta vitrine commerciale dans l\'annuaire.'
   if (!profile.website) return 'Ajoute ton site web pour gagner 10% et renvoyer du trafic vers toi.'
   if (!profile.activity) return 'Précise ton activité pour gagner 10% : les membres cherchent des prestataires par métier.'
-  if (!hasReco) return 'Demande une recommandation à un membre pour gagner 10% : rien ne vaut la preuve sociale.'
+  if (!profile.avatar_url) return 'Ajoute une photo de profil pour gagner 10% : un visage inspire confiance.'
+  if (!profile.company_number) return 'Renseigne ton numéro d\'entreprise pour gagner 10% et rassurer tes futurs clients.'
   if (!SOCIAL_KEYS.some(k => profile[k as keyof Profile])) return 'Ajoute au moins un réseau social pour gagner 5% et faciliter les prises de contact.'
   if (!profile.city) return 'Indique ta ville pour gagner 5% : les membres aiment collaborer en local.'
-  if (!profile.avatar_url) return 'Ajoute une photo de profil pour gagner 5% : un visage inspire confiance.'
-  if (!profile.company_number) return 'Renseigne ton numéro d\'entreprise pour gagner 5% et rassurer tes futurs clients.'
   return null
 }
 
@@ -372,8 +370,8 @@ export default function ProfilPage() {
     )
   }
 
-  const completion = getCompletion(profile, hasReco, portfolio.length > 0, services.length > 0)
-  const completionTip = completion < 100 ? getCompletionTip(profile, hasReco, portfolio.length > 0, services.length > 0) : null
+  const completion = getCompletion(profile, portfolio.length > 0, services.length > 0)
+  const completionTip = completion < 100 ? getCompletionTip(profile, portfolio.length > 0, services.length > 0) : null
 
   // Badge "nouveau" dynamique : affiché pendant 30 jours après l'inscription
   const isNew = profile.member_since && !profile.hide_new_badge
