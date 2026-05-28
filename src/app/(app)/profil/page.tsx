@@ -485,10 +485,10 @@ export default function ProfilPage() {
         {/* Completion */}
         <div style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-            <span style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.6 }}>
-              {completion === 100 ? 'Badge Profil complet' : 'Complétion du profil'}
+            <span style={{ fontSize: '0.85rem', color: completion === 100 ? '#7A9E7E' : '#2D2D2D', opacity: completion === 100 ? 1 : 0.6, fontWeight: completion === 100 ? 600 : 400 }}>
+              {completion === 100 ? 'Bravo ! Ton profil est complet' : 'Complétion du profil'}
             </span>
-            <span style={{ fontWeight: 700, color: '#E8501A', fontSize: '0.9rem' }}>{completion}%</span>
+            <span style={{ fontWeight: 700, color: completion === 100 ? '#7A9E7E' : '#E8501A', fontSize: '0.9rem' }}>{completion}%</span>
           </div>
           <div style={{ height: '8px', backgroundColor: '#F5F0E8', borderRadius: '4px', overflow: 'hidden' }}>
             <div style={{
