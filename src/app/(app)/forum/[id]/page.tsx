@@ -49,7 +49,10 @@ interface Topic {
   profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null } | null
   reply_count?: number
   last_reply_at?: string
+  reactions?: { emoji: string; user_id: string; profiles: { first_name: string; last_name: string } | null }[]
 }
+
+const FORUM_EMOJIS = ['👍', '🔥', '❤️']
 
 type SortMode = 'recent' | 'actif'
 
@@ -65,7 +68,22 @@ export default function ForumCategoryPage() {
   const [submitting, setSubmitting] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [reactionPopover, setReactionPopover] = useState<{ topicId: string; emoji: string } | null>(null)
   const newTopicTextareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const toggleReaction = async (topicId: string, emoji: string) => {
+    if (!currentUserId) return
+    const supabase = createClient()
+    const topic = topics.find(t => t.id === topicId)
+    const existing = topic?.reactions?.find(r => r.emoji === emoji && r.user_id === currentUserId)
+    if (existing) {
+      await supabase.from('forum_topic_reactions').delete().eq('topic_id', topicId).eq('user_id', currentUserId).eq('emoji', emoji)
+      setTopics(prev => prev.map(t => t.id === topicId ? { ...t, reactions: t.reactions?.filter(r => !(r.emoji === emoji && r.user_id === currentUserId)) } : t))
+    } else {
+      const { data } = await supabase.from('forum_topic_reactions').insert({ topic_id: topicId, user_id: currentUserId, emoji }).select('emoji, user_id, profiles(first_name, last_name)').single()
+      if (data) setTopics(prev => prev.map(t => t.id === topicId ? { ...t, reactions: [...(t.reactions || []), data] } : t))
+    }
+  }
 
   const loadTopics = async (supabase: any) => {
     const { data: topicsData, error: err } = await supabase
@@ -77,7 +95,6 @@ export default function ForumCategoryPage() {
     if (err) { console.error('topics error', err); return }
 
     if (topicsData) {
-      // Enrichir avec le nombre de réponses et la date de la dernière réponse
       const enriched = await Promise.all(topicsData.map(async (topic: any) => {
         const { count, data: replies } = await supabase
           .from('forum_replies')
@@ -86,7 +103,11 @@ export default function ForumCategoryPage() {
           .order('created_at', { ascending: false })
           .limit(1)
         const last_reply_at = replies?.[0]?.created_at || topic.created_at
-        return { ...topic, reply_count: count || 0, last_reply_at }
+        const { data: reactions } = await supabase
+          .from('forum_topic_reactions')
+          .select('emoji, user_id, profiles(first_name, last_name)')
+          .eq('topic_id', topic.id)
+        return { ...topic, reply_count: count || 0, last_reply_at, reactions: reactions || [] }
       }))
       setTopics(enriched)
     }
@@ -144,7 +165,7 @@ export default function ForumCategoryPage() {
   }
 
   return (
-    <div style={{ maxWidth: '760px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '760px', margin: '0 auto' }} onClick={() => setReactionPopover(null)}>
 
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
@@ -199,38 +220,86 @@ export default function ForumCategoryPage() {
                   title="Supprimer"
                 >✕</button>
               )}
-            <Link href={`/forum/${id}/${topic.id}`} style={{ textDecoration: 'none' }}>
-              <div
-                style={{ backgroundColor: 'white', borderRadius: '14px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateX(4px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)' }}
-              >
-                <div style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.97rem', marginBottom: '0.35rem' }}>{topic.title}</div>
-                <p style={{ fontSize: '0.83rem', color: '#2D2D2D', opacity: 0.5, margin: '0 0 0.75rem', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                  {stripHtml(topic.content)}
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 700, overflow: 'hidden', flexShrink: 0 }}>
-                      {topic.profiles?.avatar_url ? <img src={topic.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+            <div style={{ backgroundColor: 'white', borderRadius: '14px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+              <Link href={`/forum/${id}/${topic.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                <div
+                  style={{ padding: '1.25rem 1.25rem 0.85rem', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateX(4px)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = '' }}
+                >
+                  <div style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.97rem', marginBottom: '0.35rem' }}>{topic.title}</div>
+                  <p style={{ fontSize: '0.83rem', color: '#2D2D2D', opacity: 0.5, margin: '0 0 0.75rem', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {stripHtml(topic.content)}
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 700, overflow: 'hidden', flexShrink: 0 }}>
+                        {topic.profiles?.avatar_url ? <img src={topic.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+                      </div>
+                      <span style={{ fontSize: '0.78rem', color: '#2D2D2D', fontWeight: 600 }}>
+                        {topic.profiles?.first_name} {topic.profiles?.last_name}
+                      </span>
+                      {topic.author_id === ADMIN_ID && (
+                        <img src="/icons/badge-check.svg" alt="Vérifié" title="Fondateur Meello" style={{ width: '14px', height: '14px', flexShrink: 0 }} />
+                      )}
                     </div>
-                    <span style={{ fontSize: '0.78rem', color: '#2D2D2D', fontWeight: 600 }}>
-                      {topic.profiles?.first_name} {topic.profiles?.last_name}
+                    <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.3 }}>·</span>
+                    <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.4 }}>{formatDate(topic.created_at)}</span>
+                    <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.3 }}>·</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.78rem', color: '#E8501A', fontWeight: 600 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      {topic.reply_count} réponse{topic.reply_count !== 1 ? 's' : ''}
                     </span>
-                    {topic.author_id === ADMIN_ID && (
-                      <img src="/icons/badge-check.svg" alt="Vérifié" title="Fondateur Meello" style={{ width: '14px', height: '14px', flexShrink: 0 }} />
-                    )}
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.3 }}>·</span>
-                  <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.4 }}>{formatDate(topic.created_at)}</span>
-                  <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.3 }}>·</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.78rem', color: '#E8501A', fontWeight: 600 }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    {topic.reply_count} réponse{topic.reply_count !== 1 ? 's' : ''}
-                  </span>
                 </div>
+              </Link>
+              {/* Réactions */}
+              <div style={{ padding: '0.5rem 1.25rem 0.85rem', borderTop: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                {FORUM_EMOJIS.map(emoji => {
+                  const reactors = (topic.reactions || []).filter(r => r.emoji === emoji)
+                  const hasReacted = reactors.some(r => r.user_id === currentUserId)
+                  const popoverKey = `${topic.id}-${emoji}`
+                  const isOpen = reactionPopover?.topicId === topic.id && reactionPopover?.emoji === emoji
+                  return (
+                    <div key={emoji} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <button
+                        onClick={e => { e.preventDefault(); toggleReaction(topic.id, emoji) }}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                          backgroundColor: hasReacted ? '#FFF0ED' : '#F5F0E8',
+                          border: hasReacted ? '1.5px solid #E8501A' : '1.5px solid transparent',
+                          borderRadius: '20px', padding: '0.2rem 0.55rem',
+                          fontSize: '0.82rem', cursor: 'pointer', fontWeight: hasReacted ? 700 : 400,
+                          color: hasReacted ? '#E8501A' : '#2D2D2D',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {emoji}{reactors.length > 0 && <span style={{ fontSize: '0.75rem' }}>{reactors.length}</span>}
+                      </button>
+                      {reactors.length > 0 && (
+                        <button
+                          onClick={e => { e.preventDefault(); setReactionPopover(isOpen ? null : { topicId: topic.id, emoji }) }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}
+                        >▾</button>
+                      )}
+                      {isOpen && (
+                        <div
+                          style={{ position: 'absolute', bottom: '110%', left: 0, backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', zIndex: 100, minWidth: '140px', whiteSpace: 'nowrap' }}
+                          onClick={e => e.preventDefault()}
+                        >
+                          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2D2D2D', opacity: 0.4, marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{emoji} {reactors.length}</div>
+                          {reactors.map((r, i) => (
+                            <div key={i} style={{ fontSize: '0.83rem', color: '#2D2D2D', padding: '0.15rem 0' }}>
+                              {r.profiles?.first_name} {r.profiles?.last_name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
-            </Link>
+            </div>
             </div>
           )
         })}
