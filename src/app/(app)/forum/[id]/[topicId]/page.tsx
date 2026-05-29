@@ -268,7 +268,7 @@ export default function ForumTopicPage() {
         ) : (
           <>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '1.25rem' }}>
-              <h1 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.4rem', color: '#2D2D2D', margin: 0, flex: 1 }}>{topic.title}</h1>
+              <h1 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.4rem', color: '#2D2D2D', margin: 0, flex: 1, fontWeight: 700 }}>{topic.title}</h1>
               {canEditTopic && (
                 <ActionButtons
                   onEdit={() => { setEditTitle(topic.title); setEditContent(topic.content); setEditingTopic(true) }}
