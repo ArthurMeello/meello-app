@@ -161,7 +161,7 @@ export default function ForumCategoryPage() {
         </div>
         {currentUserId && (
           <button onClick={() => setNewTopicModal(true)} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '10px', padding: '0.6rem 1.25rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
-            + Nouveau sujet
+            {category?.name === 'Présentations' ? '👋 Se présenter' : '+ Nouveau sujet'}
           </button>
         )}
       </div>
