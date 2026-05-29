@@ -604,10 +604,11 @@ export default function ProfilPage() {
               <label style={labelStyle}>Bio</label>
               <textarea
                 value={form.bio || ''}
-                onChange={e => setForm(p => ({ ...p, bio: e.target.value }))}
+                onChange={e => { setForm(p => ({ ...p, bio: e.target.value })); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+                ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
                 rows={3}
                 placeholder="Decris-toi en quelques mots..."
-                style={{ ...inputStyle, resize: 'vertical' }}
+                style={{ ...inputStyle, resize: 'none', overflow: 'hidden' }}
               />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
