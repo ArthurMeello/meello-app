@@ -289,7 +289,7 @@ export default function ForumTopicPage() {
                   </div>
                   {(topic.profiles?.activity || topic.profiles?.city) && (
                     <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.45, marginTop: '0.1rem' }}>
-                      {topic.profiles.activity}{topic.profiles.activity && topic.profiles.city ? ` · à ${topic.profiles.city}` : topic.profiles.city ? `à ${topic.profiles.city}` : ''}
+                      {topic.profiles.activity}{topic.profiles.activity && topic.profiles.city ? ` à ${topic.profiles.city}` : topic.profiles.city ? `à ${topic.profiles.city}` : ''}
                     </div>
                   )}
                 </div>
@@ -331,7 +331,7 @@ export default function ForumTopicPage() {
                         </div>
                         {(reply.profiles?.activity || reply.profiles?.city) && (
                           <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.45, marginTop: '0.1rem' }}>
-                            {reply.profiles.activity}{reply.profiles.activity && reply.profiles.city ? ` · à ${reply.profiles.city}` : reply.profiles.city ? `à ${reply.profiles.city}` : ''}
+                            {reply.profiles.activity}{reply.profiles.activity && reply.profiles.city ? ` à ${reply.profiles.city}` : reply.profiles.city ? `à ${reply.profiles.city}` : ''}
                           </div>
                         )}
                       </div>
