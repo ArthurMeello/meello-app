@@ -5,6 +5,38 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 
+// ─── XP / Niveaux ─────────────────────────────────────────────────────────────
+function getLevelFromXP(totalXP: number): { level: number; currentXP: number; xpToNext: number } {
+  let level = 1
+  let accumulated = 0
+  while (level < 50) {
+    const xpForNext = Math.floor(50 * Math.pow(1.18, level - 1))
+    if (accumulated + xpForNext > totalXP) {
+      return { level, currentXP: totalXP - accumulated, xpToNext: xpForNext }
+    }
+    accumulated += xpForNext
+    level++
+  }
+  return { level: 50, currentXP: 0, xpToNext: 0 }
+}
+
+const LEVEL_COLORS = [
+  '#9E9E9E', // 1-9 : gris
+  '#4CAF50', // 10-19 : vert
+  '#2196F3', // 20-29 : bleu
+  '#9C27B0', // 30-39 : violet
+  '#FF9800', // 40-49 : orange
+  '#E8501A', // 50 : rouge Meello
+]
+function getLevelColor(level: number): string {
+  if (level >= 50) return LEVEL_COLORS[5]
+  if (level >= 40) return LEVEL_COLORS[4]
+  if (level >= 30) return LEVEL_COLORS[3]
+  if (level >= 20) return LEVEL_COLORS[2]
+  if (level >= 10) return LEVEL_COLORS[1]
+  return LEVEL_COLORS[0]
+}
+
 const COMPLETION_FIELDS = [
   { key: 'avatar_url', label: 'Photo de profil', points: 10 },
   { key: 'bio', label: 'Bio complète', points: 20 },
@@ -514,6 +546,56 @@ export default function ProfilPage() {
             </div>
           )}
         </div>
+
+        {/* Niveau XP */}
+        {(() => {
+          const totalXP = profile.xp ?? 0
+          const { level, currentXP, xpToNext } = getLevelFromXP(totalXP)
+          const color = getLevelColor(level)
+          const isMax = level === 50
+          const pct = isMax ? 100 : Math.round((currentXP / xpToNext) * 100)
+          const memberSince = new Date(profile.member_since || Date.now())
+          const daysSinceJoin = Math.floor((Date.now() - memberSince.getTime()) / (1000 * 60 * 60 * 24))
+          const boostActive = daysSinceJoin <= 30
+          return (
+            <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#F9F9F9', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <div style={{
+                    width: '36px', height: '36px', borderRadius: '50%',
+                    backgroundColor: color, color: 'white',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, fontSize: '0.85rem', flexShrink: 0,
+                  }}>
+                    {level}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D' }}>Niveau {level}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.5 }}>{totalXP} XP au total</div>
+                  </div>
+                </div>
+                {boostActive && (
+                  <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#F5A623', backgroundColor: '#FFF8E8', padding: '0.2rem 0.6rem', borderRadius: '20px', border: '1px solid rgba(245,166,35,0.3)' }}>
+                    ⚡ Boost x2 actif
+                  </div>
+                )}
+              </div>
+              {!isMax ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.45, marginBottom: '0.3rem' }}>
+                    <span>{currentXP} / {xpToNext} XP</span>
+                    <span>Niveau {level + 1}</span>
+                  </div>
+                  <div style={{ height: '6px', backgroundColor: '#E8E8E8', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, backgroundColor: color, borderRadius: '3px', transition: 'width 0.6s ease' }} />
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: '0.82rem', color, fontWeight: 600, marginTop: '0.2rem' }}>🏆 Niveau maximum atteint !</div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Form edition */}
         {editing ? (

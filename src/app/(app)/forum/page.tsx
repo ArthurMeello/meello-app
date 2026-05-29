@@ -76,7 +76,7 @@ export default function ForumPage() {
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     </svg>
                     <span style={{ fontSize: '0.8rem', color: isFirst ? 'white' : '#E8501A', fontWeight: 600 }}>
-                      {cat.topic_count} sujet{cat.topic_count !== 1 ? 's' : ''}
+                      {cat.topic_count} {cat.name.toLowerCase().includes('présentation') ? (cat.topic_count !== 1 ? 'présentations' : 'présentation') : (cat.topic_count !== 1 ? 'sujets' : 'sujet')}
                     </span>
                   </div>
                 </div>
