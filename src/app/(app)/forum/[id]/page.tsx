@@ -138,7 +138,7 @@ export default function ForumCategoryPage() {
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
           {(['recent', 'actif'] as SortMode[]).map(s => (
             <button key={s} onClick={() => setSort(s)} style={{ padding: '0.35rem 0.9rem', borderRadius: '20px', border: `1.5px solid ${sort === s ? '#E8501A' : '#E8E3D9'}`, backgroundColor: sort === s ? '#FFF0ED' : 'white', color: sort === s ? '#E8501A' : '#2D2D2D', fontWeight: sort === s ? 700 : 400, fontSize: '0.82rem', cursor: 'pointer', opacity: sort !== s ? 0.6 : 1 }}>
-              {s === 'recent' ? 'Les plus récents' : 'Les plus actifs'}
+              {s === 'recent' ? 'Les plus récentes' : 'Les plus actives'}
             </button>
           ))}
         </div>
