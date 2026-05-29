@@ -329,10 +329,10 @@ export default function ForumCategoryPage() {
             <textarea
               ref={newTopicTextareaRef}
               value={content}
-              onChange={e => setContent(e.target.value)}
+              onChange={e => { setContent(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
               placeholder="Décris ton sujet en détail..."
               rows={6}
-              style={{ width: '100%', border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.75rem 1rem', fontSize: '0.95rem', fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.75rem 1rem', fontSize: '0.95rem', fontFamily: 'inherit', outline: 'none', resize: 'none', overflow: 'hidden', boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', justifyContent: 'flex-end' }}>
               <button onClick={() => { setNewTopicModal(false); setError(null) }} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem' }}>Annuler</button>
