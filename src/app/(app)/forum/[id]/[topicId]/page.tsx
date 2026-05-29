@@ -279,13 +279,15 @@ export default function ForumTopicPage() {
             <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
               <Link href={`/membre/${topic.author_id}`}><Avatar profile={topic.profiles} size={42} /></Link>
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
-                  <Link href={`/membre/${topic.author_id}`} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <span style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.92rem' }}>{topic.profiles?.first_name} {topic.profiles?.last_name}</span>
-                    {topic.author_id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="Fondateur" style={{ width: '16px', height: '16px' }} />}
-                  </Link>
-                  {topic.profiles?.activity && <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.45 }}>{topic.profiles.activity}</span>}
-                  <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.35 }}>· {formatDate(topic.created_at)}</span>
+                <div style={{ marginBottom: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Link href={`/membre/${topic.author_id}`} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <span style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.92rem' }}>{topic.profiles?.first_name} {topic.profiles?.last_name}</span>
+                      {topic.author_id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="Fondateur" style={{ width: '16px', height: '16px' }} />}
+                    </Link>
+                    <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.35 }}>· {formatDate(topic.created_at)}</span>
+                  </div>
+                  {topic.profiles?.activity && <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.45, marginTop: '0.1rem' }}>{topic.profiles.activity}</div>}
                 </div>
                 <p style={{ color: '#2D2D2D', lineHeight: 1.7, margin: 0, fontSize: '0.95rem', whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: topic.content }} />
               </div>
@@ -309,19 +311,21 @@ export default function ForumTopicPage() {
                   <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
                     <Link href={`/membre/${reply.author_id}`}><Avatar profile={reply.profiles} size={36} /></Link>
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                        <Link href={`/membre/${reply.author_id}`} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <span style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.88rem' }}>{reply.profiles?.first_name} {reply.profiles?.last_name}</span>
-                          {reply.author_id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="Fondateur" style={{ width: '15px', height: '15px' }} />}
-                        </Link>
-                        {reply.profiles?.activity && <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.45 }}>{reply.profiles.activity}</span>}
-                        <span style={{ fontSize: '0.73rem', color: '#2D2D2D', opacity: 0.35 }}>· {formatDate(reply.created_at)}</span>
-                        {canEditReply && !isEditingThis && (
-                          <ActionButtons
-                            onEdit={() => { setEditingReplyId(reply.id); setEditReplyContent(reply.content) }}
-                            onDelete={() => deleteReply(reply.id)}
-                          />
-                        )}
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <Link href={`/membre/${reply.author_id}`} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <span style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.88rem' }}>{reply.profiles?.first_name} {reply.profiles?.last_name}</span>
+                            {reply.author_id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="Fondateur" style={{ width: '15px', height: '15px' }} />}
+                          </Link>
+                          <span style={{ fontSize: '0.73rem', color: '#2D2D2D', opacity: 0.35 }}>· {formatDate(reply.created_at)}</span>
+                          {canEditReply && !isEditingThis && (
+                            <ActionButtons
+                              onEdit={() => { setEditingReplyId(reply.id); setEditReplyContent(reply.content) }}
+                              onDelete={() => deleteReply(reply.id)}
+                            />
+                          )}
+                        </div>
+                        {reply.profiles?.activity && <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.45, marginTop: '0.1rem' }}>{reply.profiles.activity}</div>}
                       </div>
                       {isEditingThis ? (
                         <div>
