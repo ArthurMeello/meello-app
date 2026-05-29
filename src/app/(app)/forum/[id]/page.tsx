@@ -181,7 +181,12 @@ export default function ForumCategoryPage() {
                     <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 700, overflow: 'hidden', flexShrink: 0 }}>
                       {topic.profiles?.avatar_url ? <img src={topic.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
                     </div>
-                    <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.55 }}>{topic.profiles?.first_name} {topic.profiles?.last_name}</span>
+                    <span style={{ fontSize: '0.78rem', color: '#2D2D2D', fontWeight: 600 }}>
+                      {topic.profiles?.first_name} {topic.profiles?.last_name}
+                    </span>
+                    {topic.author_id === ADMIN_ID && (
+                      <img src="/icons/badge-check.svg" alt="Vérifié" title="Fondateur Meello" style={{ width: '14px', height: '14px', flexShrink: 0 }} />
+                    )}
                   </div>
                   <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.3 }}>·</span>
                   <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.4 }}>{formatDate(topic.created_at)}</span>
