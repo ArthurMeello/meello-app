@@ -17,9 +17,9 @@ export async function POST(req: NextRequest) {
   const email = userData.user.email
 
   const { data: linkData, error } = await supabase.auth.admin.generateLink({
-    type: 'invite',
+    type: 'recovery',
     email,
-    options: { redirectTo: 'https://app.meello.fr/auth/callback' },
+    options: { redirectTo: 'https://app.meello.fr/bienvenue' },
   })
 
   if (error || !linkData) {
