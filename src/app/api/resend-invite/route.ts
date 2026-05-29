@@ -4,13 +4,20 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { emailTemplate } from '@/lib/emailTemplate'
 
 export async function POST(req: NextRequest) {
-  const { userId, email, firstName } = await req.json()
-  if (!userId || !email) return NextResponse.json({ error: 'Paramètres manquants' }, { status: 400 })
+  const { userId, firstName } = await req.json()
+  if (!userId) return NextResponse.json({ error: 'Paramètres manquants' }, { status: 400 })
 
   const supabase = createAdminClient()
 
+  // Récupérer l'email depuis auth.users (source fiable)
+  const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId)
+  if (userError || !userData?.user?.email) {
+    return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 })
+  }
+  const email = userData.user.email
+
   const { data: linkData, error } = await supabase.auth.admin.generateLink({
-    type: 'invite',
+    type: 'recovery',
     email,
     options: { redirectTo: 'https://app.meello.fr/auth/callback' },
   })
