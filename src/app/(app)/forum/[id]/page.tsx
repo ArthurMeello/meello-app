@@ -1,12 +1,40 @@
 // @ts-nocheck
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+
+function applyFormat(textarea: HTMLTextAreaElement, tag: 'strong' | 'em', value: string, setValue: (v: string) => void) {
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const selected = value.slice(start, end)
+  if (!selected) return
+  const open = `<${tag}>`
+  const close = `</${tag}>`
+  const newValue = value.slice(0, start) + open + selected + close + value.slice(end)
+  setValue(newValue)
+  setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + open.length, end + open.length) }, 0)
+}
+
+function FormatToolbar({ textareaRef, value, setValue }: { textareaRef: React.RefObject<HTMLTextAreaElement>; value: string; setValue: (v: string) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.35rem' }}>
+      {[
+        { tag: 'strong' as const, label: 'G', style: { fontWeight: 700 } },
+        { tag: 'em' as const, label: 'I', style: { fontStyle: 'italic' } },
+      ].map(({ tag, label, style }) => (
+        <button key={tag} type="button" onMouseDown={e => { e.preventDefault(); if (textareaRef.current) applyFormat(textareaRef.current, tag, value, setValue) }}
+          style={{ ...style, background: 'none', border: '1px solid #E8E3D9', borderRadius: '5px', width: '28px', height: '26px', cursor: 'pointer', fontSize: '0.85rem', color: '#2D2D2D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 interface Topic {
   id: string
@@ -33,6 +61,7 @@ export default function ForumCategoryPage() {
   const [submitting, setSubmitting] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const newTopicTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   const loadTopics = async (supabase: any) => {
     const { data: topicsData, error: err } = await supabase
@@ -223,7 +252,9 @@ export default function ForumCategoryPage() {
               placeholder="Titre du sujet"
               style={{ width: '100%', border: '1.5px solid #E8E3D9', borderRadius: '10px', padding: '0.75rem 1rem', fontSize: '0.95rem', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: '0.75rem' }}
             />
+            <FormatToolbar textareaRef={newTopicTextareaRef} value={content} setValue={setContent} />
             <textarea
+              ref={newTopicTextareaRef}
               value={content}
               onChange={e => setContent(e.target.value)}
               placeholder="Décris ton sujet en détail..."

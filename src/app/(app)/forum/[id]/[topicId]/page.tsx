@@ -25,6 +25,51 @@ interface Topic {
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 
+// ─── Toolbar gras / italique ──────────────────────────────────────────────────
+function applyFormat(
+  textarea: HTMLTextAreaElement,
+  tag: 'strong' | 'em',
+  value: string,
+  setValue: (v: string) => void
+) {
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const selected = value.slice(start, end)
+  if (!selected) return
+  const open = `<${tag}>`
+  const close = `</${tag}>`
+  const newValue = value.slice(0, start) + open + selected + close + value.slice(end)
+  setValue(newValue)
+  setTimeout(() => {
+    textarea.focus()
+    textarea.setSelectionRange(start + open.length, end + open.length)
+  }, 0)
+}
+
+function FormatToolbar({ textareaRef, value, setValue }: { textareaRef: React.RefObject<HTMLTextAreaElement>; value: string; setValue: (v: string) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.35rem' }}>
+      {[
+        { tag: 'strong' as const, label: 'G', title: 'Gras', style: { fontWeight: 700 } },
+        { tag: 'em' as const, label: 'I', title: 'Italique', style: { fontStyle: 'italic' } },
+      ].map(({ tag, label, title, style }) => (
+        <button
+          key={tag}
+          type="button"
+          title={title}
+          onMouseDown={e => {
+            e.preventDefault()
+            if (textareaRef.current) applyFormat(textareaRef.current, tag, value, setValue)
+          }}
+          style={{ ...style, background: 'none', border: '1px solid #E8E3D9', borderRadius: '5px', width: '28px', height: '26px', cursor: 'pointer', fontSize: '0.85rem', color: '#2D2D2D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export default function ForumTopicPage() {
   const { id: categoryId, topicId } = useParams()
   const router = useRouter()
@@ -37,6 +82,8 @@ export default function ForumTopicPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentProfile, setCurrentProfile] = useState<any>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editTopicRef = useRef<HTMLTextAreaElement>(null)
+  const editReplyRef = useRef<HTMLTextAreaElement>(null)
 
   // Edition topic
   const [editingTopic, setEditingTopic] = useState(false)
@@ -198,7 +245,9 @@ export default function ForumTopicPage() {
               onChange={e => setEditTitle(e.target.value)}
               style={{ width: '100%', border: '1.5px solid #E8501A', borderRadius: '10px', padding: '0.75rem 1rem', fontSize: '1rem', fontFamily: 'var(--font-clash)', fontWeight: 700, outline: 'none', boxSizing: 'border-box', marginBottom: '0.75rem' }}
             />
+            <FormatToolbar textareaRef={editTopicRef} value={editContent} setValue={setEditContent} />
             <textarea
+              ref={editTopicRef}
               value={editContent}
               onChange={e => setEditContent(e.target.value)}
               rows={6}
@@ -233,7 +282,7 @@ export default function ForumTopicPage() {
                   {topic.profiles?.activity && <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.45 }}>{topic.profiles.activity}</span>}
                   <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.35 }}>· {formatDate(topic.created_at)}</span>
                 </div>
-                <p style={{ color: '#2D2D2D', lineHeight: 1.7, margin: 0, fontSize: '0.95rem', whiteSpace: 'pre-wrap' }}>{topic.content}</p>
+                <p style={{ color: '#2D2D2D', lineHeight: 1.7, margin: 0, fontSize: '0.95rem', whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: topic.content }} />
               </div>
             </div>
           </>
@@ -271,7 +320,9 @@ export default function ForumTopicPage() {
                       </div>
                       {isEditingThis ? (
                         <div>
+                          <FormatToolbar textareaRef={editReplyRef} value={editReplyContent} setValue={setEditReplyContent} />
                           <textarea
+                            ref={editReplyRef}
                             value={editReplyContent}
                             onChange={e => setEditReplyContent(e.target.value)}
                             rows={3}
@@ -285,7 +336,7 @@ export default function ForumTopicPage() {
                           </div>
                         </div>
                       ) : (
-                        <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: 0, fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{reply.content}</p>
+                        <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: 0, fontSize: '0.9rem', whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: reply.content }} />
                       )}
                     </div>
                   </div>
@@ -302,6 +353,7 @@ export default function ForumTopicPage() {
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
             <Avatar profile={currentProfile} size={36} />
             <div style={{ flex: 1 }}>
+              <FormatToolbar textareaRef={textareaRef} value={replyContent} setValue={setReplyContent} />
               <textarea
                 ref={textareaRef}
                 value={replyContent}
