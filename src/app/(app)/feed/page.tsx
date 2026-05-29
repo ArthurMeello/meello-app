@@ -1034,7 +1034,12 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
           )}
           {postBody && (
             <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {postBody.split(/(https?:\/\/[^\s]+|@[^\s]+|\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
+              {postBody.split(/(https?:\/\/[^\s]+|@\[[^\]]+\]\([^)]+\)|@[^\s]+|\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
+                // Mention avec ID : @[Prénom](userId)
+                const mentionWithId = part.match(/^@\[([^\]]+)\]\(([^)]+)\)$/)
+                if (mentionWithId) {
+                  return <a key={i} href={`/membre/${mentionWithId[2]}`} style={{ color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>@{mentionWithId[1]}</a>
+                }
                 // Lien markdown [texte](url)
                 const mdLink = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
                 if (mdLink) {
