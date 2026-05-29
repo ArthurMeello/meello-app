@@ -536,7 +536,8 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
   const [comments, setComments] = useState<{ id: string; content: string; author_id: string; parent_id: string | null; profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null } }[]>([])
   const [commentCount, setCommentCount] = useState(0)
   const [showComments, setShowComments] = useState(false)
-  const [reactions, setReactions] = useState<{ emoji: string; author_id: string }[]>([])
+  const [reactions, setReactions] = useState<{ emoji: string; author_id: string; profiles?: { first_name: string; last_name: string } | null }[]>([])
+  const [reactionPopover, setReactionPopover] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [editingPost, setEditingPost] = useState(false)
   const [editPostContent, setEditPostContent] = useState(post.content || '')
@@ -580,7 +581,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     const supabase = createClient()
     const { data } = await supabase
       .from('reactions')
-      .select('emoji, author_id')
+      .select('emoji, author_id, profiles(first_name, last_name)')
       .eq('post_id', post.id)
     if (data) setReactions(data)
   }
@@ -903,7 +904,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
   const postBody = hasTitle ? lines.slice(1).join('\n') : post.content
 
   return (
-    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', opacity: deleting ? 0.5 : 1 }}>
+    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', opacity: deleting ? 0.5 : 1 }} onClick={() => setReactionPopover(null)}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
         <div style={{
@@ -1121,28 +1122,46 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
 
       {/* Réactions + Commenter */}
       <div style={{ paddingTop: '0.75rem', borderTop: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        {reactionCounts.map(({ emoji, count, active }) => (
-          <button
-            key={emoji}
-            onClick={() => handleReaction(emoji)}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-              padding: '0.3rem 0.65rem', borderRadius: '20px',
-              border: active ? '1.5px solid #E8501A' : '1.5px solid #E8E3D9',
-              backgroundColor: active ? 'rgba(232,80,26,0.08)' : 'transparent',
-              cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-              color: active ? '#E8501A' : '#2D2D2D', transition: 'all 0.15s',
-            }}
-          >
-            {emoji} {count > 0 && <span style={{ fontSize: '0.8rem' }}>{count}</span>}
-          </button>
-        ))}
-
-        {totalReactions > 0 && (
-          <span style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.4 }}>
-            {totalReactions} réaction{totalReactions > 1 ? 's' : ''}
-          </span>
-        )}
+        {reactionCounts.map(({ emoji, count, active }) => {
+          const reactors = reactions.filter(r => r.emoji === emoji)
+          const isOpen = reactionPopover === emoji
+          return (
+            <div key={emoji} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+              <button
+                onClick={() => handleReaction(emoji)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                  padding: '0.3rem 0.65rem', borderRadius: '20px',
+                  border: active ? '1.5px solid #E8501A' : '1.5px solid #E8E3D9',
+                  backgroundColor: active ? 'rgba(232,80,26,0.08)' : 'transparent',
+                  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
+                  color: active ? '#E8501A' : '#2D2D2D', transition: 'all 0.15s',
+                }}
+              >
+                {emoji} {count > 0 && <span style={{ fontSize: '0.8rem' }}>{count}</span>}
+              </button>
+              {count > 0 && (
+                <button
+                  onClick={e => { e.stopPropagation(); setReactionPopover(isOpen ? null : emoji) }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}
+                >▾</button>
+              )}
+              {isOpen && (
+                <div
+                  style={{ position: 'absolute', bottom: '110%', left: 0, backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', zIndex: 100, minWidth: '140px', whiteSpace: 'nowrap' }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2D2D2D', opacity: 0.4, marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{emoji} {count}</div>
+                  {reactors.map((r, i) => (
+                    <div key={i} style={{ fontSize: '0.83rem', color: '#2D2D2D', padding: '0.15rem 0' }}>
+                      {r.profiles?.first_name} {r.profiles?.last_name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
 
         <button
           onClick={toggleComments}
