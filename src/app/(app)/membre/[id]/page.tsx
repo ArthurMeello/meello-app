@@ -438,7 +438,7 @@ export default function MembrePublicPage() {
             })()}
 
             {/* Bio */}
-            {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem' }}>{profile.bio}</p>}
+            {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem', whiteSpace: 'pre-wrap' }}>{profile.bio}</p>}
 
             {/* Compétences */}
             {(profile.skills || []).length > 0 && (

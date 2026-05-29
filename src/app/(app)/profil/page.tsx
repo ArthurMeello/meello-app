@@ -604,12 +604,16 @@ export default function ProfilPage() {
               <label style={labelStyle}>Bio</label>
               <textarea
                 value={form.bio || ''}
-                onChange={e => { setForm(p => ({ ...p, bio: e.target.value })); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+                onChange={e => { if (e.target.value.length > 500) return; setForm(p => ({ ...p, bio: e.target.value })); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
                 ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
+                maxLength={500}
                 rows={3}
                 placeholder="Decris-toi en quelques mots..."
                 style={{ ...inputStyle, resize: 'none', overflow: 'hidden' }}
               />
+              <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.35, marginTop: '0.25rem' }}>
+                {(form.bio || '').length}/500
+              </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
@@ -758,7 +762,7 @@ export default function ProfilPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: 0 }}>{profile.bio}</p>}
+            {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: 0, whiteSpace: 'pre-wrap' }}>{profile.bio}</p>}
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
               {profile.website && <a href={profile.website} target="_blank" rel="noopener noreferrer" title="Site web" className="social-icon" style={socialLinkStyle}><img src="/icons/website.svg" alt="Site web" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.linkedin && <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" className="social-icon" style={socialLinkStyle}><img src="/icons/linkedin.svg" alt="LinkedIn" style={{ width: '20px', height: '20px' }} /></a>}
