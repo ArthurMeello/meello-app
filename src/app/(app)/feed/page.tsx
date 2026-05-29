@@ -1048,10 +1048,11 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                   return <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
                 }
                 if (/^@/.test(part)) {
-                  const tag = part.slice(1).toLowerCase()
+                  const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+                  const tag = normalize(part.slice(1))
                   const member = allMembers.find(m =>
-                    `${m.first_name}${m.last_name}`.toLowerCase() === tag ||
-                    m.first_name.toLowerCase() === tag
+                    normalize(`${m.first_name}${m.last_name}`) === tag ||
+                    normalize(m.first_name) === tag
                   )
                   if (member) {
                     return <a key={i} href={`/membre/${member.id}`} style={{ color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>{part}</a>
