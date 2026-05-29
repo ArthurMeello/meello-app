@@ -1156,8 +1156,9 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                 {reactions.map((r, i) => {
                   const initials = `${(r.profiles?.first_name || '?')[0]}${(r.profiles?.last_name || '')[0] || ''}`.toUpperCase()
+                  const isAdmin = r.author_id === ADMIN_ID
                   return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <a key={i} href={`/membre/${r.author_id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }} onClick={() => setReactionPopover(null)}>
                       <div style={{ position: 'relative', flexShrink: 0 }}>
                         <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', overflow: 'hidden' }}>
                           {(r as any).profiles?.avatar_url
@@ -1166,8 +1167,11 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                         </div>
                         <span style={{ position: 'absolute', bottom: -2, right: -4, fontSize: '0.9rem', lineHeight: 1 }}>{r.emoji}</span>
                       </div>
-                      <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#2D2D2D' }}>{r.profiles?.first_name} {r.profiles?.last_name}</span>
-                    </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#2D2D2D' }}>{r.profiles?.first_name} {r.profiles?.last_name}</span>
+                        {isAdmin && <img src="/icons/badge-check.svg" alt="Vérifié" style={{ width: '14px', height: '14px', flexShrink: 0 }} />}
+                      </div>
+                    </a>
                   )
                 })}
               </div>
