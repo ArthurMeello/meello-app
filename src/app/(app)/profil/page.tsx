@@ -448,7 +448,7 @@ export default function ProfilPage() {
             {profile.city && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.1rem' }}>
                 <img src="/icons/pin.svg" alt="" style={{ width: '22px', height: '22px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)', flexShrink: 0 }} />
-                <span style={{ color: '#E8501A', fontSize: '0.82rem', fontWeight: 500 }}>{profile.city}</span>
+                <span style={{ color: '#E8501A', fontSize: '0.82rem', fontWeight: 380 }}>{profile.city}</span>
               </div>
             )}
             {profile.member_since && (
@@ -604,15 +604,15 @@ export default function ProfilPage() {
               <label style={labelStyle}>Bio</label>
               <textarea
                 value={form.bio || ''}
-                onChange={e => { if (e.target.value.length > 500) return; setForm(p => ({ ...p, bio: e.target.value })); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+                onChange={e => { if (e.target.value.length > 380) return; setForm(p => ({ ...p, bio: e.target.value })); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
                 ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
-                maxLength={500}
+                maxLength={380}
                 rows={3}
                 placeholder="Decris-toi en quelques mots..."
                 style={{ ...inputStyle, resize: 'none', overflow: 'hidden' }}
               />
               <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.35, marginTop: '0.25rem' }}>
-                {(form.bio || '').length}/500
+                {(form.bio || '').length}/380
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -928,7 +928,7 @@ export default function ProfilPage() {
             <input ref={serviceFileRef} type="file" accept="image/*" onChange={handleServiceFileChange} style={{ display: 'none' }} />
             <input value={serviceForm.title} onChange={e => setServiceForm(p => ({ ...p, title: e.target.value }))} placeholder="Titre du produit / service *" style={inputStyle} />
             <textarea value={serviceForm.description} onChange={e => setServiceForm(p => ({ ...p, description: e.target.value }))} placeholder="Description (facultatif)" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
-            <input value={serviceForm.price} onChange={e => setServiceForm(p => ({ ...p, price: e.target.value }))} placeholder="Prix (ex: 150€, À partir de 500€, Sur devis...)" style={inputStyle} />
+            <input value={serviceForm.price} onChange={e => setServiceForm(p => ({ ...p, price: e.target.value }))} placeholder="Prix (ex: 150€, À partir de 380€, Sur devis...)" style={inputStyle} />
             <input value={serviceForm.link} onChange={e => setServiceForm(p => ({ ...p, link: e.target.value }))} placeholder="Lien (facultatif)" style={inputStyle} />
             {serviceForm.link && (
               <input value={serviceForm.link_label} onChange={e => setServiceForm(p => ({ ...p, link_label: e.target.value }))} placeholder="Texte du bouton (ex: En savoir plus, Commander...)" style={inputStyle} />
@@ -971,7 +971,7 @@ export default function ProfilPage() {
 const labelStyle: React.CSSProperties = {
   display: 'block',
   marginBottom: '0.35rem',
-  fontWeight: 500,
+  fontWeight: 380,
   color: '#2D2D2D',
   fontSize: '0.88rem',
 }
