@@ -20,6 +20,10 @@ function applyFormat(textarea: HTMLTextAreaElement, tag: 'strong' | 'em', value:
   setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + open.length, end + open.length) }, 0)
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '')
+}
+
 function FormatToolbar({ textareaRef, value, setValue }: { textareaRef: React.RefObject<HTMLTextAreaElement>; value: string; setValue: (v: string) => void }) {
   return (
     <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.35rem' }}>
@@ -203,7 +207,7 @@ export default function ForumCategoryPage() {
               >
                 <div style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.97rem', marginBottom: '0.35rem' }}>{topic.title}</div>
                 <p style={{ fontSize: '0.83rem', color: '#2D2D2D', opacity: 0.5, margin: '0 0 0.75rem', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                  {topic.content}
+                  {stripHtml(topic.content)}
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
