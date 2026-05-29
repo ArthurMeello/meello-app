@@ -11,7 +11,7 @@ interface Reply {
   content: string
   created_at: string
   author_id: string
-  profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null } | null
+  profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null; city: string | null } | null
 }
 
 interface Topic {
@@ -20,7 +20,7 @@ interface Topic {
   content: string
   created_at: string
   author_id: string
-  profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null } | null
+  profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null; city: string | null } | null
 }
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
@@ -113,14 +113,14 @@ export default function ForumTopicPage() {
 
       const { data: topicData } = await supabase
         .from('forum_topics')
-        .select('id, title, content, created_at, author_id, profiles!forum_topics_author_id_fkey(first_name, last_name, avatar_url, activity)')
+        .select('id, title, content, created_at, author_id, profiles!forum_topics_author_id_fkey(first_name, last_name, avatar_url, activity, city)')
         .eq('id', topicId)
         .single()
       if (topicData) setTopic(topicData)
 
       const { data: repliesData } = await supabase
         .from('forum_replies')
-        .select('id, content, created_at, author_id, profiles!forum_replies_author_id_fkey(first_name, last_name, avatar_url, activity)')
+        .select('id, content, created_at, author_id, profiles!forum_replies_author_id_fkey(first_name, last_name, avatar_url, activity, city)')
         .eq('topic_id', topicId)
         .order('created_at', { ascending: true })
       if (repliesData) setReplies(repliesData)
@@ -137,7 +137,7 @@ export default function ForumTopicPage() {
     const { data } = await supabase
       .from('forum_replies')
       .insert({ topic_id: topicId, author_id: currentUserId, content: replyContent.trim() })
-      .select('id, content, created_at, author_id, profiles!forum_replies_author_id_fkey(first_name, last_name, avatar_url, activity)')
+      .select('id, content, created_at, author_id, profiles!forum_replies_author_id_fkey(first_name, last_name, avatar_url, activity, city)')
       .single()
     if (data) {
       setReplies(prev => [...prev, data])
@@ -287,7 +287,11 @@ export default function ForumTopicPage() {
                     </Link>
                     <span style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.35 }}>· {formatDate(topic.created_at)}</span>
                   </div>
-                  {topic.profiles?.activity && <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.45, marginTop: '0.1rem' }}>{topic.profiles.activity}</div>}
+                  {(topic.profiles?.activity || topic.profiles?.city) && (
+                    <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.45, marginTop: '0.1rem' }}>
+                      {topic.profiles.activity}{topic.profiles.activity && topic.profiles.city ? ` · à ${topic.profiles.city}` : topic.profiles.city ? `à ${topic.profiles.city}` : ''}
+                    </div>
+                  )}
                 </div>
                 <p style={{ color: '#2D2D2D', lineHeight: 1.7, margin: 0, fontSize: '0.95rem', whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: topic.content }} />
               </div>
@@ -325,7 +329,11 @@ export default function ForumTopicPage() {
                             />
                           )}
                         </div>
-                        {reply.profiles?.activity && <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.45, marginTop: '0.1rem' }}>{reply.profiles.activity}</div>}
+                        {(reply.profiles?.activity || reply.profiles?.city) && (
+                          <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.45, marginTop: '0.1rem' }}>
+                            {reply.profiles.activity}{reply.profiles.activity && reply.profiles.city ? ` · à ${reply.profiles.city}` : reply.profiles.city ? `à ${reply.profiles.city}` : ''}
+                          </div>
+                        )}
                       </div>
                       {isEditingThis ? (
                         <div>
