@@ -118,28 +118,26 @@ function FeedPageInner() {
 
       {/* Post épinglé de bienvenue */}
       <div style={{
-        backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1rem',
-        borderLeft: '3px solid #E8501A',
+        backgroundColor: '#E8501A', borderRadius: '16px', padding: '1.25rem',
+        boxShadow: '0 2px 12px rgba(232,80,26,0.25)', marginBottom: '1rem',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="#E8501A" style={{ flexShrink: 0 }}>
-            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="white" style={{ flexShrink: 0 }}>
+            <path d="M16 1l-1.5 1.5 1 1-6.5 5H5l-1 1 4 4-4 4 1 1 4-4 4 4 1-1v-4l5-6.5 1 1L21 6l-5-5z"/>
           </svg>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#E8501A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Épinglé</span>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Épinglé</span>
         </div>
-        <p style={{ fontSize: '0.95rem', color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 1rem', whiteSpace: 'pre-wrap' }}>{`Bienvenue dans la communauté Meello ! 👋
+        <p style={{ fontSize: '1rem', fontWeight: 700, color: 'white', margin: '0 0 0.6rem', fontFamily: 'var(--font-clash)' }}>Bienvenue dans la communauté Meello ! 👋</p>
+        <p style={{ fontSize: '0.92rem', color: 'rgba(255,255,255,0.9)', lineHeight: 1.65, margin: '0 0 1.1rem', whiteSpace: 'pre-wrap' }}>{`Tu viens de rejoindre une communauté d'entrepreneurs qui avancent ensemble. Ici, pas de solitude, pas de jugement, juste des gens qui comprennent ce que c'est de construire quelque chose.
 
-Ici, on se serre les coudes entre entrepreneurs. Commence par te présenter aux autres membres — dis-nous qui tu es, ce que tu fais, et ce qui t'a amené ici.
-
-C'est le meilleur moyen de faire ta première connexion.`}</p>
+La meilleure façon de commencer ? Te présenter aux autres membres. Dis-leur qui tu es, ce que tu fais, et ce qui t'a poussé à te lancer.`}</p>
         {presentationsCategoryId && (
           <a
             href={`/forum/${presentationsCategoryId}`}
             style={{
-              display: 'inline-block', backgroundColor: '#E8501A', color: 'white',
+              display: 'inline-block', backgroundColor: 'white', color: '#E8501A',
               borderRadius: '50px', padding: '0.5rem 1.1rem', fontSize: '0.85rem',
-              fontWeight: 600, textDecoration: 'none',
+              fontWeight: 700, textDecoration: 'none',
             }}
           >
             Je me présente →
