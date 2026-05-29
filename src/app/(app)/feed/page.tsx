@@ -1234,10 +1234,13 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                         </div>
                       </a>
                       <div style={{ flex: 1 }}>
-                        <a href={`/membre/${c.author_id}`} style={{ fontWeight: 600, color: '#2D2D2D', textDecoration: 'none', fontSize: '0.9rem' }}
-                          onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-                          onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
-                        >{c.profiles?.first_name} {c.profiles?.last_name}</a>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <a href={`/membre/${c.author_id}`} style={{ fontWeight: 600, color: '#2D2D2D', textDecoration: 'none', fontSize: '0.9rem' }}
+                            onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                            onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                          >{c.profiles?.first_name} {c.profiles?.last_name}</a>
+                          {c.author_id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="Vérifié" style={{ width: '14px', height: '14px', flexShrink: 0 }} />}
+                        </div>
                         {c.profiles?.activity && <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.5 }}>{c.profiles.activity}</div>}
                         <div style={{ fontSize: '0.9rem', color: '#2D2D2D', marginTop: '0.2rem', lineHeight: 1.5 }}>{renderCommentText(c.content)}</div>
                         <button
@@ -1284,10 +1287,13 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                           </div>
                         </a>
                         <div style={{ flex: 1 }}>
-                          <a href={`/membre/${r.author_id}`} style={{ fontWeight: 600, color: '#2D2D2D', textDecoration: 'none', fontSize: '0.85rem' }}
-                            onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-                            onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
-                          >{r.profiles?.first_name} {r.profiles?.last_name}</a>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <a href={`/membre/${r.author_id}`} style={{ fontWeight: 600, color: '#2D2D2D', textDecoration: 'none', fontSize: '0.85rem' }}
+                              onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                              onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                            >{r.profiles?.first_name} {r.profiles?.last_name}</a>
+                            {r.author_id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="Vérifié" style={{ width: '13px', height: '13px', flexShrink: 0 }} />}
+                          </div>
                           {r.profiles?.activity && <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.5 }}>{r.profiles.activity}</div>}
                           <div style={{ fontSize: '0.88rem', color: '#2D2D2D', marginTop: '0.15rem', lineHeight: 1.5 }}>{renderCommentText(r.content)}</div>
                           {/* Répondre à une réponse → même niveau, parent_id = c.id, pré-rempli @auteur */}
