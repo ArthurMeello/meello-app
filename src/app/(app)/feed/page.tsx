@@ -1048,7 +1048,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                   return <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
                 }
                 if (/^@/.test(part)) {
-                  const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+                  const normalize = (s: string) => s.toLowerCase().split('').map(c => c.normalize('NFD')[0]).join('')
                   const tag = normalize(part.slice(1))
                   const member = allMembers.find(m =>
                     normalize(`${m.first_name}${m.last_name}`) === tag ||
