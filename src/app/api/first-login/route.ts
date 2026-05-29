@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     ? ` — depuis ${profile.city}${profile.country && profile.country !== 'France' ? `, ${profile.country}` : ''}`
     : ''
   const welcomeContent = [
-    `🎉 Nouvelle tête dans la communauté ! Bienvenue à @${profile.first_name}${profile.last_name} !`,
+    `🎉 Nouvelle tête dans la communauté ! Bienvenue à @${profile.first_name} ${profile.last_name} !`,
     ``,
     `${profile.first_name} est ${profile.activity}${cityLine}.`,
     ``,
