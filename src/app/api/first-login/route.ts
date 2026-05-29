@@ -26,12 +26,11 @@ export async function POST(req: NextRequest) {
 
   // Publier le post de bienvenue
   const profileUrl = `https://app.meello.fr/membre/${userId}`
-  const cityLine = profile.city
-    ? ` à ${profile.city}`
-    : ''
+  const cityLine = profile.city ? ` à ${profile.city}` : ''
   const fullName = `${profile.first_name} ${profile.last_name}`
+  const mentionName = profile.first_name.normalize('NFD').replace(/[̀-ͯ]/g, '')
   const welcomeContent = [
-    `🎉 Nouvelle tête dans la communauté ! Bienvenue à @${profile.first_name} !`,
+    `🎉 Nouvelle tête dans la communauté ! Bienvenue à @${mentionName} !`,
     ``,
     `${fullName} est ${profile.activity}${cityLine}.`,
     ``,
