@@ -710,6 +710,9 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     }
   }
 
+  const slugifyName = (str: string) =>
+    str.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]/g, '')
+
   const insertCommentMention = (member: { id: string; first_name: string; last_name: string }) => {
     const textarea = commentInputRef.current
     if (!textarea) return
@@ -717,7 +720,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     const textBefore = comment.slice(0, cursor)
     const textAfter = comment.slice(cursor)
     const atIndex = textBefore.lastIndexOf('@')
-    const tag = `@${member.first_name}${member.last_name}`
+    const tag = `@${slugifyName(member.first_name)}${slugifyName(member.last_name)}`
     const newContent = textBefore.slice(0, atIndex) + tag + ' ' + textAfter
     setComment(newContent)
     setCommentMentionSuggestions([])
@@ -797,7 +800,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     const textBefore = replyContent.slice(0, cursor)
     const textAfter = replyContent.slice(cursor)
     const atIndex = textBefore.lastIndexOf('@')
-    const tag = `@${member.first_name}${member.last_name}`
+    const tag = `@${slugifyName(member.first_name)}${slugifyName(member.last_name)}`
     const newContent = textBefore.slice(0, atIndex) + tag + ' ' + textAfter
     setReplyContent(newContent)
     setReplyMentionSuggestions([])
@@ -887,10 +890,11 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
         return <a key={i} href={mdLink[2]} style={{ color: '#E8501A', fontWeight: 700, textDecoration: 'none' }}>{mdLink[1].replace(/\*\*/g, '')}</a>
       }
       if (/^@/.test(part)) {
-        const tag = part.slice(1).toLowerCase()
+        const slugify = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+        const tag = slugify(part.slice(1))
         const member = allMembers.find(m =>
-          `${m.first_name}${m.last_name}`.toLowerCase() === tag ||
-          m.first_name.toLowerCase() === tag
+          slugify(`${m.first_name}${m.last_name}`) === tag ||
+          slugify(m.first_name) === tag
         )
         if (member) {
           return <a key={i} href={`/membre/${member.id}`} style={{ color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>{part}</a>
@@ -1096,7 +1100,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                   return <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
                 }
                 if (/^@/.test(part)) {
-                  const normalize = (s: string) => s.toLowerCase().split('').map(c => c.normalize('NFD')[0]).join('')
+                  const normalize = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
                   const tag = normalize(part.slice(1))
                   const member = allMembers.find(m =>
                     normalize(`${m.first_name}${m.last_name}`) === tag ||
