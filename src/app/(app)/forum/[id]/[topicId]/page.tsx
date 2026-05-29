@@ -249,9 +249,14 @@ export default function ForumTopicPage() {
             <textarea
               ref={editTopicRef}
               value={editContent}
-              onChange={e => setEditContent(e.target.value)}
-              rows={6}
-              style={{ width: '100%', border: '1.5px solid #E8501A', borderRadius: '10px', padding: '0.75rem 1rem', fontSize: '0.95rem', fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+              onChange={e => {
+                setEditContent(e.target.value)
+                e.target.style.height = 'auto'
+                e.target.style.height = e.target.scrollHeight + 'px'
+              }}
+              onFocus={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+              rows={1}
+              style={{ width: '100%', border: '1.5px solid #E8501A', borderRadius: '10px', padding: '0.75rem 1rem', fontSize: '0.95rem', fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box', overflow: 'hidden', minHeight: '120px' }}
             />
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', justifyContent: 'flex-end' }}>
               <button onClick={() => setEditingTopic(false)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 0.9rem', cursor: 'pointer', fontSize: '0.88rem' }}>Annuler</button>
@@ -324,9 +329,14 @@ export default function ForumTopicPage() {
                           <textarea
                             ref={editReplyRef}
                             value={editReplyContent}
-                            onChange={e => setEditReplyContent(e.target.value)}
-                            rows={3}
-                            style={{ width: '100%', border: '1.5px solid #E8501A', borderRadius: '10px', padding: '0.65rem 0.9rem', fontSize: '0.9rem', fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+                            onChange={e => {
+                              setEditReplyContent(e.target.value)
+                              e.target.style.height = 'auto'
+                              e.target.style.height = e.target.scrollHeight + 'px'
+                            }}
+                            onFocus={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+                            rows={1}
+                            style={{ width: '100%', border: '1.5px solid #E8501A', borderRadius: '10px', padding: '0.65rem 0.9rem', fontSize: '0.9rem', fontFamily: 'inherit', outline: 'none', resize: 'none', boxSizing: 'border-box', overflow: 'hidden', minHeight: '80px' }}
                           />
                           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', justifyContent: 'flex-end' }}>
                             <button onClick={() => setEditingReplyId(null)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.35rem 0.8rem', cursor: 'pointer', fontSize: '0.85rem' }}>Annuler</button>
