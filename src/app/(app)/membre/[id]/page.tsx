@@ -74,7 +74,7 @@ function MiniPostCard({ post, isLast }: { post: any; isLast?: boolean }) {
         <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: '160px', objectFit: 'cover', borderRadius: '10px', marginBottom: '0.6rem', display: 'block' }} />
       )}
       <p style={{ fontSize: '0.88rem', color: '#2D2D2D', lineHeight: 1.6, margin: '0 0 0.5rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-        {post.content}
+        {(post.content || '').replace(/<[^>]*>/g, '').replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1')}
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4 }}>{formatDate(post.created_at)}</span>
