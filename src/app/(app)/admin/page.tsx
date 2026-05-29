@@ -648,7 +648,7 @@ export default function AdminPage() {
                       body: JSON.stringify({ userId: member.id, email: member.email, firstName: member.first_name }),
                     })
                     if (res.ok) alert('Lien renvoyé avec succès !')
-                    else alert('Erreur lors de l\'envoi.')
+                    else { const err = await res.json(); alert('Erreur : ' + (err.error || 'inconnue')) }
                   }}
                   title="Renvoyer le lien d'invitation"
                   style={{

@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   })
 
   if (error || !linkData) {
-    return NextResponse.json({ error: error?.message || 'Erreur génération lien' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Erreur génération lien', details: error }, { status: 500 })
   }
 
   const loginLink = linkData.properties?.action_link
