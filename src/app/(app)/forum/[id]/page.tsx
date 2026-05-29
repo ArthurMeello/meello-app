@@ -49,7 +49,7 @@ interface Topic {
   profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null } | null
   reply_count?: number
   last_reply_at?: string
-  reactions?: { emoji: string; user_id: string; profiles: { first_name: string; last_name: string } | null }[]
+  reactions?: { emoji: string; user_id: string; profiles: { first_name: string; last_name: string; avatar_url?: string | null } | null }[]
 }
 
 const FORUM_EMOJIS = ['👍', '🔥', '❤️']
@@ -68,7 +68,7 @@ export default function ForumCategoryPage() {
   const [submitting, setSubmitting] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [reactionPopover, setReactionPopover] = useState<{ topicId: string; emoji: string } | null>(null)
+  const [reactionPopover, setReactionPopover] = useState<string | null>(null)
   const newTopicTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   const toggleReaction = async (topicId: string, emoji: string) => {
@@ -105,7 +105,7 @@ export default function ForumCategoryPage() {
         const last_reply_at = replies?.[0]?.created_at || topic.created_at
         const { data: reactions } = await supabase
           .from('forum_topic_reactions')
-          .select('emoji, user_id, profiles(first_name, last_name)')
+          .select('emoji, user_id, profiles(first_name, last_name, avatar_url)')
           .eq('topic_id', topic.id)
         return { ...topic, reply_count: count || 0, last_reply_at, reactions: reactions || [] }
       }))
@@ -256,48 +256,58 @@ export default function ForumCategoryPage() {
               {/* Réactions */}
               <div style={{ padding: '0.5rem 1.25rem 0.85rem', borderTop: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                 {FORUM_EMOJIS.map(emoji => {
-                  const reactors = (topic.reactions || []).filter(r => r.emoji === emoji)
-                  const hasReacted = reactors.some(r => r.user_id === currentUserId)
-                  const popoverKey = `${topic.id}-${emoji}`
-                  const isOpen = reactionPopover?.topicId === topic.id && reactionPopover?.emoji === emoji
+                  const hasReacted = (topic.reactions || []).some(r => r.emoji === emoji && r.user_id === currentUserId)
                   return (
-                    <div key={emoji} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                      <button
-                        onClick={e => { e.preventDefault(); toggleReaction(topic.id, emoji) }}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                          backgroundColor: hasReacted ? '#FFF0ED' : '#F5F0E8',
-                          border: hasReacted ? '1.5px solid #E8501A' : '1.5px solid transparent',
-                          borderRadius: '20px', padding: '0.2rem 0.55rem',
-                          fontSize: '0.82rem', cursor: 'pointer', fontWeight: hasReacted ? 700 : 400,
-                          color: hasReacted ? '#E8501A' : '#2D2D2D',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {emoji}{reactors.length > 0 && <span style={{ fontSize: '0.75rem' }}>{reactors.length}</span>}
-                      </button>
-                      {reactors.length > 0 && (
-                        <button
-                          onClick={e => { e.preventDefault(); setReactionPopover(isOpen ? null : { topicId: topic.id, emoji }) }}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}
-                        >▾</button>
-                      )}
-                      {isOpen && (
-                        <div
-                          style={{ position: 'absolute', bottom: '110%', left: 0, backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', zIndex: 100, minWidth: '140px', whiteSpace: 'nowrap' }}
-                          onClick={e => e.preventDefault()}
-                        >
-                          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2D2D2D', opacity: 0.4, marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{emoji} {reactors.length}</div>
-                          {reactors.map((r, i) => (
-                            <div key={i} style={{ fontSize: '0.83rem', color: '#2D2D2D', padding: '0.15rem 0' }}>
-                              {r.profiles?.first_name} {r.profiles?.last_name}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <button
+                      key={emoji}
+                      onClick={e => { e.preventDefault(); toggleReaction(topic.id, emoji) }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center',
+                        backgroundColor: hasReacted ? '#FFF0ED' : '#F5F0E8',
+                        border: hasReacted ? '1.5px solid #E8501A' : '1.5px solid transparent',
+                        borderRadius: '20px', padding: '0.2rem 0.55rem',
+                        fontSize: '0.82rem', cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >{emoji}</button>
                   )
                 })}
+                {(topic.reactions || []).length > 0 && (
+                  <button
+                    onClick={e => { e.preventDefault(); setReactionPopover(topic.id) }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5, fontWeight: 600, padding: '0.2rem 0.4rem' }}
+                  >
+                    {(topic.reactions || []).length} réaction{(topic.reactions || []).length > 1 ? 's' : ''}
+                  </button>
+                )}
+                {reactionPopover === topic.id && (
+                  <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={e => { e.preventDefault(); setReactionPopover(null) }}>
+                    <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', width: '100%', maxWidth: '360px', maxHeight: '70vh', overflowY: 'auto' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#2D2D2D' }}>{(topic.reactions || []).length} réaction{(topic.reactions || []).length > 1 ? 's' : ''}</span>
+                        <button onClick={() => setReactionPopover(null)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}>×</button>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                        {(topic.reactions || []).map((r, i) => {
+                          const initials = `${(r.profiles?.first_name || '?')[0]}${(r.profiles?.last_name || '')[0] || ''}`.toUpperCase()
+                          return (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <div style={{ position: 'relative', flexShrink: 0 }}>
+                                <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', overflow: 'hidden' }}>
+                                  {r.profiles?.avatar_url
+                                    ? <img src={r.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    : initials}
+                                </div>
+                                <span style={{ position: 'absolute', bottom: -2, right: -4, fontSize: '0.9rem', lineHeight: 1 }}>{r.emoji}</span>
+                              </div>
+                              <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#2D2D2D' }}>{r.profiles?.first_name} {r.profiles?.last_name}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             </div>

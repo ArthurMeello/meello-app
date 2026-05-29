@@ -16,10 +16,12 @@ export async function POST(req: NextRequest) {
   }
   const email = userData.user.email
 
+  const isConfirmed = !!userData.user.email_confirmed_at
+
   const { data: linkData, error } = await supabase.auth.admin.generateLink({
     type: 'recovery',
     email,
-    options: { redirectTo: 'https://app.meello.fr/bienvenue' },
+    options: { redirectTo: isConfirmed ? 'https://app.meello.fr' : 'https://app.meello.fr/bienvenue' },
   })
 
   if (error || !linkData) {
@@ -27,6 +29,14 @@ export async function POST(req: NextRequest) {
   }
 
   const loginLink = linkData.properties?.action_link
+
+  const subject = isConfirmed ? `Réinitialise ton mot de passe Meello` : `Ton accès à Meello`
+  const body = isConfirmed
+    ? `Tu as demandé à réinitialiser ton mot de passe Meello.<br><br>Clique sur le bouton ci-dessous pour en créer un nouveau. Ce lien est valable 24h.`
+    : `Voici ton lien personnel pour accéder à Meello et créer ton mot de passe.<br><br>Ce lien est valable 24h.`
+  const cta = isConfirmed
+    ? { label: 'Réinitialiser mon mot de passe →', href: loginLink }
+    : { label: 'Accéder à Meello →', href: loginLink }
 
   await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -37,14 +47,10 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       sender: { name: 'Meello', email: 'hello@meello.fr' },
       to: [{ email, name: firstName }],
-      subject: `Ton accès à Meello`,
-      htmlContent: emailTemplate({
-        firstName,
-        body: `Voici ton lien personnel pour accéder à Meello et créer ton mot de passe.<br><br>Ce lien est valable 24h.`,
-        cta: { label: 'Accéder à Meello →', href: loginLink },
-      }),
+      subject,
+      htmlContent: emailTemplate({ firstName, body, cta }),
     }),
   })
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, type: isConfirmed ? 'password_reset' : 'invite' })
 }

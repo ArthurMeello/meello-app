@@ -581,7 +581,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     const supabase = createClient()
     const { data } = await supabase
       .from('reactions')
-      .select('emoji, author_id, profiles(first_name, last_name)')
+      .select('emoji, author_id, profiles(first_name, last_name, avatar_url)')
       .eq('post_id', post.id)
     if (data) setReactions(data)
   }
@@ -1122,46 +1122,58 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
 
       {/* Réactions + Commenter */}
       <div style={{ paddingTop: '0.75rem', borderTop: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        {reactionCounts.map(({ emoji, count, active }) => {
-          const reactors = reactions.filter(r => r.emoji === emoji)
-          const isOpen = reactionPopover === emoji
-          return (
-            <div key={emoji} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-              <button
-                onClick={() => handleReaction(emoji)}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                  padding: '0.3rem 0.65rem', borderRadius: '20px',
-                  border: active ? '1.5px solid #E8501A' : '1.5px solid #E8E3D9',
-                  backgroundColor: active ? 'rgba(232,80,26,0.08)' : 'transparent',
-                  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-                  color: active ? '#E8501A' : '#2D2D2D', transition: 'all 0.15s',
-                }}
-              >
-                {emoji} {count > 0 && <span style={{ fontSize: '0.8rem' }}>{count}</span>}
-              </button>
-              {count > 0 && (
-                <button
-                  onClick={e => { e.stopPropagation(); setReactionPopover(isOpen ? null : emoji) }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}
-                >▾</button>
-              )}
-              {isOpen && (
-                <div
-                  style={{ position: 'absolute', bottom: '110%', left: 0, backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', zIndex: 100, minWidth: '140px', whiteSpace: 'nowrap' }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2D2D2D', opacity: 0.4, marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{emoji} {count}</div>
-                  {reactors.map((r, i) => (
-                    <div key={i} style={{ fontSize: '0.83rem', color: '#2D2D2D', padding: '0.15rem 0' }}>
-                      {r.profiles?.first_name} {r.profiles?.last_name}
+        {reactionCounts.map(({ emoji, count, active }) => (
+          <button
+            key={emoji}
+            onClick={() => handleReaction(emoji)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+              padding: '0.3rem 0.65rem', borderRadius: '20px',
+              border: active ? '1.5px solid #E8501A' : '1.5px solid #E8E3D9',
+              backgroundColor: active ? 'rgba(232,80,26,0.08)' : 'transparent',
+              cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
+              color: active ? '#E8501A' : '#2D2D2D', transition: 'all 0.15s',
+            }}
+          >
+            {emoji}
+          </button>
+        ))}
+        {reactions.length > 0 && (
+          <button
+            onClick={e => { e.stopPropagation(); setReactionPopover('open') }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5, fontWeight: 600, padding: '0.2rem 0.4rem' }}
+          >
+            {reactions.length} réaction{reactions.length > 1 ? 's' : ''}
+          </button>
+        )}
+        {reactionPopover === 'open' && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setReactionPopover(null)}>
+            <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', width: '100%', maxWidth: '360px', maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#2D2D2D' }}>{reactions.length} réaction{reactions.length > 1 ? 's' : ''}</span>
+                <button onClick={() => setReactionPopover(null)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}>×</button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                {reactions.map((r, i) => {
+                  const initials = `${(r.profiles?.first_name || '?')[0]}${(r.profiles?.last_name || '')[0] || ''}`.toUpperCase()
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', overflow: 'hidden' }}>
+                          {(r as any).profiles?.avatar_url
+                            ? <img src={(r as any).profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : initials}
+                        </div>
+                        <span style={{ position: 'absolute', bottom: -2, right: -4, fontSize: '0.9rem', lineHeight: 1 }}>{r.emoji}</span>
+                      </div>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#2D2D2D' }}>{r.profiles?.first_name} {r.profiles?.last_name}</span>
                     </div>
-                  ))}
-                </div>
-              )}
+                  )
+                })}
+              </div>
             </div>
-          )
-        })}
+          </div>
+        )}
 
         <button
           onClick={toggleComments}

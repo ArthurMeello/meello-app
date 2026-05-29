@@ -32,6 +32,7 @@ interface Member {
   member_since: string | null
   hide_new_badge: boolean
   created_at: string
+  is_confirmed?: boolean
 }
 
 export default function AdminPage() {
@@ -90,7 +91,17 @@ export default function AdminPage() {
       .from('profiles')
       .select('id, first_name, last_name, email, activity, city, badges, member_since, hide_new_badge, created_at')
       .order('created_at', { ascending: true })
-    if (data) setMembers(data)
+    if (data) {
+      // Enrichir avec le statut de confirmation email
+      const res = await fetch('/api/member-auth-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds: data.map(m => m.id) }),
+      })
+      const { data: authStatuses } = await res.json()
+      const statusMap = Object.fromEntries((authStatuses || []).map((s: any) => [s.id, s.is_confirmed]))
+      setMembers(data.map(m => ({ ...m, is_confirmed: statusMap[m.id] ?? false })))
+    }
   }
 
   const handleApprove = async (app: Application) => {
@@ -641,23 +652,24 @@ export default function AdminPage() {
                 })()}
                 <button
                   onClick={async () => {
-                    if (!confirm(`Renvoyer le lien d'invitation à ${member.email} ?`)) return
+                    const label = member.is_confirmed ? 'un lien de réinitialisation de mot de passe' : "le lien d'invitation"
+                    if (!confirm(`Envoyer ${label} à ${member.email} ?`)) return
                     const res = await fetch('/api/resend-invite', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ userId: member.id, email: member.email, firstName: member.first_name }),
                     })
-                    if (res.ok) alert('Lien renvoyé avec succès !')
+                    if (res.ok) alert(member.is_confirmed ? 'Lien de réinitialisation envoyé !' : 'Invitation renvoyée avec succès !')
                     else { const err = await res.json(); alert('Erreur : ' + (err.error || 'inconnue')) }
                   }}
-                  title="Renvoyer le lien d'invitation"
+                  title={member.is_confirmed ? 'Envoyer un lien de réinitialisation de mot de passe' : "Renvoyer le lien d'invitation"}
                   style={{
                     marginLeft: '0.25rem', background: 'none', border: '1px solid #b3d9b3',
                     borderRadius: '8px', padding: '0.2rem 0.5rem', cursor: 'pointer',
                     color: '#2d7a2d', fontSize: '0.75rem', fontWeight: 600,
                   }}
                 >
-                  ✉️ Renvoyer invitation
+                  {member.is_confirmed ? '🔑 Mot de passe oublié' : '✉️ Renvoyer invitation'}
                 </button>
                 <button
                   onClick={() => deleteMember(member)}
