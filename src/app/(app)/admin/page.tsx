@@ -640,6 +640,26 @@ export default function AdminPage() {
                   )
                 })()}
                 <button
+                  onClick={async () => {
+                    if (!confirm(`Renvoyer le lien d'invitation à ${member.email} ?`)) return
+                    const res = await fetch('/api/resend-invite', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId: member.id, email: member.email, firstName: member.first_name }),
+                    })
+                    if (res.ok) alert('Lien renvoyé avec succès !')
+                    else alert('Erreur lors de l\'envoi.')
+                  }}
+                  title="Renvoyer le lien d'invitation"
+                  style={{
+                    marginLeft: '0.25rem', background: 'none', border: '1px solid #b3d9b3',
+                    borderRadius: '8px', padding: '0.2rem 0.5rem', cursor: 'pointer',
+                    color: '#2d7a2d', fontSize: '0.75rem', fontWeight: 600,
+                  }}
+                >
+                  ✉️ Renvoyer invitation
+                </button>
+                <button
                   onClick={() => deleteMember(member)}
                   title="Supprimer ce compte"
                   style={{
