@@ -874,13 +874,17 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
 
   // Rendu d'un texte de commentaire/réponse avec @mentions et liens cliquables
   const renderCommentText = (text: string) => {
-    return text.split(/(https?:\/\/[^\s]+|@\[[^\]]+\]\([^)]+\)|@[^\s]+)/g).map((part, i) => {
+    return text.split(/(https?:\/\/[^\s]+|@\[[^\]]+\]\([^)]+\)|\[[^\]]+\]\([^)]+\)|@[^\s]+)/g).map((part, i) => {
       if (/^https?:\/\//.test(part)) {
         return <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline', wordBreak: 'break-all' }}>{part}</a>
       }
       const mentionWithId = part.match(/^@\[([^\]]+)\]\(([^)]+)\)$/)
       if (mentionWithId) {
         return <a key={i} href={`/membre/${mentionWithId[2]}`} style={{ color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>@{mentionWithId[1]}</a>
+      }
+      const mdLink = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
+      if (mdLink) {
+        return <a key={i} href={mdLink[2]} style={{ color: '#E8501A', fontWeight: 700, textDecoration: 'none' }}>{mdLink[1].replace(/\*\*/g, '')}</a>
       }
       if (/^@/.test(part)) {
         const tag = part.slice(1).toLowerCase()
