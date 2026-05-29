@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
     type: 'recovery',
     email: app.email,
-    options: { redirectTo: 'https://app.meello.fr/bienvenue' },
+    options: { redirectTo: 'https://app.meello.fr/auth/callback' },
   })
 
   // 3. Créer le profil

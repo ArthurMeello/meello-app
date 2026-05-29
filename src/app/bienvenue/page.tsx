@@ -16,7 +16,30 @@ export default function BienvenuePage() {
   useEffect(() => {
     const supabase = createClient()
 
-    // Lire le token depuis le hash de l'URL et créer la session
+    const searchParams = new URLSearchParams(window.location.search)
+    const token_hash = searchParams.get('token_hash')
+    const type = searchParams.get('type')
+    const code = searchParams.get('code')
+
+    // Cas 1 : token_hash (lien email invite/recovery)
+    if (token_hash && type) {
+      supabase.auth.verifyOtp({ token_hash, type: type as any }).then(({ error }) => {
+        if (!error) setReady(true)
+        else setError('Lien invalide ou expiré. Contacte-nous pour recevoir un nouveau lien.')
+      })
+      return
+    }
+
+    // Cas 2 : PKCE code
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (!error) setReady(true)
+        else setError('Lien invalide ou expiré. Contacte-nous pour recevoir un nouveau lien.')
+      })
+      return
+    }
+
+    // Cas 3 : ancien format hash (fallback)
     const hash = window.location.hash
     if (hash) {
       const params = new URLSearchParams(hash.substring(1))
@@ -25,13 +48,12 @@ export default function BienvenuePage() {
       if (access_token && refresh_token) {
         supabase.auth.setSession({ access_token, refresh_token }).then(({ error }) => {
           if (!error) setReady(true)
-          else setError('Lien invalide ou expiré. Demande un nouveau lien.')
+          else setError('Lien invalide ou expiré. Contacte-nous pour recevoir un nouveau lien.')
         })
         return
       }
     }
 
-    // Pas de token dans l'URL
     setError('Lien invalide. Utilise le lien reçu par email.')
   }, [])
 
