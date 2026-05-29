@@ -23,6 +23,7 @@ function FeedPageInner() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userProfile, setUserProfile] = useState<{ first_name: string; avatar_url: string | null } | null>(null)
   const [allMembers, setAllMembers] = useState<{ id: string; first_name: string; last_name: string }[]>([])
+  const [presentationsCategoryId, setPresentationsCategoryId] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const highlightPostId = searchParams.get('post')
 
@@ -38,6 +39,10 @@ function FeedPageInner() {
     // Charger tous les membres pour résoudre les mentions
     createClient().from('profiles').select('id, first_name, last_name').eq('is_active', true).then(({ data }) => {
       if (data) setAllMembers(data)
+    })
+    // Récupérer l'ID de la catégorie Présentations
+    createClient().from('forum_categories').select('id').eq('name', 'Présentations').single().then(({ data }) => {
+      if (data) setPresentationsCategoryId(data.id)
     })
   }, [])
 
@@ -110,6 +115,37 @@ function FeedPageInner() {
           onSuccess={() => { setShowModal(false); fetchPosts() }}
         />
       )}
+
+      {/* Post épinglé de bienvenue */}
+      <div style={{
+        backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1rem',
+        borderLeft: '3px solid #E8501A',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#E8501A" style={{ flexShrink: 0 }}>
+            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+          </svg>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#E8501A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Épinglé</span>
+        </div>
+        <p style={{ fontSize: '0.95rem', color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 1rem', whiteSpace: 'pre-wrap' }}>{`Bienvenue dans la communauté Meello ! 👋
+
+Ici, on se serre les coudes entre entrepreneurs. Commence par te présenter aux autres membres — dis-nous qui tu es, ce que tu fais, et ce qui t'a amené ici.
+
+C'est le meilleur moyen de faire ta première connexion.`}</p>
+        {presentationsCategoryId && (
+          <a
+            href={`/forum/${presentationsCategoryId}`}
+            style={{
+              display: 'inline-block', backgroundColor: '#E8501A', color: 'white',
+              borderRadius: '50px', padding: '0.5rem 1.1rem', fontSize: '0.85rem',
+              fontWeight: 600, textDecoration: 'none',
+            }}
+          >
+            Je me présente →
+          </a>
+        )}
+      </div>
 
       {/* Posts */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
