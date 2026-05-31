@@ -272,14 +272,14 @@ export default function ForumCategoryPage() {
                 })}
                 {(topic.reactions || []).length > 0 && (
                   <button
-                    onClick={e => { e.preventDefault(); setReactionPopover(topic.id) }}
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); setReactionPopover(topic.id) }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5, fontWeight: 600, padding: '0.2rem 0.4rem' }}
                   >
                     {(topic.reactions || []).length} réaction{(topic.reactions || []).length > 1 ? 's' : ''}
                   </button>
                 )}
                 {reactionPopover === topic.id && (
-                  <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={e => { e.preventDefault(); setReactionPopover(null) }}>
+                  <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={e => { e.preventDefault(); e.stopPropagation(); setReactionPopover(null) }}>
                     <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', width: '100%', maxWidth: '360px', maxHeight: '70vh', overflowY: 'auto' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                         <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#2D2D2D' }}>{(topic.reactions || []).length} réaction{(topic.reactions || []).length > 1 ? 's' : ''}</span>
