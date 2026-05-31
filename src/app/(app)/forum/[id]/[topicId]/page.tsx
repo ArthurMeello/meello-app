@@ -202,18 +202,21 @@ export default function ForumTopicPage() {
   const toggleReaction = async (emoji: string) => {
     if (!currentUserId) return
     const supabase = createClient()
-    const existing = reactions.find(r => r.emoji === emoji && r.user_id === currentUserId)
+    const existing = reactions.find(r => r.user_id === currentUserId)
     if (existing) {
-      await supabase.from('forum_topic_reactions').delete().eq('topic_id', topicId).eq('user_id', currentUserId).eq('emoji', emoji)
-      setReactions(prev => prev.filter(r => !(r.emoji === emoji && r.user_id === currentUserId)))
-    } else {
-      const { data } = await supabase
-        .from('forum_topic_reactions')
-        .insert({ topic_id: topicId, user_id: currentUserId, emoji })
-        .select('emoji, user_id, profiles(first_name, last_name, avatar_url)')
-        .single()
-      if (data) setReactions(prev => [...prev, data])
+      // Supprimer l'ancienne réaction dans tous les cas
+      await supabase.from('forum_topic_reactions').delete().eq('topic_id', topicId).eq('user_id', currentUserId)
+      setReactions(prev => prev.filter(r => r.user_id !== currentUserId))
+      // Si c'est le même emoji → on retire seulement (toggle off)
+      if (existing.emoji === emoji) return
     }
+    // Ajouter la nouvelle réaction
+    const { data } = await supabase
+      .from('forum_topic_reactions')
+      .insert({ topic_id: topicId, user_id: currentUserId, emoji })
+      .select('emoji, user_id, profiles(first_name, last_name, avatar_url)')
+      .single()
+    if (data) setReactions(prev => [...prev, data])
   }
 
   const formatDate = (d: string) => {
