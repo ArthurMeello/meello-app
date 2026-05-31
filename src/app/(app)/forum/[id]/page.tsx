@@ -253,23 +253,21 @@ export default function ForumCategoryPage() {
                   </div>
                 </div>
               </Link>
-              {/* Réactions */}
+              {/* Réactions — lecture seule ici, cliquer sur le sujet pour réagir */}
               <div style={{ padding: '0.5rem 1.25rem 0.85rem', borderTop: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {FORUM_EMOJIS.map(emoji => {
+                {FORUM_EMOJIS.filter(emoji => (topic.reactions || []).some(r => r.emoji === emoji)).map(emoji => {
                   const hasReacted = (topic.reactions || []).some(r => r.emoji === emoji && r.user_id === currentUserId)
                   return (
-                    <button
+                    <span
                       key={emoji}
-                      onClick={e => { e.preventDefault(); toggleReaction(topic.id, emoji) }}
                       style={{
                         display: 'inline-flex', alignItems: 'center',
                         backgroundColor: hasReacted ? '#FFF0ED' : '#F5F0E8',
                         border: hasReacted ? '1.5px solid #E8501A' : '1.5px solid transparent',
                         borderRadius: '20px', padding: '0.2rem 0.55rem',
-                        fontSize: '0.82rem', cursor: 'pointer',
-                        transition: 'all 0.15s',
+                        fontSize: '0.82rem',
                       }}
-                    >{emoji}</button>
+                    >{emoji}</span>
                   )
                 })}
                 {(topic.reactions || []).length > 0 && (
