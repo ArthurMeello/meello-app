@@ -24,6 +24,13 @@ interface Topic {
 }
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+const FORUM_EMOJIS = ['👍', '🔥', '❤️']
+
+interface Reaction {
+  emoji: string
+  user_id: string
+  profiles: { first_name: string; last_name: string; avatar_url?: string | null } | null
+}
 
 // ─── Toolbar gras / italique ──────────────────────────────────────────────────
 function applyFormat(
@@ -96,6 +103,10 @@ export default function ForumTopicPage() {
   const [editReplyContent, setEditReplyContent] = useState('')
   const [savingReply, setSavingReply] = useState(false)
 
+  // Réactions
+  const [reactions, setReactions] = useState<Reaction[]>([])
+  const [reactionModalOpen, setReactionModalOpen] = useState(false)
+
   const isAdmin = currentUserId === ADMIN_ID
 
   useEffect(() => {
@@ -124,6 +135,12 @@ export default function ForumTopicPage() {
         .eq('topic_id', topicId)
         .order('created_at', { ascending: true })
       if (repliesData) setReplies(repliesData)
+
+      const { data: reactionsData } = await supabase
+        .from('forum_topic_reactions')
+        .select('emoji, user_id, profiles(first_name, last_name, avatar_url)')
+        .eq('topic_id', topicId)
+      if (reactionsData) setReactions(reactionsData)
 
       setLoading(false)
     }
@@ -180,6 +197,23 @@ export default function ForumTopicPage() {
     const supabase = createClient()
     await supabase.from('forum_replies').delete().eq('id', replyId)
     setReplies(prev => prev.filter(r => r.id !== replyId))
+  }
+
+  const toggleReaction = async (emoji: string) => {
+    if (!currentUserId) return
+    const supabase = createClient()
+    const existing = reactions.find(r => r.emoji === emoji && r.user_id === currentUserId)
+    if (existing) {
+      await supabase.from('forum_topic_reactions').delete().eq('topic_id', topicId).eq('user_id', currentUserId).eq('emoji', emoji)
+      setReactions(prev => prev.filter(r => !(r.emoji === emoji && r.user_id === currentUserId)))
+    } else {
+      const { data } = await supabase
+        .from('forum_topic_reactions')
+        .insert({ topic_id: topicId, user_id: currentUserId, emoji })
+        .select('emoji, user_id, profiles(first_name, last_name, avatar_url)')
+        .single()
+      if (data) setReactions(prev => [...prev, data])
+    }
   }
 
   const formatDate = (d: string) => {
@@ -297,6 +331,69 @@ export default function ForumTopicPage() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Réactions */}
+        {!editingTopic && (
+          <div style={{ borderTop: '1px solid #F5F0E8', marginTop: '1.25rem', paddingTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+            {FORUM_EMOJIS.map(emoji => {
+              const hasReacted = reactions.some(r => r.emoji === emoji && r.user_id === currentUserId)
+              return (
+                <button
+                  key={emoji}
+                  onClick={() => toggleReaction(emoji)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    backgroundColor: hasReacted ? '#FFF0ED' : '#F5F0E8',
+                    border: hasReacted ? '1.5px solid #E8501A' : '1.5px solid transparent',
+                    borderRadius: '20px', padding: '0.25rem 0.6rem',
+                    fontSize: '0.85rem', cursor: currentUserId ? 'pointer' : 'default',
+                    transition: 'all 0.15s',
+                  }}
+                >{emoji}</button>
+              )
+            })}
+            {reactions.length > 0 && (
+              <button
+                onClick={() => setReactionModalOpen(true)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5, fontWeight: 600, padding: '0.2rem 0.4rem' }}
+              >
+                {reactions.length} réaction{reactions.length > 1 ? 's' : ''}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Modal qui a réagi */}
+        {reactionModalOpen && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setReactionModalOpen(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', width: '100%', maxWidth: '360px', maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#2D2D2D' }}>{reactions.length} réaction{reactions.length > 1 ? 's' : ''}</span>
+                <button onClick={() => setReactionModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}>×</button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                {reactions.map((r, i) => {
+                  const initials = `${(r.profiles?.first_name || '?')[0]}${(r.profiles?.last_name || '')[0] || ''}`.toUpperCase()
+                  const isAdminUser = r.user_id === ADMIN_ID
+                  return (
+                    <a key={i} href={`/membre/${r.user_id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }} onClick={() => setReactionModalOpen(false)}>
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', overflow: 'hidden' }}>
+                          {r.profiles?.avatar_url ? <img src={r.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+                        </div>
+                        <span style={{ position: 'absolute', bottom: -2, right: -4, fontSize: '0.9rem', lineHeight: 1 }}>{r.emoji}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#2D2D2D' }}>{r.profiles?.first_name} {r.profiles?.last_name}</span>
+                        {isAdminUser && <img src="/icons/badge-check.svg" alt="Vérifié" style={{ width: '14px', height: '14px', flexShrink: 0 }} />}
+                      </div>
+                    </a>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
