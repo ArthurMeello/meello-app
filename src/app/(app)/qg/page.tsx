@@ -266,7 +266,6 @@ export default function QGPage() {
             align-items: center !important;
             gap: 0.5rem !important;
           }
-          .qg-online-side { display: none !important; }
           .qg-online-inline { display: flex !important; }
           /* La colonne membres de droite est masquée sur mobile —
              on y accède via la modale "X en ligne" */
@@ -305,14 +304,6 @@ export default function QGPage() {
               </div>
             </div>
             <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.45 }}>Canal général — tout le monde peut discuter ici</div>
-          </div>
-          <div
-            className="qg-online-trigger qg-online-side"
-            onClick={() => setOnlineModalOpen(true)}
-            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}
-          >
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E', display: 'inline-block' }} />
-            <span style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5 }}>{onlineMembers.length} en ligne</span>
           </div>
         </div>
 
