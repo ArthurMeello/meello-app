@@ -280,7 +280,13 @@ export default function MembrePublicPage() {
       const { data: created } = await supabase.from('conversations').insert({ participant1_id: currentUserId, participant2_id: id }).select('id').single()
       if (created) convId = created.id
     }
-    if (convId) window.dispatchEvent(new CustomEvent('meello:open-conv', { detail: convId }))
+    if (convId) {
+      if (window.innerWidth <= 768) {
+        router.push(`/messages?conv=${convId}`)
+      } else {
+        window.dispatchEvent(new CustomEvent('meello:open-conv', { detail: convId }))
+      }
+    }
   }
 
   const sendReco = async () => {

@@ -106,7 +106,11 @@ export default function ReseauPage() {
       if (created) convId = created.id
     }
     if (convId) {
-      window.dispatchEvent(new CustomEvent('meello:open-conv', { detail: convId }))
+      if (window.innerWidth <= 768) {
+        router.push(`/messages?conv=${convId}`)
+      } else {
+        window.dispatchEvent(new CustomEvent('meello:open-conv', { detail: convId }))
+      }
     }
   }
 
