@@ -186,7 +186,7 @@ export default function AppNav() {
         {menuOpen && (
           <div
             onClick={() => setMenuOpen(false)}
-            style={{ position: 'fixed', inset: 0, zIndex: 199, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', backgroundColor: 'rgba(26,26,46,0.35)' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 199, backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', backgroundColor: 'rgba(255,255,255,0.45)' }}
           />
         )}
 
