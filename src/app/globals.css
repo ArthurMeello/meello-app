@@ -28,8 +28,16 @@
   box-sizing: border-box;
 }
 
-body {
+html, body {
   margin: 0;
+  /* Empêche le décalage de mise en page résiduel quand le clavier
+     virtuel mobile s'ouvre puis se ferme. Le viewport reste ancré
+     en haut et la hauteur suit le viewport dynamique. */
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body {
   font-family: 'General Sans', system-ui, sans-serif;
   color: #2D2D2D;
   -webkit-font-smoothing: antialiased;

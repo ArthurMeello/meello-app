@@ -382,7 +382,7 @@ export default function MessagesPage() {
         }
       `}</style>
 
-      <div className="msg-layout" style={{ height: 'calc(100vh - 4rem)', display: 'flex', gap: '1rem', maxWidth: '960px', margin: '0 auto' }}>
+      <div className="msg-layout" style={{ height: 'calc(100dvh - 4rem)', display: 'flex', gap: '1rem', maxWidth: '960px', margin: '0 auto' }}>
 
         {/* Liste conversations */}
         <div className={`msg-list${mobileView === 'conv' ? ' msg-list-mobile-hidden' : ''}`} style={{

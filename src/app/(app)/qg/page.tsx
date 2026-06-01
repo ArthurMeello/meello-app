@@ -219,7 +219,7 @@ export default function QGPage() {
   }
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 2rem)', gap: '1.5rem', maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', height: 'calc(100dvh - 2rem)', gap: '1.5rem', maxWidth: '1100px', margin: '0 auto' }}>
 
       {/* Chat principal */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>

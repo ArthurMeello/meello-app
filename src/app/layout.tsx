@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -17,12 +17,16 @@ export const metadata: Metadata = {
     icon: "/favicon-meello.png",
     apple: "/favicon-meello.png",
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  // Le contenu se redimensionne avec le clavier virtuel au lieu de
+  // décaler le layout (évite le décalage résiduel après fermeture).
+  interactiveWidget: 'resizes-content',
 };
 
 export default function RootLayout({
