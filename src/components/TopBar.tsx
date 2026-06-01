@@ -40,12 +40,39 @@ export default function TopBar() {
 
   useEffect(() => {
     const supabase = createClient()
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) return
-      setUserId(data.user.id)
-      loadNotifications(data.user.id)
-      loadUnreadMessages(data.user.id)
+      const uid = data.user.id
+      setUserId(uid)
+      loadNotifications(uid)
+      loadUnreadMessages(uid)
+
+      // Écoute en temps réel les nouvelles notifs messages
+      channel = supabase
+        .channel('topbar-message-notifs')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${uid}`,
+        }, (payload) => {
+          if (payload.new?.type === 'message' && !payload.new?.read) {
+            setUnreadMessages(prev => prev + 1)
+          } else if (payload.new?.type !== 'message') {
+            loadNotifications(uid)
+          }
+        })
+        .subscribe()
     })
+
+    return () => {
+      if (channel) {
+        const supabase = createClient()
+        supabase.removeChannel(channel)
+      }
+    }
   }, [])
 
   // Fermer le dropdown en cliquant ailleurs
