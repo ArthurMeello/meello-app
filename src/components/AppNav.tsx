@@ -26,9 +26,17 @@ export default function AppNav() {
   const [pendingConnections, setPendingConnections] = useState(0)
   const [adminActions, setAdminActions] = useState(0)
   const [notifications, setNotifications] = useState(0)
+  const [unreadMessages, setUnreadMessages] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifsOpen, setNotifsOpen] = useState(false)
   const [notifsList, setNotifsList] = useState<any[]>([])
+
+  // Écouter les mises à jour du badge messages
+  useEffect(() => {
+    const handler = (e: CustomEvent) => setUnreadMessages(e.detail)
+    window.addEventListener('meello:chat-unread', handler as EventListener)
+    return () => window.removeEventListener('meello:chat-unread', handler as EventListener)
+  }, [])
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -42,6 +50,9 @@ export default function AppNav() {
       setPendingConnections(connCount || 0)
       const { count: notifCount } = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('read', false).neq('type', 'message')
       setNotifications(notifCount || 0)
+      // Charger le count messages non lus
+      const { count: msgCount } = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('type', 'message').eq('read', false)
+      setUnreadMessages(msgCount || 0)
       loadNotifs(user.id)
       if (user.id === ADMIN_ID) {
         const [{ count: appCount }, { count: recoCount }] = await Promise.all([
@@ -292,7 +303,12 @@ export default function AppNav() {
 
           {/* Messages */}
           <Link href="/messages" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', color: pathname.startsWith('/messages') ? '#E8501A' : 'rgba(245,240,232,0.6)', fontSize: '0.65rem' }}>
-            <img src="/icons/chat.svg" alt="Messages" style={{ width: '24px', height: '24px', filter: pathname.startsWith('/messages') ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(0.6)' }} />
+            <div style={{ position: 'relative' }}>
+              <img src="/icons/chat.svg" alt="Messages" style={{ width: '24px', height: '24px', filter: pathname.startsWith('/messages') ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(0.6)' }} />
+              {unreadMessages > 0 && (
+                <span style={{ position: 'absolute', top: '-4px', right: '-6px', backgroundColor: '#E8501A', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '0.55rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unreadMessages > 9 ? '9+' : unreadMessages}</span>
+              )}
+            </div>
             <span>Messages</span>
           </Link>
 
