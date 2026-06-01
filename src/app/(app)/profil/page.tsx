@@ -428,12 +428,6 @@ export default function ProfilPage() {
             width: 100% !important;
             margin-top: 0.25rem !important;
           }
-          .profil-actions > a,
-          .profil-actions > button {
-            flex: 1 !important;
-            text-align: center !important;
-            justify-content: center !important;
-          }
         }
       `}</style>
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
