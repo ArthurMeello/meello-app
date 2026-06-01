@@ -143,9 +143,13 @@ export default function AnnuairePage() {
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto' }}>
       <style>{`
+        /* Fondu de scroll : masqué par défaut (desktop a les flèches) */
+        .suggestions-fade { display: none; }
         @media (max-width: 768px) {
           /* Une seule carte membre par ligne sur mobile */
           .annuaire-grid { grid-template-columns: 1fr !important; }
+          /* Fondu dégradé visible sur mobile pour suggérer le scroll */
+          .suggestions-fade { display: block !important; }
         }
       `}</style>
 
@@ -185,14 +189,25 @@ export default function AnnuairePage() {
             </div>
           </div>
 
-          <div
-            ref={scrollRef}
-            style={{ display: 'flex', gap: '0.85rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            <style>{`.suggestions-scroll::-webkit-scrollbar { display: none; }`}</style>
-            {suggestions.map(profile => (
-              <SuggestionCard key={profile.id} profile={profile} reasons={profile.reasons} />
-            ))}
+          <div style={{ position: 'relative' }}>
+            <div
+              ref={scrollRef}
+              style={{ display: 'flex', gap: '0.85rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              <style>{`.suggestions-scroll::-webkit-scrollbar { display: none; }`}</style>
+              {suggestions.map(profile => (
+                <SuggestionCard key={profile.id} profile={profile} reasons={profile.reasons} />
+              ))}
+            </div>
+            {/* Fondu dégradé à droite — indique qu'il reste des cartes à scroller (mobile) */}
+            <div
+              className="suggestions-fade"
+              style={{
+                position: 'absolute', top: 0, right: 0, bottom: 0,
+                width: '48px', pointerEvents: 'none',
+                background: 'linear-gradient(to right, rgba(245,240,232,0), #F5F0E8)',
+              }}
+            />
           </div>
         </div>
       )}
