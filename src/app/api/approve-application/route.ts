@@ -23,11 +23,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: authError?.message || 'Erreur création compte' }, { status: 400 })
   }
 
-  // 2. Générer un lien d'invitation (première connexion)
+  // 2. Générer un lien de définition de mot de passe (première connexion)
   const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-    type: 'invite',
+    type: 'recovery',
     email: app.email,
-    options: { redirectTo: 'https://app.meello.fr/auth/callback' },
+    options: { redirectTo: 'https://app.meello.fr/bienvenue' },
   })
 
   // 3. Créer le profil
