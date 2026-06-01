@@ -652,25 +652,46 @@ export default function AdminPage() {
                 })()}
                 <button
                   onClick={async () => {
-                    const label = member.is_confirmed ? 'un lien de réinitialisation de mot de passe' : "le lien d'invitation"
-                    if (!confirm(`Envoyer ${label} à ${member.email} ?`)) return
+                    if (!confirm(`Envoyer le mail de bienvenue (création de mot de passe) à ${member.email} ?`)) return
                     const res = await fetch('/api/resend-invite', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ userId: member.id, email: member.email, firstName: member.first_name }),
+                      body: JSON.stringify({ userId: member.id, firstName: member.first_name, forceWelcome: true }),
                     })
-                    if (res.ok) alert(member.is_confirmed ? 'Lien de réinitialisation envoyé !' : 'Invitation renvoyée avec succès !')
+                    if (res.ok) alert('Mail de bienvenue envoyé !')
                     else { const err = await res.json(); alert('Erreur : ' + (err.error || 'inconnue')) }
                   }}
-                  title={member.is_confirmed ? 'Envoyer un lien de réinitialisation de mot de passe' : "Renvoyer le lien d'invitation"}
+                  title="Renvoyer le mail de bienvenue avec lien de création de mot de passe"
                   style={{
-                    marginLeft: '0.25rem', background: 'none', border: '1px solid #b3d9b3',
+                    marginLeft: '0.25rem', background: 'none', border: '1px solid #b3c6e8',
                     borderRadius: '8px', padding: '0.2rem 0.5rem', cursor: 'pointer',
-                    color: '#2d7a2d', fontSize: '0.75rem', fontWeight: 600,
+                    color: '#2d4a8a', fontSize: '0.75rem', fontWeight: 600,
                   }}
                 >
-                  {member.is_confirmed ? '🔑 Mot de passe oublié' : '✉️ Renvoyer invitation'}
+                  🏠 Mail de bienvenue
                 </button>
+                {member.is_confirmed && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Envoyer un lien de réinitialisation de mot de passe à ${member.email} ?`)) return
+                      const res = await fetch('/api/resend-invite', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: member.id, firstName: member.first_name, forceWelcome: false }),
+                      })
+                      if (res.ok) alert('Lien de réinitialisation envoyé !')
+                      else { const err = await res.json(); alert('Erreur : ' + (err.error || 'inconnue')) }
+                    }}
+                    title="Envoyer un lien de réinitialisation de mot de passe"
+                    style={{
+                      marginLeft: '0.25rem', background: 'none', border: '1px solid #b3d9b3',
+                      borderRadius: '8px', padding: '0.2rem 0.5rem', cursor: 'pointer',
+                      color: '#2d7a2d', fontSize: '0.75rem', fontWeight: 600,
+                    }}
+                  >
+                    🔑 Mot de passe oublié
+                  </button>
+                )}
                 <button
                   onClick={() => deleteMember(member)}
                   title="Supprimer ce compte"
