@@ -417,10 +417,28 @@ export default function ProfilPage() {
       <style>{`
         .social-icon img { filter: brightness(0); transition: filter 0.15s; }
         .social-icon:hover img { filter: brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg); }
+        @media (max-width: 768px) {
+          /* Boutons Voir/Modifier sous le bloc nom/poste/ville,
+             pour que celui-ci occupe toute la largeur (pas de 2 colonnes) */
+          .profil-header {
+            flex-wrap: wrap !important;
+          }
+          .profil-actions {
+            order: 3 !important;
+            width: 100% !important;
+            margin-top: 0.25rem !important;
+          }
+          .profil-actions > a,
+          .profil-actions > button {
+            flex: 1 !important;
+            text-align: center !important;
+            justify-content: center !important;
+          }
+        }
       `}</style>
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem' }}>
+        <div className="profil-header" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem' }}>
           <div
             onClick={() => fileRef.current?.click()}
             style={{
@@ -457,7 +475,7 @@ export default function ProfilPage() {
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="profil-actions" style={{ display: 'flex', gap: '0.5rem' }}>
             <a
               href={`/membre/${profile.id}`}
               target="_blank"
