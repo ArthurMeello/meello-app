@@ -266,7 +266,7 @@ export default function QGPage() {
             row-gap: 0.35rem !important;
           }
           .qg-online-trigger {
-            margin-left: 44px !important;
+            margin-left: 34px !important;
             width: 100% !important;
           }
           /* Texte d'aide sous le chat masqué sur mobile */
