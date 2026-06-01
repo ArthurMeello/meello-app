@@ -64,6 +64,7 @@ export default function QGPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
+  const [onlineModalOpen, setOnlineModalOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
   const oldestCreatedAt = useRef<string | null>(null)
@@ -219,10 +220,29 @@ export default function QGPage() {
   }
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100dvh - 2rem)', gap: '1.5rem', maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="qg-layout" style={{ display: 'flex', height: 'calc(100dvh - 2rem)', gap: '1.5rem', maxWidth: '1100px', margin: '0 auto' }}>
+
+      <style>{`
+        @media (max-width: 768px) {
+          /* Le QG occupe toute la largeur, comme une conversation privée */
+          .qg-layout {
+            height: calc(100dvh - 5rem) !important;
+            gap: 0 !important;
+          }
+          .qg-chat {
+            border-radius: 0 !important;
+            box-shadow: none !important;
+          }
+          /* La colonne membres de droite est masquée sur mobile —
+             on y accède via la modale "X en ligne" */
+          .qg-members-panel { display: none !important; }
+          /* L'indicateur "X en ligne" du header devient cliquable */
+          .qg-online-trigger { cursor: pointer !important; }
+        }
+      `}</style>
 
       {/* Chat principal */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+      <div className="qg-chat" style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden', minWidth: 0 }}>
 
         {/* Header */}
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -231,7 +251,11 @@ export default function QGPage() {
             <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.15rem', fontWeight: 700, color: '#2D2D2D' }}>Le QG</div>
             <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.45 }}>Canal général — tout le monde peut discuter ici</div>
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div
+            className="qg-online-trigger"
+            onClick={() => setOnlineModalOpen(true)}
+            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E', display: 'inline-block' }} />
             <span style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5 }}>{onlineMembers.length} en ligne</span>
           </div>
@@ -345,8 +369,8 @@ export default function QGPage() {
         </div>
       </div>
 
-      {/* Membres en ligne */}
-      <div style={{ width: '220px', flexShrink: 0, backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto' }}>
+      {/* Membres en ligne — colonne desktop */}
+      <div className="qg-members-panel" style={{ width: '220px', flexShrink: 0, backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto' }}>
         <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2D2D2D', opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
           En ligne — {onlineMembers.length}
         </div>
@@ -378,6 +402,56 @@ export default function QGPage() {
           <div style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.35, textAlign: 'center', marginTop: '1rem' }}>Aucun membre en ligne</div>
         )}
       </div>
+
+      {/* Modale membres en ligne — mobile (et desktop si clic) */}
+      {onlineModalOpen && (
+        <div
+          onClick={() => setOnlineModalOpen(false)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '380px', maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.1rem 1.25rem', borderBottom: '1px solid #F5F0E8' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E', display: 'inline-block' }} />
+                <span style={{ fontWeight: 700, fontSize: '1rem', color: '#2D2D2D' }}>En ligne — {onlineMembers.length}</span>
+              </div>
+              <button
+                onClick={() => setOnlineModalOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', lineHeight: 1, color: '#2D2D2D', opacity: 0.5, padding: 0 }}
+              >×</button>
+            </div>
+            <div style={{ overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              {onlineMembers.map(member => (
+                <a key={member.user_id} href={`/membre/${member.user_id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', textDecoration: 'none', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', overflow: 'hidden' }}>
+                      {member.profile?.avatar_url
+                        ? <img src={member.profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : `${(member.profile?.first_name || '?')[0]}${(member.profile?.last_name || '')[0] || ''}`.toUpperCase()
+                      }
+                    </div>
+                    <span style={{ position: 'absolute', bottom: '0', right: '0', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#22C55E', border: '1.5px solid white' }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0 }}>
+                    <span style={{ fontSize: '0.9rem', color: '#2D2D2D', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {member.profile?.first_name} {member.profile?.last_name}
+                    </span>
+                    {(member.user_id === ADMIN_ID || member.user_id === '00000000-0000-0000-0000-000000000001') && (
+                      <img src="/icons/badge-check.svg" alt="Admin" style={{ width: '15px', height: '15px', flexShrink: 0 }} />
+                    )}
+                  </div>
+                </a>
+              ))}
+              {onlineMembers.length === 0 && (
+                <div style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.35, textAlign: 'center', padding: '1.5rem' }}>Aucun membre en ligne</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )
