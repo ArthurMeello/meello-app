@@ -338,15 +338,34 @@ export default function MembrePublicPage() {
       <style>{`
         .social-icon img { filter: brightness(0); transition: filter 0.15s; }
         .social-icon:hover img { filter: brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg); }
+        @media (max-width: 768px) {
+          /* Une seule colonne : on fait remonter les blocs des deux
+             colonnes au niveau de la grille pour pouvoir les entrelacer.
+             Ordre : principal → localité/réseaux → produits/services
+             → portfolio → publications → recommandations */
+          .profil-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .profil-col-left,
+          .profil-col-right {
+            display: contents !important;
+          }
+          .profil-block-main      { order: 1 !important; }
+          .profil-block-social    { order: 2 !important; }
+          .profil-block-services  { order: 3 !important; }
+          .profil-block-portfolio { order: 4 !important; }
+          .profil-block-posts     { order: 5 !important; }
+          .profil-block-recos     { order: 6 !important; }
+        }
       `}</style>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.5rem', alignItems: 'start' }}>
+      <div className="profil-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.5rem', alignItems: 'start' }}>
 
         {/* COLONNE GAUCHE */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="profil-col-left" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
           {/* Carte profil principale */}
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <div className="profil-block-main" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
             {/* Avatar + nom + actions */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.25rem' }}>
               <div style={{ width: '72px', height: '72px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.4rem', flexShrink: 0, overflow: 'hidden' }}>
@@ -460,7 +479,7 @@ export default function MembrePublicPage() {
 
           {/* Produits & Services */}
           {services.length > 0 && (
-            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            <div className="profil-block-services" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
               <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>Produits & Services</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
                 {services.map(item => (
@@ -484,7 +503,7 @@ export default function MembrePublicPage() {
 
           {/* Portfolio */}
           {portfolio.length > 0 && (
-            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            <div className="profil-block-portfolio" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
               <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>Portfolio</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
                 {portfolio.map(item => (
@@ -505,10 +524,10 @@ export default function MembrePublicPage() {
         </div>
 
         {/* COLONNE DROITE */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="profil-col-right" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
           {/* Localisation + Réseaux */}
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <div className="profil-block-social" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
             {profile.city && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#2D2D2D', opacity: 0.5, fontSize: '1rem', marginBottom: '1rem' }}>
                 <img src="/icons/pin.svg" alt="" style={{ width: '18px', height: '18px', flexShrink: 0 }} />
@@ -539,7 +558,7 @@ export default function MembrePublicPage() {
 
           {/* Recommandations */}
           {recos.length > 0 && (
-            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            <div className="profil-block-recos" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
               <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1rem', color: '#2D2D2D', marginBottom: '0.75rem' }}>
                 Recommandations ({recos.length})
               </h2>
@@ -577,7 +596,7 @@ export default function MembrePublicPage() {
           )}
 
           {/* Publications */}
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <div className="profil-block-posts" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
             <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1rem', color: '#2D2D2D', marginBottom: '0.75rem' }}>Publications</h2>
             {posts.length === 0 ? (
               <p style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.4, margin: 0 }}>Aucune publication pour l'instant.</p>
