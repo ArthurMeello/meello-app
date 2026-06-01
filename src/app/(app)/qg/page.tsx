@@ -260,15 +260,6 @@ export default function QGPage() {
           .qg-members-panel { display: none !important; }
           /* L'indicateur "X en ligne" du header devient cliquable */
           .qg-online-trigger { cursor: pointer !important; }
-          /* "X en ligne" passe sur sa propre ligne, sous le titre */
-          .qg-header {
-            flex-wrap: wrap !important;
-            row-gap: 0.35rem !important;
-          }
-          .qg-online-trigger {
-            margin-left: 34px !important;
-            width: 100% !important;
-          }
           /* Texte d'aide sous le chat masqué sur mobile */
           .qg-input-hint { display: none !important; }
         }
