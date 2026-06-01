@@ -221,7 +221,7 @@ export default function AnnuairePage() {
                 className="suggestions-fade"
                 style={{
                   position: 'absolute', top: 0, left: 0, bottom: 0,
-                  width: '48px', pointerEvents: 'none',
+                  width: '28px', pointerEvents: 'none',
                   background: 'linear-gradient(to left, rgba(245,240,232,0), #F5F0E8)',
                 }}
               />
@@ -232,7 +232,7 @@ export default function AnnuairePage() {
                 className="suggestions-fade"
                 style={{
                   position: 'absolute', top: 0, right: 0, bottom: 0,
-                  width: '48px', pointerEvents: 'none',
+                  width: '28px', pointerEvents: 'none',
                   background: 'linear-gradient(to right, rgba(245,240,232,0), #F5F0E8)',
                 }}
               />
