@@ -142,6 +142,12 @@ export default function AnnuairePage() {
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          /* Une seule carte membre par ligne sur mobile */
+          .annuaire-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -201,7 +207,7 @@ export default function AnnuairePage() {
         <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>Chargement...</div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem' }}>
+      <div className="annuaire-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem' }}>
         {filtered.map(profile => (
           <MemberCard key={profile.id} profile={profile} />
         ))}
