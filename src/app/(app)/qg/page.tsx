@@ -251,10 +251,23 @@ export default function QGPage() {
           }
           /* Chevron retour vers le feed */
           .qg-back-btn { display: flex !important; }
-          /* Décale le header sous l'encoche / barre de statut */
+          /* Décale le header sous l'encoche / barre de statut.
+             Aligné en haut pour que "X en ligne" se cale sur la ligne du
+             titre, et que le sous-titre "Canal général" s'étende dessous
+             sur toute la largeur sans être coupé. */
           .qg-header {
             padding-top: calc(1rem + env(safe-area-inset-top)) !important;
+            align-items: flex-start !important;
           }
+          .qg-header-icon { margin-top: 2px !important; }
+          /* La ligne du titre : "Le QG" + "X en ligne" côte à côte */
+          .qg-title-row {
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+          }
+          .qg-online-side { display: none !important; }
+          .qg-online-inline { display: flex !important; }
           /* La colonne membres de droite est masquée sur mobile —
              on y accède via la modale "X en ligne" */
           .qg-members-panel { display: none !important; }
@@ -277,13 +290,24 @@ export default function QGPage() {
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <img src="/icons/megaphone.svg" alt="" style={{ width: '22px', height: '22px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' }} />
-          <div>
-            <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.15rem', fontWeight: 700, color: '#2D2D2D' }}>Le QG</div>
+          <img className="qg-header-icon" src="/icons/megaphone.svg" alt="" style={{ width: '22px', height: '22px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="qg-title-row">
+              <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.15rem', fontWeight: 700, color: '#2D2D2D' }}>Le QG</div>
+              {/* "X en ligne" — affiché ici sur la ligne du titre en mobile */}
+              <div
+                className="qg-online-trigger qg-online-inline"
+                onClick={() => setOnlineModalOpen(true)}
+                style={{ display: 'none', alignItems: 'center', gap: '0.4rem', flexShrink: 0, marginLeft: 'auto' }}
+              >
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E', display: 'inline-block' }} />
+                <span style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5, whiteSpace: 'nowrap' }}>{onlineMembers.length} en ligne</span>
+              </div>
+            </div>
             <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.45 }}>Canal général — tout le monde peut discuter ici</div>
           </div>
           <div
-            className="qg-online-trigger"
+            className="qg-online-trigger qg-online-side"
             onClick={() => setOnlineModalOpen(true)}
             style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}
           >
