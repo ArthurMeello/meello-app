@@ -63,12 +63,28 @@ export default function AppNav() {
     if (!targetUid) return
     const { data } = await supabase
       .from('notifications')
-      .select('id, type, content, read, created_at, link, from_user_id, profiles!notifications_from_user_id_fkey(first_name, last_name, avatar_url)')
+      .select('*')
       .eq('user_id', targetUid)
       .neq('type', 'message')
       .order('created_at', { ascending: false })
       .limit(20)
-    if (data) setNotifsList(data)
+    if (!data) return
+
+    // Charger les profils séparément (comme TopBar)
+    const fromIds = [...new Set(data.map((n: any) => n.from_user_id).filter(Boolean))]
+    let profilesMap: Record<string, any> = {}
+    if (fromIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url')
+        .in('id', fromIds)
+      if (profiles) profiles.forEach((p: any) => { profilesMap[p.id] = p })
+    }
+
+    setNotifsList(data.map((n: any) => ({
+      ...n,
+      profiles: n.from_user_id ? profilesMap[n.from_user_id] || null : null,
+    })))
   }
 
   const markAllRead = async () => {
