@@ -40,7 +40,7 @@ export default function AppNav() {
       if (data) setProfile(data)
       const { count: connCount } = await supabase.from('connections').select('id', { count: 'exact', head: true }).eq('receiver_id', user.id).eq('status', 'pending')
       setPendingConnections(connCount || 0)
-      const { count: notifCount } = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('read', false)
+      const { count: notifCount } = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('read', false).neq('type', 'message')
       setNotifications(notifCount || 0)
       loadNotifs(user.id)
       if (user.id === ADMIN_ID) {
