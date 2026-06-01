@@ -50,13 +50,17 @@ export default function TopBar() {
 
   // Fermer le dropdown en cliquant ailleurs
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
+    const handleClick = (e: MouseEvent | TouchEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setShowNotifs(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('touchstart', handleClick as EventListener)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('touchstart', handleClick as EventListener)
+    }
   }, [])
 
   const loadNotifications = async (uid: string) => {
@@ -203,12 +207,14 @@ export default function TopBar() {
       {/* Dropdown notifications */}
       {showNotifs && (
         <div style={{
-          position: 'absolute', top: 'calc(100% + 0.5rem)', right: 0,
+          position: 'fixed', top: '5rem', right: '1rem', left: '1rem',
           backgroundColor: 'white', borderRadius: '16px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          width: '340px', maxHeight: '480px',
+          maxWidth: '380px', marginLeft: 'auto',
+          maxHeight: '70vh',
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
+          zIndex: 300,
         }}>
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', borderBottom: '1px solid #F5F0E8' }}>
