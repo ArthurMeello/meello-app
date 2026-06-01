@@ -238,6 +238,17 @@ export default function QGPage() {
           .qg-members-panel { display: none !important; }
           /* L'indicateur "X en ligne" du header devient cliquable */
           .qg-online-trigger { cursor: pointer !important; }
+          /* "X en ligne" passe sur sa propre ligne, sous le titre */
+          .qg-header {
+            flex-wrap: wrap !important;
+            row-gap: 0.35rem !important;
+          }
+          .qg-online-trigger {
+            margin-left: 44px !important;
+            width: 100% !important;
+          }
+          /* Texte d'aide sous le chat masqué sur mobile */
+          .qg-input-hint { display: none !important; }
         }
       `}</style>
 
@@ -245,7 +256,7 @@ export default function QGPage() {
       <div className="qg-chat" style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden', minWidth: 0 }}>
 
         {/* Header */}
-        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div className="qg-header" style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <img src="/icons/megaphone.svg" alt="" style={{ width: '22px', height: '22px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' }} />
           <div>
             <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.15rem', fontWeight: 700, color: '#2D2D2D' }}>Le QG</div>
@@ -254,7 +265,7 @@ export default function QGPage() {
           <div
             className="qg-online-trigger"
             onClick={() => setOnlineModalOpen(true)}
-            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}
           >
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E', display: 'inline-block' }} />
             <span style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.5 }}>{onlineMembers.length} en ligne</span>
@@ -365,7 +376,7 @@ export default function QGPage() {
               </svg>
             </button>
           </div>
-          <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.35, marginTop: '0.4rem', textAlign: 'right' }}>Entrée pour envoyer · Maj+Entrée pour sauter une ligne</div>
+          <div className="qg-input-hint" style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.35, marginTop: '0.4rem', textAlign: 'right' }}>Entrée pour envoyer · Maj+Entrée pour sauter une ligne</div>
         </div>
       </div>
 
