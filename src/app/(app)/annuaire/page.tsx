@@ -201,7 +201,7 @@ export default function AnnuairePage() {
         <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>Chargement...</div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem' }}>
         {filtered.map(profile => (
           <MemberCard key={profile.id} profile={profile} />
         ))}
@@ -274,9 +274,9 @@ function MemberCard({ profile }: { profile: Profile }) {
   const badges = isNew ? ['nouveau', ...baseBadges] : baseBadges
 
   return (
-    <Link href={`/membre/${profile.id}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/membre/${profile.id}`} style={{ textDecoration: 'none', minWidth: 0, display: 'block' }}>
       <div
-        style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer' }}
+        style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', transition: 'transform 0.15s, box-shadow 0.15s', cursor: 'pointer', minWidth: 0, overflow: 'hidden' }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(0,0,0,0.12)' }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)' }}
       >
