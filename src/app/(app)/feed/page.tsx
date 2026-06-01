@@ -1365,7 +1365,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                       placeholder={`Répondre à ${replyingTo.first_name}…`}
                       rows={1}
                       autoFocus
-                      onFocus={e => { const len = e.target.value.length; e.target.setSelectionRange(len, len) }}
+                      onFocus={e => { const len = e.target.value.length; e.target.setSelectionRange(len, len); setTimeout(() => { e.target.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, 350) }}
                       style={{ flex: 1, border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 0.65rem', fontSize: '0.85rem', outline: 'none', fontFamily: 'inherit', resize: 'none', overflow: 'hidden', minHeight: '34px', lineHeight: '1.4' }}
                     />
                     <button type="submit" disabled={!replyContent.trim()} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.4rem 0.85rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', height: '34px', flexShrink: 0 }}>↩</button>
@@ -1405,6 +1405,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
                 value={comment}
                 onChange={handleCommentChange}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(e as any) } }}
+                onFocus={e => { setTimeout(() => { e.target.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, 350) }}
                 placeholder="Ton commentaire… (@nom pour mentionner)"
                 rows={1}
                 style={{ flex: 1, border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 0.75rem', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', resize: 'none', overflow: 'hidden', minHeight: '38px', lineHeight: '1.4' }}
