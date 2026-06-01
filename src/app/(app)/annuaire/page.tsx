@@ -77,6 +77,8 @@ export default function AnnuairePage() {
   const [suggestions, setSuggestions] = useState<Array<Profile & { reasons: string[] }>>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -140,6 +142,19 @@ export default function AnnuairePage() {
     }
   }
 
+  // Met à jour la visibilité des fondus selon la position de scroll
+  const updateFades = () => {
+    const el = scrollRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 4)
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
+  }
+
+  // Initialise les fondus quand les suggestions sont chargées
+  useEffect(() => {
+    updateFades()
+  }, [suggestions])
+
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto' }}>
       <style>{`
@@ -192,6 +207,7 @@ export default function AnnuairePage() {
           <div style={{ position: 'relative' }}>
             <div
               ref={scrollRef}
+              onScroll={updateFades}
               style={{ display: 'flex', gap: '0.85rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               <style>{`.suggestions-scroll::-webkit-scrollbar { display: none; }`}</style>
@@ -199,15 +215,28 @@ export default function AnnuairePage() {
                 <SuggestionCard key={profile.id} profile={profile} reasons={profile.reasons} />
               ))}
             </div>
+            {/* Fondu dégradé à gauche — visible une fois qu'on a commencé à scroller (mobile) */}
+            {canScrollLeft && (
+              <div
+                className="suggestions-fade"
+                style={{
+                  position: 'absolute', top: 0, left: 0, bottom: 0,
+                  width: '48px', pointerEvents: 'none',
+                  background: 'linear-gradient(to left, rgba(245,240,232,0), #F5F0E8)',
+                }}
+              />
+            )}
             {/* Fondu dégradé à droite — indique qu'il reste des cartes à scroller (mobile) */}
-            <div
-              className="suggestions-fade"
-              style={{
-                position: 'absolute', top: 0, right: 0, bottom: 0,
-                width: '48px', pointerEvents: 'none',
-                background: 'linear-gradient(to right, rgba(245,240,232,0), #F5F0E8)',
-              }}
-            />
+            {canScrollRight && (
+              <div
+                className="suggestions-fade"
+                style={{
+                  position: 'absolute', top: 0, right: 0, bottom: 0,
+                  width: '48px', pointerEvents: 'none',
+                  background: 'linear-gradient(to right, rgba(245,240,232,0), #F5F0E8)',
+                }}
+              />
+            )}
           </div>
         </div>
       )}
