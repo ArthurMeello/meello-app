@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
@@ -55,6 +56,7 @@ function renderContent(text: string) {
 }
 
 export default function QGPage() {
+  const router = useRouter()
   const [messages, setMessages] = useState<QGMessage[]>([])
   const [onlineMembers, setOnlineMembers] = useState<OnlineMember[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -72,6 +74,13 @@ export default function QGPage() {
   const presenceInterval = useRef<any>(null)
   const channelRef = useRef<any>(null)
   const userIdRef = useRef<string | null>(null)
+
+  // Sur mobile, le QG est plein écran : masque la topbar + la bottom-nav
+  // (réutilise le mécanisme des conversations privées).
+  useEffect(() => {
+    document.body.classList.add('msg-conv-open')
+    return () => document.body.classList.remove('msg-conv-open')
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
@@ -224,14 +233,27 @@ export default function QGPage() {
 
       <style>{`
         @media (max-width: 768px) {
-          /* Le QG occupe toute la largeur, comme une conversation privée */
+          /* Le QG occupe tout l'écran, comme une conversation privée ouverte.
+             La topbar et la bottom-nav sont masquées (body.msg-conv-open),
+             donc on prend toute la hauteur du viewport. */
           .qg-layout {
-            height: calc(100dvh - 5rem) !important;
+            position: fixed !important;
+            inset: 0 !important;
+            height: 100dvh !important;
+            max-width: none !important;
+            margin: 0 !important;
             gap: 0 !important;
+            z-index: 50 !important;
           }
           .qg-chat {
             border-radius: 0 !important;
             box-shadow: none !important;
+          }
+          /* Chevron retour vers le feed */
+          .qg-back-btn { display: flex !important; }
+          /* Décale le header sous l'encoche / barre de statut */
+          .qg-header {
+            padding-top: calc(1rem + env(safe-area-inset-top)) !important;
           }
           /* La colonne membres de droite est masquée sur mobile —
              on y accède via la modale "X en ligne" */
@@ -257,6 +279,13 @@ export default function QGPage() {
 
         {/* Header */}
         <div className="qg-header" style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #F5F0E8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            className="qg-back-btn"
+            onClick={() => router.push('/feed')}
+            style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', color: '#E8501A', flexShrink: 0, padding: '0.25rem', alignItems: 'center' }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
           <img src="/icons/megaphone.svg" alt="" style={{ width: '22px', height: '22px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' }} />
           <div>
             <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.15rem', fontWeight: 700, color: '#2D2D2D' }}>Le QG</div>
