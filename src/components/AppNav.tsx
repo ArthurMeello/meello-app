@@ -150,6 +150,9 @@ export default function AppNav() {
                   {item.href === '/reseau' && pendingConnections > 0 && (
                     <span style={{ position: 'absolute', top: '-5px', right: '-6px', backgroundColor: '#E8501A', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #1A1A2E' }}>{pendingConnections}</span>
                   )}
+                  {item.href === '/messages' && unreadMessages > 0 && (
+                    <span style={{ position: 'absolute', top: '-5px', right: '-6px', backgroundColor: '#E8501A', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #1A1A2E' }}>{unreadMessages > 9 ? '9+' : unreadMessages}</span>
+                  )}
                 </div>
                 <span>{item.label}</span>
               </Link>

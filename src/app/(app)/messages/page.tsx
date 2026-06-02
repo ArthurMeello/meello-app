@@ -205,6 +205,14 @@ export default function MessagesPage() {
         .eq('from_user_id', conv.other_user.id)
         .eq('read', false)
       setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread: false } : c))
+
+      // Mettre à jour le badge messages de la sidebar en direct
+      const { count } = await supabase.from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('type', 'message')
+        .eq('read', false)
+      window.dispatchEvent(new CustomEvent('meello:chat-unread', { detail: count || 0 }))
     }
 
     // Canal typing indicator
