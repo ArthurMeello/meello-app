@@ -91,6 +91,13 @@ export default function QGPage() {
       setUserId(user.id)
       userIdRef.current = user.id
 
+      // Marquer le QG comme lu (masque la pastille de la nav en direct)
+      await supabase.from('qg_last_read').upsert(
+        { user_id: user.id, last_read_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+      window.dispatchEvent(new CustomEvent('meello:qg-read'))
+
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       if (prof) setProfile(prof)
 
@@ -124,6 +131,15 @@ export default function QGPage() {
     return () => {
       if (channelRef.current) channelRef.current.unsubscribe()
       clearInterval(presenceInterval.current)
+      // Re-marquer le QG comme lu en quittant (couvre les messages
+      // reçus pendant la session)
+      if (userIdRef.current) {
+        const sb = createClient()
+        sb.from('qg_last_read').upsert(
+          { user_id: userIdRef.current, last_read_at: new Date().toISOString() },
+          { onConflict: 'user_id' }
+        ).then(() => {})
+      }
     }
   }, [])
 

@@ -13,6 +13,7 @@ const NOTIF_TYPES = [
   { key: 'connections', label: 'Demandes de connexion', emailable: true },
   { key: 'recommendations', label: 'Recommandations', emailable: true },
   { key: 'community', label: 'Activité communauté', emailable: false },
+  { key: 'qg', label: 'Activité du QG', emailable: false },
   { key: 'newsletter', label: 'Newsletter', appable: false, emailable: true },
 ]
 
@@ -21,6 +22,7 @@ const DEFAULT_PREFS: Record<string, boolean> = {
   connections_app: true, connections_email: true,
   recommendations_app: true, recommendations_email: true,
   community_app: true, community_email: true,
+  qg_app: true,
   // Newsletter désactivée par défaut : opt-in explicite requis
   newsletter_app: true, newsletter_email: false,
 }

@@ -27,6 +27,7 @@ export default function AppNav() {
   const [adminActions, setAdminActions] = useState(0)
   const [notifications, setNotifications] = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
+  const [qgUnread, setQgUnread] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifsOpen, setNotifsOpen] = useState(false)
   const [notifsList, setNotifsList] = useState<any[]>([])
@@ -37,6 +38,42 @@ export default function AppNav() {
     window.addEventListener('meello:chat-unread', handler as EventListener)
     return () => window.removeEventListener('meello:chat-unread', handler as EventListener)
   }, [])
+
+  // Écouter la lecture du QG (masque la pastille en direct)
+  useEffect(() => {
+    const handler = () => setQgUnread(false)
+    window.addEventListener('meello:qg-read', handler)
+    return () => window.removeEventListener('meello:qg-read', handler)
+  }, [])
+
+  // Y a-t-il du nouveau dans le QG depuis la dernière lecture ?
+  const checkQgUnread = async (uid: string) => {
+    const supabase = createClient()
+    // Préférence désactivée → pas de badge
+    const { data: prefs } = await supabase
+      .from('notification_preferences')
+      .select('qg_app')
+      .eq('user_id', uid)
+      .single()
+    if (prefs && prefs.qg_app === false) { setQgUnread(false); return }
+
+    const { data: lastRead } = await supabase
+      .from('qg_last_read')
+      .select('last_read_at')
+      .eq('user_id', uid)
+      .single()
+
+    // Dernier message du QG qui n'est pas de l'utilisateur lui-même
+    let query = supabase
+      .from('qg_messages')
+      .select('created_at')
+      .neq('user_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    if (lastRead?.last_read_at) query = query.gt('created_at', lastRead.last_read_at)
+    const { data: newer } = await query
+    setQgUnread((newer?.length || 0) > 0)
+  }
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -53,6 +90,7 @@ export default function AppNav() {
       // Charger le count messages non lus
       const { count: msgCount } = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('type', 'message').eq('read', false)
       setUnreadMessages(msgCount || 0)
+      checkQgUnread(user.id)
       loadNotifs(user.id)
       if (user.id === ADMIN_ID) {
         const [{ count: appCount }, { count: recoCount }] = await Promise.all([
@@ -152,6 +190,9 @@ export default function AppNav() {
                   )}
                   {item.href === '/messages' && unreadMessages > 0 && (
                     <span style={{ position: 'absolute', top: '-5px', right: '-6px', backgroundColor: '#E8501A', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #1A1A2E' }}>{unreadMessages > 9 ? '9+' : unreadMessages}</span>
+                  )}
+                  {item.href === '/qg' && qgUnread && (
+                    <span style={{ position: 'absolute', top: '-3px', right: '-4px', backgroundColor: '#E8501A', borderRadius: '50%', width: '10px', height: '10px', border: '1.5px solid #1A1A2E' }} />
                   )}
                 </div>
                 <span>{item.label}</span>
