@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
+import { GHOST_ID } from '@/lib/ghost'
 import imageCompression from 'browser-image-compression'
 import type { Post } from '@/types'
 
@@ -39,7 +40,7 @@ function FeedPageInner() {
     fetchPosts()
     // Charger tous les membres pour résoudre les mentions
     createClient().from('profiles').select('id, first_name, last_name').eq('is_active', true).then(({ data }) => {
-      if (data) setAllMembers(data)
+      if (data) setAllMembers(data.filter(m => m.id !== GHOST_ID))
     })
     // Récupérer l'ID de la catégorie Présentations
     createClient().from('forum_categories').select('id').eq('name', 'Présentations').single().then(({ data }) => {
@@ -191,7 +192,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
     const load = async () => {
       const supabase = createClient()
       const { data } = await supabase.from('profiles').select('id, first_name, last_name').eq('is_active', true)
-      if (data) setAllMembers(data.filter(m => m.id !== userId))
+      if (data) setAllMembers(data.filter(m => m.id !== userId && m.id !== GHOST_ID))
     }
     load()
   }, [userId])
@@ -285,7 +286,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
       if (allProfiles) {
         await Promise.all(
           allProfiles
-            .filter(p => p.id !== userId)
+            .filter(p => p.id !== userId && p.id !== GHOST_ID)
             .map(p => notify({
               userId: p.id,
               type: 'community',

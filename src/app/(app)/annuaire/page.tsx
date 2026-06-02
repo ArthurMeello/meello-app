@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { filterGhost } from '@/lib/ghost'
 import type { Profile } from '@/types'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
@@ -86,11 +87,14 @@ export default function AnnuairePage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
 
-      const { data } = await supabase
+      const { data: rawData } = await supabase
         .from('profiles')
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: true })
+
+      // Masquer le compte fantôme (sauf pour l'admin)
+      const data = filterGhost(rawData || [], p => p.id, user?.id)
 
       if (data) {
         setProfiles(data)

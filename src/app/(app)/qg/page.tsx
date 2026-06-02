@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { GHOST_ID, filterGhost } from '@/lib/ghost'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 const PAGE_SIZE = 50
@@ -116,6 +117,8 @@ export default function QGPage() {
         .channel('qg-messages-live')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'qg_messages' }, async (payload) => {
           const msg = payload.new
+          // Ignorer les messages du compte fantôme (sauf admin)
+          if (msg.user_id === GHOST_ID && userIdRef.current !== ADMIN_ID) return
           const { data: prof } = await supabase.from('profiles').select('first_name, last_name, avatar_url, badges').eq('id', msg.user_id).single()
           const fullMsg = { ...msg, profile: prof }
           setMessages(prev => [...prev, fullMsg])
@@ -152,7 +155,8 @@ export default function QGPage() {
 
     if (before) query = query.lt('created_at', before)
 
-    const { data } = await query
+    const { data: rawData } = await query
+    const data = filterGhost(rawData || [], (m: any) => m.user_id, userIdRef.current)
     if (!data || data.length === 0) { setHasMore(false); return [] }
 
     const userIds = [...new Set(data.map((m: any) => m.user_id))]
@@ -167,12 +171,13 @@ export default function QGPage() {
 
   const loadOnlineMembers = async (supabase: any) => {
     const since = new Date(Date.now() - 30 * 1000).toISOString() // 30 secondes
-    const { data } = await supabase
+    const { data: rawData } = await supabase
       .from('qg_presence')
       .select('user_id, last_seen')
       .gte('last_seen', since)
       .order('last_seen', { ascending: false })
 
+    const data = filterGhost(rawData || [], (p: any) => p.user_id, userIdRef.current)
     if (!data || data.length === 0) { setOnlineMembers([]); return }
 
     const userIds = data.map((p: any) => p.user_id)

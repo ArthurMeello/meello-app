@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
+import { GHOST_ID } from '@/lib/ghost'
 
 // ─── XP / Niveaux ─────────────────────────────────────────────────────────────
 function getLevelFromXP(totalXP: number): { level: number; currentXP: number; xpToNext: number } {
@@ -113,6 +114,7 @@ function MiniPostCard({ post, isLast }: { post: any; isLast?: boolean }) {
 
 export default function MembrePublicPage() {
   const { id } = useParams()
+  const router = useRouter()
   const [profile, setProfile] = useState(null)
   const [portfolio, setPortfolio] = useState([])
   const [services, setServices] = useState([])
@@ -148,6 +150,12 @@ export default function MembrePublicPage() {
 
       const { data: { user } } = await supabase.auth.getUser()
       if (user) setCurrentUserId(user.id)
+
+      // Compte fantôme : invisible sauf pour l'admin → redirection
+      if (id === GHOST_ID && user?.id !== ADMIN_ID) {
+        router.push('/feed')
+        return
+      }
 
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).single()
       if (prof) setProfile(prof)
