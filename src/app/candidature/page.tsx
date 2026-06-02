@@ -24,6 +24,7 @@ export default function CandidaturePage() {
     why_join: '',
     company_number: '',
   })
+  const [newsletterOptIn, setNewsletterOptIn] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,6 +50,7 @@ export default function CandidaturePage() {
       country: form.country,
       why_join: form.why_join,
       company_number: form.company_number || null,
+      newsletter_opt_in: newsletterOptIn,
       status: 'pending',
     })
 
@@ -167,6 +169,16 @@ export default function CandidaturePage() {
                 style={{ ...inputStyle, resize: 'vertical', minHeight: '100px' }}
               />
             </div>
+
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', cursor: 'pointer', fontSize: '0.88rem', color: '#2D2D2D', opacity: 0.8, lineHeight: 1.5 }}>
+              <input
+                type="checkbox"
+                checked={newsletterOptIn}
+                onChange={e => setNewsletterOptIn(e.target.checked)}
+                style={{ marginTop: '0.15rem', width: '18px', height: '18px', accentColor: '#E8501A', flexShrink: 0, cursor: 'pointer' }}
+              />
+              <span>J&apos;accepte de recevoir la newsletter et les actualités de Meello par e-mail. (Tu pourras te désinscrire à tout moment.)</span>
+            </label>
 
             {error && (
               <div style={{ backgroundColor: '#FFF0ED', border: '1px solid #E8501A', borderRadius: '8px', padding: '0.75rem', color: '#E8501A', fontSize: '0.9rem' }}>

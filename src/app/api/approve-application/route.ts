@@ -78,7 +78,10 @@ export async function POST(req: NextRequest) {
     }),
   })
 
-  // 7. Ajouter à la liste Brevo
+  // 7. Ajouter à la liste Brevo transactionnelle (#4) + newsletter (#5) si consentement
+  const NEWSLETTER_LIST_ID = Number(process.env.BREVO_NEWSLETTER_LIST_ID || 5)
+  const optedIn = app.newsletter_opt_in === true
+  const listIds = optedIn ? [4, NEWSLETTER_LIST_ID] : [4]
   await fetch('https://api.brevo.com/v3/contacts', {
     method: 'POST',
     headers: {
@@ -88,9 +91,15 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       email: app.email,
       attributes: { PRENOM: app.first_name, NOM: app.last_name },
-      listIds: [4],
+      listIds,
       updateEnabled: true,
     }),
+  })
+
+  // 8. Initialiser les préférences de notification (newsletter selon consentement)
+  await supabase.from('notification_preferences').insert({
+    user_id: authData.user.id,
+    newsletter_email: optedIn,
   })
 
   return NextResponse.json({ ok: true, userId: authData.user.id })
