@@ -280,8 +280,18 @@ export default function MembrePublicPage() {
     if (!connectionId) return
     setRemoving(true)
     const supabase = createClient()
-    await supabase.from('connections').delete().eq('id', connectionId)
+    // `select()` renvoie les lignes réellement supprimées : permet de détecter
+    // un blocage RLS silencieux (0 ligne supprimée).
+    const { data: deleted, error } = await supabase
+      .from('connections')
+      .delete()
+      .eq('id', connectionId)
+      .select('id')
     setRemoving(false)
+    if (error || !deleted || deleted.length === 0) {
+      alert("La suppression a échoué. Vérifie les permissions (RLS) sur la table connections.")
+      return
+    }
     setRemoveModal(false)
     setConnectionStatus('none')
     setConnectionId(null)
