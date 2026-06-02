@@ -371,6 +371,12 @@ export default function MembrePublicPage() {
           .profil-block-portfolio { order: 4 !important; }
           .profil-block-posts     { order: 5 !important; }
           .profil-block-recos     { order: 6 !important; }
+
+          /* Ordre des actions du profil sur mobile :
+             Recommander, puis icône message, puis le menu "..." */
+          .act-reco    { order: 1 !important; }
+          .act-message { order: 2 !important; }
+          .act-menu    { order: 3 !important; margin-left: 0 !important; }
         }
       `}</style>
 
@@ -416,7 +422,7 @@ export default function MembrePublicPage() {
                 )}
                 {connectionStatus === 'accepted' && (
                   <>
-                    <button onClick={openMessage} style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Envoyer un message"
+                    <button onClick={openMessage} className="act-message" style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Envoyer un message"
                       onMouseEnter={e => e.currentTarget.querySelector('svg')!.style.stroke = '#E8501A'}
                       onMouseLeave={e => e.currentTarget.querySelector('svg')!.style.stroke = '#2D2D2D'}
                     >
@@ -424,11 +430,11 @@ export default function MembrePublicPage() {
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                       </svg>
                     </button>
-                    <button onClick={() => !alreadyRecommended && setRecoModal(true)} disabled={alreadyRecommended}
+                    <button onClick={() => !alreadyRecommended && setRecoModal(true)} disabled={alreadyRecommended} className="act-reco"
                       style={{ background: 'none', border: `1.5px solid ${alreadyRecommended ? '#ccc' : '#E8501A'}`, borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: alreadyRecommended ? 'default' : 'pointer', fontSize: '0.85rem', color: alreadyRecommended ? '#aaa' : '#E8501A' }}>
                       {alreadyRecommended ? 'Déjà recommandé' : 'Recommander'}
                     </button>
-                    <div style={{ position: 'relative', marginLeft: 'auto' }}>
+                    <div className="act-menu" style={{ position: 'relative', marginLeft: 'auto' }}>
                       <button onClick={() => setMenuOpen(o => !o)}
                         style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#999' }}
                         title="Plus d'options"
