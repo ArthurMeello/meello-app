@@ -11,7 +11,7 @@ const NOTIF_TYPES = [
   { key: 'messages', label: 'Messages privés', emailable: false },
   { key: 'connections', label: 'Demandes de connexion', emailable: true },
   { key: 'recommendations', label: 'Recommandations', emailable: true },
-  { key: 'community', label: 'Activité communauté', emailable: true },
+  { key: 'community', label: 'Activité communauté', emailable: false },
 ]
 
 const DEFAULT_PREFS: Record<string, boolean> = {
@@ -267,7 +267,7 @@ export default function ParametresPage() {
                   {t.emailable ? (
                     <Toggle on={!!prefs[`${t.key}_email`]} onClick={() => togglePref(`${t.key}_email`)} />
                   ) : (
-                    <span title="Non disponible pour les messages" style={{ color: '#2D2D2D', opacity: 0.25, fontWeight: 600 }}>—</span>
+                    <span title="Notifications par e-mail non disponibles pour ce type" style={{ color: '#2D2D2D', opacity: 0.25, fontWeight: 600 }}>—</span>
                   )}
                 </div>
               </div>
