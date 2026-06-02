@@ -122,6 +122,8 @@ export default function MembrePublicPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending_sent' | 'pending_received' | 'accepted'>('none')
   const [connectionId, setConnectionId] = useState<string | null>(null)
+  const [removeModal, setRemoveModal] = useState(false)
+  const [removing, setRemoving] = useState(false)
   const [recoModal, setRecoModal] = useState(false)
   const [recoText, setRecoText] = useState('')
   const [recoLoading, setRecoLoading] = useState(false)
@@ -273,6 +275,17 @@ export default function MembrePublicPage() {
     setConnectionStatus('accepted')
   }
 
+  const removeConnection = async () => {
+    if (!connectionId) return
+    setRemoving(true)
+    const supabase = createClient()
+    await supabase.from('connections').delete().eq('id', connectionId)
+    setRemoving(false)
+    setRemoveModal(false)
+    setConnectionStatus('none')
+    setConnectionId(null)
+  }
+
   const openMessage = async () => {
     const supabase = createClient()
     const { data: existing } = await supabase.from('conversations').select('id').or(`and(participant1_id.eq.${currentUserId},participant2_id.eq.${id}),and(participant1_id.eq.${id},participant2_id.eq.${currentUserId})`).single()
@@ -413,6 +426,19 @@ export default function MembrePublicPage() {
                     <button onClick={() => !alreadyRecommended && setRecoModal(true)} disabled={alreadyRecommended}
                       style={{ background: 'none', border: `1.5px solid ${alreadyRecommended ? '#ccc' : '#E8501A'}`, borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: alreadyRecommended ? 'default' : 'pointer', fontSize: '0.85rem', color: alreadyRecommended ? '#aaa' : '#E8501A' }}>
                       {alreadyRecommended ? 'Déjà recommandé' : 'Recommander'}
+                    </button>
+                    <button onClick={() => setRemoveModal(true)}
+                      style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', marginLeft: 'auto' }}
+                      title="Retirer de mon réseau"
+                      onMouseEnter={e => e.currentTarget.querySelector('svg')!.style.stroke = '#E8501A'}
+                      onMouseLeave={e => e.currentTarget.querySelector('svg')!.style.stroke = '#999'}
+                    >
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'stroke 0.15s' }}>
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                      </svg>
                     </button>
                   </>
                 )}
@@ -617,6 +643,28 @@ export default function MembrePublicPage() {
 
         </div>
       </div>
+
+      {/* Modal confirmation suppression de relation */}
+      {removeModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setRemoveModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.75rem', width: '100%', maxWidth: '400px' }}>
+            <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.15rem', color: '#2D2D2D', marginBottom: '0.6rem' }}>
+              Retirer de ton réseau ?
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: '#2D2D2D', opacity: 0.65, lineHeight: 1.55, margin: '0 0 1.5rem' }}>
+              {profile.first_name} {profile.last_name} sera retiré(e) de ton réseau. Vous devrez renvoyer une demande de connexion pour vous reconnecter.
+            </p>
+            <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setRemoveModal(false)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.55rem 1.1rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#2D2D2D' }}>
+                Annuler
+              </button>
+              <button onClick={removeConnection} disabled={removing} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.55rem 1.1rem', cursor: removing ? 'default' : 'pointer', fontSize: '0.9rem', fontWeight: 600, opacity: removing ? 0.6 : 1 }}>
+                {removing ? 'Suppression…' : 'Retirer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal recommandation */}
       {recoModal && (
