@@ -17,8 +17,10 @@ import { createClient } from '@/lib/supabase/client'
 
 interface Step {
   type: 'action' | 'info'
-  target?: string        // onglet à cliquer (étapes 'action')
-  route: string          // page sur laquelle l'étape se déroule / qu'on doit atteindre
+  target?: string         // onglet à cliquer sur desktop (data-tour)
+  mobileTarget?: string   // onglet à cliquer sur mobile (data-tour)
+  needsMenu?: boolean     // si la cible mobile est dans le menu burger
+  route: string           // page sur laquelle l'étape se déroule / qu'on doit atteindre
   title: string
   body: string
 }
@@ -27,28 +29,28 @@ const STEPS: Step[] = [
   // — Accueil
   { type: 'info', route: '/feed', title: 'Bienvenue sur Meello 👋', body: "Ravi de t'accueillir ! Je vais te faire visiter les différentes pages, une par une. À chaque étape, clique sur l'onglet mis en avant pour avancer." },
 
-  // — Profil
-  { type: 'action', target: 'nav-profil', route: '/profil', title: 'Ton profil', body: "Commençons par ton profil. Clique sur « Mon profil » dans le menu." },
+  // — Profil (bottom-bar sur mobile)
+  { type: 'action', target: 'nav-profil', mobileTarget: 'm-profil-bottom', route: '/profil', title: 'Ton profil', body: "Commençons par ton profil. Clique sur « Mon profil »." },
   { type: 'info', route: '/profil', title: 'Complète ton profil', body: "Voici ta page profil. Ajoute ta photo, ta bio et ton activité : un profil complet inspire confiance et donne envie de se connecter avec toi. Tu pourras le remplir juste après le tutoriel." },
 
-  // — La Communauté (forum / présentations)
-  { type: 'action', target: 'nav-forum', route: '/forum', title: 'La Communauté', body: "Maintenant, découvrons « La Communauté ». Clique sur cet onglet." },
+  // — La Communauté (forum / présentations) — dans le menu sur mobile
+  { type: 'action', target: 'nav-forum', mobileTarget: 'm-forum', needsMenu: true, route: '/forum', title: 'La Communauté', body: "Maintenant, découvrons « La Communauté ». Clique sur cet onglet." },
   { type: 'info', route: '/forum', title: 'Présente-toi ici', body: "C'est le cœur de Meello. Tu y trouves des espaces d'échange par thème, dont la catégorie « Présentations » : c'est LÀ que chaque membre se présente. Va t'y présenter dès que possible, c'est la meilleure façon de te faire connaître et de lancer les premières conversations." },
 
   // — Annuaire
-  { type: 'action', target: 'nav-annuaire', route: '/annuaire', title: "L'Annuaire", body: "Voyons comment trouver d'autres membres. Clique sur « Annuaire »." },
+  { type: 'action', target: 'nav-annuaire', mobileTarget: 'm-annuaire', needsMenu: true, route: '/annuaire', title: "L'Annuaire", body: "Voyons comment trouver d'autres membres. Clique sur « Annuaire »." },
   { type: 'info', route: '/annuaire', title: 'Trouve des membres', body: "L'annuaire liste tous les membres. Tu peux les filtrer par activité ou par ville pour repérer les personnes qui t'intéressent et leur envoyer une demande de connexion." },
 
   // — Mon Réseau
-  { type: 'action', target: 'nav-reseau', route: '/reseau', title: 'Ton Réseau', body: "Regarde ton réseau. Clique sur « Mon Réseau »." },
+  { type: 'action', target: 'nav-reseau', mobileTarget: 'm-reseau', needsMenu: true, route: '/reseau', title: 'Ton Réseau', body: "Regarde ton réseau. Clique sur « Mon Réseau »." },
   { type: 'info', route: '/reseau', title: 'Tu as déjà un contact !', body: "Bonne nouvelle : tu n'es pas seul. En tant que fondateur, je suis déjà ta toute première connexion 🙌 Ici tu retrouves tes contacts, et tu gères les demandes reçues et envoyées." },
 
   // — Le QG
-  { type: 'action', target: 'nav-qg', route: '/qg', title: 'Le QG', body: "Direction le salon de discussion. Clique sur « Le QG »." },
+  { type: 'action', target: 'nav-qg', mobileTarget: 'm-qg', needsMenu: true, route: '/qg', title: 'Le QG', body: "Direction le salon de discussion. Clique sur « Le QG »." },
   { type: 'info', route: '/qg', title: 'Discute en direct', body: "Le QG est le chat général de la communauté, en temps réel. Viens dire bonjour, poser des questions, réagir : c'est l'endroit le plus vivant de Meello." },
 
   // — Événements
-  { type: 'action', target: 'nav-evenements', route: '/evenements', title: 'Les Événements', body: "Dernière étape. Clique sur « Événements »." },
+  { type: 'action', target: 'nav-evenements', mobileTarget: 'm-evenements', needsMenu: true, route: '/evenements', title: 'Les Événements', body: "Dernière étape. Clique sur « Événements »." },
   { type: 'info', route: '/evenements', title: 'Rencontre les autres en vrai', body: "Participe aux visios et événements pour rencontrer les membres. Rien ne vaut un vrai échange pour créer des liens durables." },
 
   // — Fin
@@ -91,16 +93,40 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
     })
   }, [finish])
 
+  const isMobileView = () => typeof window !== 'undefined' && window.innerWidth <= 768
+
+  // Cible courante selon l'appareil
+  const currentTarget = () => {
+    if (!step || step.type !== 'action') return undefined
+    return isMobileView() ? (step.mobileTarget || step.target) : step.target
+  }
+
+  // Ouvre/ferme le menu burger mobile via événement (écouté par AppNav)
+  const setMobileMenu = (open: boolean) => {
+    window.dispatchEvent(new CustomEvent('meello:tour-menu', { detail: open }))
+  }
+
   // Mesurer l'élément cible (étapes 'action')
   const updateRect = useCallback(() => {
-    if (!active || step?.type !== 'action' || !step.target) { setRect(null); return }
-    const el = document.querySelector(`[data-tour="${step.target}"]`)
+    const tgt = currentTarget()
+    if (!active || step?.type !== 'action' || !tgt) { setRect(null); return }
+    const el = document.querySelector(`[data-tour="${tgt}"]`)
     setRect(el ? el.getBoundingClientRect() : null)
   }, [active, step])
 
+  // Sur mobile, ouvrir le menu burger si l'étape cible une pill du menu
+  useEffect(() => {
+    if (!active || !step || step.type !== 'action') { setMobileMenu(false); return }
+    if (isMobileView() && step.needsMenu && pathname === step.route) {
+      // déjà sur la page : pas besoin d'ouvrir
+    } else if (isMobileView() && step.needsMenu) {
+      setMobileMenu(true)
+    }
+  }, [active, stepIndex, step, pathname])
+
   useEffect(() => {
     if (!active) return
-    const t = setTimeout(updateRect, 120)
+    const t = setTimeout(updateRect, 200)
     window.addEventListener('resize', updateRect)
     window.addEventListener('scroll', updateRect, true)
     return () => {
@@ -114,32 +140,38 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
   useEffect(() => {
     if (!active || !step || step.type !== 'action') return
     if (pathname === step.route) {
-      const t = setTimeout(() => next(), 350) // laisse la page se charger
+      setMobileMenu(false) // refermer le menu si ouvert
+      const t = setTimeout(() => next(), 350)
       return () => clearTimeout(t)
     }
   }, [active, step, pathname, next])
 
   if (!active || !step) return null
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
-  const isAction = step.type === 'action' && !!rect && !isMobile
+  const isMobile = isMobileView()
+  const isAction = step.type === 'action' && !!rect
   const pad = 8
 
-  // Bulle : pour une étape action, on la place près de l'onglet ; sinon centrée
+  // Bulle : placement selon appareil + position de la cible
   let bubbleStyle: React.CSSProperties = {
     position: 'fixed', zIndex: 100002, maxWidth: '380px', width: 'calc(100% - 2rem)',
   }
-  if (isAction && rect) {
+  if (isMobile) {
+    // Sur mobile, la bulle se place en haut ou en bas selon où est la cible,
+    // pour ne pas la recouvrir.
+    const targetLow = rect && rect.top > window.innerHeight / 2
+    bubbleStyle = {
+      position: 'fixed', zIndex: 100002, left: '1rem', right: '1rem',
+      maxWidth: 'none', width: 'auto',
+      ...(targetLow
+        ? { top: 'calc(1rem + env(safe-area-inset-top))' }
+        : { bottom: 'calc(1rem + env(safe-area-inset-bottom))' }),
+    }
+  } else if (isAction && rect) {
     bubbleStyle.top = Math.min(rect.top, window.innerHeight - 220) + 'px'
     bubbleStyle.left = (rect.right + 16) + 'px'
   } else {
     bubbleStyle = { ...bubbleStyle, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
-  }
-  if (isMobile) {
-    bubbleStyle = {
-      position: 'fixed', zIndex: 100002, left: '1rem', right: '1rem',
-      bottom: 'calc(1rem + env(safe-area-inset-bottom))', maxWidth: 'none', width: 'auto',
-    }
   }
 
   // Masque : 4 panneaux autour de l'élément cible (le laissent cliquable).

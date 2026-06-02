@@ -46,6 +46,13 @@ export default function AppNav() {
     return () => window.removeEventListener('meello:qg-read', handler)
   }, [])
 
+  // Le tutoriel d'onboarding peut ouvrir/fermer le menu burger mobile
+  useEffect(() => {
+    const handler = (e: CustomEvent) => setMenuOpen(!!e.detail)
+    window.addEventListener('meello:tour-menu', handler as EventListener)
+    return () => window.removeEventListener('meello:tour-menu', handler as EventListener)
+  }, [])
+
   // Y a-t-il du nouveau dans le QG depuis la dernière lecture ?
   const checkQgUnread = async (uid: string) => {
     const supabase = createClient()
@@ -251,6 +258,7 @@ export default function AppNav() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  data-tour={`m-${item.href.replace('/', '')}`}
                   onClick={() => setMenuOpen(false)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '12px',
@@ -294,6 +302,7 @@ export default function AppNav() {
 
         {/* Bulle burger / croix */}
         <button
+          data-tour="m-burger"
           onClick={() => setMenuOpen(o => !o)}
           style={{
             position: 'fixed', top: '16px', left: '16px', zIndex: 201,
@@ -353,7 +362,7 @@ export default function AppNav() {
           boxShadow: '0 -1px 0 rgba(255,255,255,0.06)',
         }}>
           {/* Fil d'actualité */}
-          <Link href="/feed" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', color: pathname.startsWith('/feed') ? '#E8501A' : 'rgba(245,240,232,0.6)', fontSize: '0.65rem' }}>
+          <Link href="/feed" data-tour="m-feed-bottom" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', color: pathname.startsWith('/feed') ? '#E8501A' : 'rgba(245,240,232,0.6)', fontSize: '0.65rem' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
               <polyline points="9 22 9 12 15 12 15 22"/>
@@ -392,7 +401,7 @@ export default function AppNav() {
           </button>
 
           {/* Profil */}
-          <Link href="/profil" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', color: pathname.startsWith('/profil') ? '#E8501A' : 'rgba(245,240,232,0.6)', fontSize: '0.65rem' }}>
+          <Link href="/profil" data-tour="m-profil-bottom" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', textDecoration: 'none', color: pathname.startsWith('/profil') ? '#E8501A' : 'rgba(245,240,232,0.6)', fontSize: '0.65rem' }}>
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', overflow: 'hidden', border: pathname.startsWith('/profil') ? '2px solid #E8501A' : '2px solid rgba(245,240,232,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, color: 'white' }}>
               {profile?.avatar_url ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
             </div>
