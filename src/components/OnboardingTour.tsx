@@ -61,6 +61,8 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
   const [active, setActive] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
   const [rect, setRect] = useState<DOMRect | null>(null)
+  const [radius, setRadius] = useState('12px')
+  const [targetMissing, setTargetMissing] = useState(false)
   const pathname = usePathname()
   const checkedRef = useRef(false)
 
@@ -106,12 +108,20 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
     window.dispatchEvent(new CustomEvent('meello:tour-menu', { detail: open }))
   }
 
-  // Mesurer l'élément cible (étapes 'action')
+  // Mesurer l'élément cible (étapes 'action') + récupérer son rayon réel
   const updateRect = useCallback(() => {
     const tgt = currentTarget()
     if (!active || step?.type !== 'action' || !tgt) { setRect(null); return }
     const el = document.querySelector(`[data-tour="${tgt}"]`)
-    setRect(el ? el.getBoundingClientRect() : null)
+    if (el) {
+      setRect(el.getBoundingClientRect())
+      const br = getComputedStyle(el).borderRadius
+      // +pad pour que le contour reste concentrique avec l'élément
+      setRadius(br && br !== '0px' ? `calc(${br} + ${8}px)` : '12px')
+      setTargetMissing(false)
+    } else {
+      setRect(null)
+    }
   }, [active, step])
 
   // Sur mobile, ouvrir le menu burger si l'étape cible une pill du menu
@@ -126,11 +136,21 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
 
   useEffect(() => {
     if (!active) return
+    setTargetMissing(false)
     const t = setTimeout(updateRect, 200)
     window.addEventListener('resize', updateRect)
     window.addEventListener('scroll', updateRect, true)
+    // Filet de sécurité : si la cible reste introuvable, proposer un Suivant manuel
+    let miss: any
+    if (step?.type === 'action') {
+      miss = setTimeout(() => {
+        const tgt = currentTarget()
+        if (!tgt || !document.querySelector(`[data-tour="${tgt}"]`)) setTargetMissing(true)
+      }, 900)
+    }
     return () => {
       clearTimeout(t)
+      if (miss) clearTimeout(miss)
       window.removeEventListener('resize', updateRect)
       window.removeEventListener('scroll', updateRect, true)
     }
@@ -183,8 +203,8 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
       <div style={{ position: 'fixed', top: rect.bottom + pad, left: 0, right: 0, bottom: 0, backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
       <div style={{ position: 'fixed', top: rect.top - pad, left: 0, width: Math.max(0, rect.left - pad), height: rect.height + pad * 2, backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
       <div style={{ position: 'fixed', top: rect.top - pad, left: rect.right + pad, right: 0, height: rect.height + pad * 2, backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
-      {/* Contour de l'élément cliquable */}
-      <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, border: '2px solid #E8501A', borderRadius: '12px', zIndex: 100001, pointerEvents: 'none' }} />
+      {/* Contour de l'élément cliquable — épouse le rayon réel de l'élément */}
+      <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, border: '2px solid #E8501A', borderRadius: radius, zIndex: 100001, pointerEvents: 'none' }} />
     </>
   ) : (
     // Étape info (ou mobile) : overlay plein qui bloque tout
@@ -211,6 +231,11 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
           {step.type === 'info' ? (
             <button onClick={next} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
               {stepIndex === STEPS.length - 1 ? 'Terminer' : 'Suivant'}
+            </button>
+          ) : targetMissing ? (
+            // Filet de sécurité : la cible n'a pas été trouvée → avancer manuellement
+            <button onClick={next} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+              Suivant
             </button>
           ) : (
             <span style={{ fontSize: '0.8rem', color: '#E8501A', fontWeight: 700, whiteSpace: 'nowrap' }}>👆 Clique sur l'onglet</span>
