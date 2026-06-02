@@ -109,19 +109,26 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
     window.dispatchEvent(new CustomEvent('meello:tour-menu', { detail: open }))
   }
 
-  // Mesurer l'élément cible (étapes 'action') + récupérer son rayon réel
+  // Mesurer l'élément cible (étapes 'action') + récupérer son rayon réel.
+  // Ne met à jour le state que si la position a changé (évite les re-renders
+  // inutiles dans la boucle d'animation).
   const updateRect = useCallback(() => {
     const tgt = currentTarget()
-    if (!active || step?.type !== 'action' || !tgt) { setRect(null); return }
+    if (!active || step?.type !== 'action' || !tgt) { setRect(prev => prev ? null : prev); return }
     const el = document.querySelector(`[data-tour="${tgt}"]`)
     if (el) {
-      setRect(el.getBoundingClientRect())
+      const r = el.getBoundingClientRect()
+      setRect(prev => {
+        if (prev && Math.abs(prev.top - r.top) < 0.5 && Math.abs(prev.left - r.left) < 0.5
+            && Math.abs(prev.width - r.width) < 0.5 && Math.abs(prev.height - r.height) < 0.5) {
+          return prev
+        }
+        return r
+      })
       const br = getComputedStyle(el).borderRadius
-      // Rayon exact de l'élément (pad = 0, on colle au pixel près)
       setRadius(br && br !== '0px' ? br : '10px')
-      setTargetMissing(false)
     } else {
-      setRect(null)
+      setRect(prev => prev ? null : prev)
     }
   }, [active, step])
 
@@ -142,22 +149,27 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
   useEffect(() => {
     if (!active) return
     setTargetMissing(false)
-    const t = setTimeout(updateRect, 200)
-    window.addEventListener('resize', updateRect)
-    window.addEventListener('scroll', updateRect, true)
+
+    // Suivi en continu (requestAnimationFrame) : le trou colle à l'élément
+    // même pendant son animation d'apparition (les pills glissent en entrant).
+    let raf: number
+    const loop = () => {
+      updateRect()
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+
     // Filet de sécurité : si la cible reste introuvable, proposer un Suivant manuel
     let miss: any
     if (step?.type === 'action') {
       miss = setTimeout(() => {
         const tgt = currentTarget()
         if (!tgt || !document.querySelector(`[data-tour="${tgt}"]`)) setTargetMissing(true)
-      }, 900)
+      }, 1000)
     }
     return () => {
-      clearTimeout(t)
+      cancelAnimationFrame(raf)
       if (miss) clearTimeout(miss)
-      window.removeEventListener('resize', updateRect)
-      window.removeEventListener('scroll', updateRect, true)
     }
   }, [active, stepIndex, updateRect])
 
