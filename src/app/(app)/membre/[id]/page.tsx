@@ -390,12 +390,15 @@ export default function MembrePublicPage() {
           .profil-block-posts     { order: 5 !important; }
           .profil-block-recos     { order: 6 !important; }
 
-          /* Ordre des actions du profil sur mobile :
-             Recommander, puis icône message, puis le menu "..." */
-          .act-reco    { order: 1 !important; }
-          .act-message { order: 2 !important; }
-          .act-menu    { order: 3 !important; margin-left: 0 !important; }
+          /* Sur mobile, le menu se colle aux autres au lieu d'être à droite */
+          .act-menu    { margin-left: 0 !important; }
         }
+
+        /* Ordre des actions (desktop + mobile) :
+           Recommander, puis icône message, puis le menu "..." */
+        .act-reco    { order: 1; }
+        .act-message { order: 2; }
+        .act-menu    { order: 3; }
       `}</style>
 
       <div className="profil-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.5rem', alignItems: 'start' }}>
