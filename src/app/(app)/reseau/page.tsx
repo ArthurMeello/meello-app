@@ -203,18 +203,6 @@ export default function ReseauPage() {
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     </svg>
                   </button>
-                  {alreadyRecommended.has(c.other_user.id) ? (
-                    <button disabled style={{ background: 'none', border: '1.5px solid #ccc', borderRadius: '8px', padding: '0.45rem 0.85rem', fontWeight: 600, cursor: 'default', fontSize: '0.82rem', color: '#aaa' }}>
-                      Déjà recommandé
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => { setRecoModal(c.other_user); setRecoText('') }}
-                      style={{ background: 'none', border: '1.5px solid #E8501A', borderRadius: '8px', padding: '0.45rem 0.85rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem', color: '#E8501A' }}
-                    >
-                      Recommander
-                    </button>
-                  )}
                 </div>
               </div>
             ))}
