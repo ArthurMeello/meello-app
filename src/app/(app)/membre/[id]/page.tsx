@@ -124,6 +124,7 @@ export default function MembrePublicPage() {
   const [connectionId, setConnectionId] = useState<string | null>(null)
   const [removeModal, setRemoveModal] = useState(false)
   const [removing, setRemoving] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [recoModal, setRecoModal] = useState(false)
   const [recoText, setRecoText] = useState('')
   const [recoLoading, setRecoLoading] = useState(false)
@@ -427,19 +428,32 @@ export default function MembrePublicPage() {
                       style={{ background: 'none', border: `1.5px solid ${alreadyRecommended ? '#ccc' : '#E8501A'}`, borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: alreadyRecommended ? 'default' : 'pointer', fontSize: '0.85rem', color: alreadyRecommended ? '#aaa' : '#E8501A' }}>
                       {alreadyRecommended ? 'Déjà recommandé' : 'Recommander'}
                     </button>
-                    <button onClick={() => setRemoveModal(true)}
-                      style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', marginLeft: 'auto' }}
-                      title="Retirer de mon réseau"
-                      onMouseEnter={e => e.currentTarget.querySelector('svg')!.style.stroke = '#E8501A'}
-                      onMouseLeave={e => e.currentTarget.querySelector('svg')!.style.stroke = '#999'}
-                    >
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'stroke 0.15s' }}>
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                        <line x1="10" y1="11" x2="10" y2="17"/>
-                        <line x1="14" y1="11" x2="14" y2="17"/>
-                      </svg>
-                    </button>
+                    <div style={{ position: 'relative', marginLeft: 'auto' }}>
+                      <button onClick={() => setMenuOpen(o => !o)}
+                        style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#999' }}
+                        title="Plus d'options"
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                          <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+                        </svg>
+                      </button>
+                      {menuOpen && (
+                        <>
+                          <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                          <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '0.25rem', backgroundColor: 'white', border: '1px solid #E8E3D9', borderRadius: '10px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 51, minWidth: '200px', overflow: 'hidden' }}>
+                            <button
+                              onClick={() => { setMenuOpen(false); setRemoveModal(true) }}
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', background: 'none', border: 'none', padding: '0.7rem 0.9rem', cursor: 'pointer', fontSize: '0.88rem', color: '#2D2D2D', textAlign: 'left' }}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F5F0E8'}
+                              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <img src="/icons/remove-person.svg" alt="" style={{ width: '17px', height: '17px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)', flexShrink: 0 }} />
+                              Supprimer la relation
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
