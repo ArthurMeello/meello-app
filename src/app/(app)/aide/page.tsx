@@ -46,10 +46,10 @@ const FAQ = [
   },
 ]
 
-function FaqItem({ q, a }: { q: string; a: string }) {
+function FaqItem({ q, a, isLast }: { q: string; a: string; isLast?: boolean }) {
   const [open, setOpen] = useState(false)
   return (
-    <div style={{ borderBottom: '1px solid #F0EBE1' }}>
+    <div style={{ borderBottom: isLast ? 'none' : '1px solid #F0EBE1' }}>
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -58,8 +58,8 @@ function FaqItem({ q, a }: { q: string; a: string }) {
           padding: '1.1rem 0', textAlign: 'left',
         }}
       >
-        <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#2D2D2D' }}>{q}</span>
-        <span style={{ fontSize: '1.3rem', color: '#E8501A', flexShrink: 0, transform: open ? 'rotate(45deg)' : 'none', transition: 'transform 0.18s', lineHeight: 1 }}>+</span>
+        <span style={{ fontSize: '0.95rem', fontWeight: 600, color: open ? '#E8501A' : '#2D2D2D' }}>{q}</span>
+        <span style={{ fontSize: '1.3rem', color: '#E8501A', flexShrink: 0, lineHeight: 1 }}>{open ? '−' : '+'}</span>
       </button>
       {open && (
         <p style={{ margin: '0 0 1.1rem', color: '#2D2D2D', opacity: 0.7, lineHeight: 1.6, fontSize: '0.9rem' }}>{a}</p>
@@ -80,7 +80,7 @@ export default function AidePage() {
 
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '0.5rem 1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
         {FAQ.map((item, i) => (
-          <FaqItem key={i} q={item.q} a={item.a} />
+          <FaqItem key={i} q={item.q} a={item.a} isLast={i === FAQ.length - 1} />
         ))}
       </div>
 
