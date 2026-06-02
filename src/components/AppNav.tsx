@@ -172,6 +172,10 @@ export default function AppNav() {
             </div>
             <span>Mon profil</span>
           </Link>
+          <Link href="/parametres" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.75rem', borderRadius: '10px', textDecoration: 'none', color: pathname.startsWith('/parametres') ? '#E8501A' : '#F5F0E8', backgroundColor: pathname.startsWith('/parametres') ? 'rgba(232,80,26,0.12)' : 'transparent', fontSize: '0.95rem' }}>
+            <img src="/icons/settings.svg" alt="Paramètres" style={{ width: '22px', height: '22px', filter: pathname.startsWith('/parametres') ? 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' : 'brightness(0) invert(1)', flexShrink: 0 }} />
+            <span>Paramètres</span>
+          </Link>
           <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.75rem', borderRadius: '10px', background: 'none', border: 'none', color: '#F5F0E8', fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
             <img src="/icons/logout.svg" alt="Déconnexion" style={{ width: '22px', height: '22px', filter: 'brightness(0) invert(1)', flexShrink: 0 }} />
             <span>Déconnexion</span>
@@ -225,6 +229,10 @@ export default function AppNav() {
                 Admin {adminActions > 0 && `(${adminActions})`}
               </Link>
             )}
+            <Link href="/parametres" onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderRadius: '50px', textDecoration: 'none', background: pathname.startsWith('/parametres') ? 'rgba(232,80,26,0.85)' : '#1A1A2E', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: 'none', color: 'white', fontWeight: pathname.startsWith('/parametres') ? 700 : 500, fontSize: '0.95rem', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}>
+              <img src="/icons/settings.svg" alt="" style={{ width: '20px', height: '20px', filter: 'brightness(0) invert(1)' }} />
+              Paramètres
+            </Link>
             <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderRadius: '50px', background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.2)', color: '#1A1A2E', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}>
               <img src="/icons/logout.svg" alt="" style={{ width: '20px', height: '20px', filter: 'brightness(0)' }} />
               Déconnexion
