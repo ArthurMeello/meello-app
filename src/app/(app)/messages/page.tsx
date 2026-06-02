@@ -294,10 +294,18 @@ export default function MessagesPage() {
       typingChannelRef.current.send({ type: 'broadcast', event: 'stop_typing', payload: { user_id: userId } })
     }
 
+    const sentAt = insertedMsg?.created_at || new Date().toISOString()
     setMessages(prev => [...prev, insertedMsg || {
       id: Date.now().toString(), content: msgContent,
-      sender_id: userId, created_at: new Date().toISOString(), read_at: null,
+      sender_id: userId, created_at: sentAt, read_at: null,
     }])
+    // Mise à jour optimiste : l'heure de TON message s'affiche immédiatement
+    setConversations(prev => {
+      const updated = prev.map(c => c.id === activeConv.id
+        ? { ...c, last_message: `Vous : ${msgContent}`, last_message_at: sentAt }
+        : c)
+      return [...updated].sort((a, b) => (b.last_message_at || '').localeCompare(a.last_message_at || ''))
+    })
     setNewMessage('')
     if (inputRef.current) inputRef.current.style.height = 'auto'
     fetchConversations(userId)

@@ -385,13 +385,22 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       channelRef.current.send({ type: 'broadcast', event: 'stop_typing', payload: { user_id: userId } })
     }
 
+    const sentAt = insertedMsg?.created_at || new Date().toISOString()
     setMessages(prev => [...prev, insertedMsg || {
       id: Date.now().toString(),
       content: msgContent,
       sender_id: userId,
-      created_at: new Date().toISOString(),
+      created_at: sentAt,
       read_at: null,
     }])
+    // Mise à jour optimiste de la liste : l'heure de TON message s'affiche
+    // tout de suite, sans dépendre de la latence du re-fetch.
+    setConversations(prev => {
+      const updated = prev.map(c => c.id === activeConv.id
+        ? { ...c, last_message: `Vous : ${msgContent}`, last_message_at: sentAt }
+        : c)
+      return updated.sort((a, b) => (b.last_message_at || '').localeCompare(a.last_message_at || ''))
+    })
     setNewMessage('')
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
