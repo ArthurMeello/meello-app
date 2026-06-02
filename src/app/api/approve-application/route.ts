@@ -97,10 +97,11 @@ export async function POST(req: NextRequest) {
   })
 
   // 8. Initialiser les préférences de notification (newsletter selon consentement)
-  await supabase.from('notification_preferences').insert({
+  // upsert : crée la ligne, ou la met à jour si elle existe déjà (pas de doublon)
+  await supabase.from('notification_preferences').upsert({
     user_id: authData.user.id,
     newsletter_email: optedIn,
-  })
+  }, { onConflict: 'user_id' })
 
   return NextResponse.json({ ok: true, userId: authData.user.id })
 }
