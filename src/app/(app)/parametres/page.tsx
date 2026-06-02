@@ -21,7 +21,8 @@ const DEFAULT_PREFS: Record<string, boolean> = {
   connections_app: true, connections_email: true,
   recommendations_app: true, recommendations_email: true,
   community_app: true, community_email: true,
-  newsletter_app: true, newsletter_email: true,
+  // Newsletter désactivée par défaut : opt-in explicite requis
+  newsletter_app: true, newsletter_email: false,
 }
 
 // Petit interrupteur on/off
