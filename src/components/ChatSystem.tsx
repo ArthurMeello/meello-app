@@ -217,9 +217,9 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       .select('conversation_id, content, sender_id, created_at')
       .in('conversation_id', convIds)
       .order('created_at', { ascending: false })
-    const lastMsgMap: Record<string, { content: string; sender_id: string }> = {}
+    const lastMsgMap: Record<string, { content: string; sender_id: string; created_at: string }> = {}
     for (const msg of (lastMsgs || [])) {
-      if (!lastMsgMap[msg.conversation_id]) lastMsgMap[msg.conversation_id] = { content: msg.content, sender_id: msg.sender_id }
+      if (!lastMsgMap[msg.conversation_id]) lastMsgMap[msg.conversation_id] = { content: msg.content, sender_id: msg.sender_id, created_at: msg.created_at }
     }
 
     const convs = data.map((c: any) => {
@@ -233,9 +233,11 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
         id: c.id,
         other_user: profileMap[otherId] || null,
         last_message: preview,
-        last_message_at: c.last_message_at || '',
+        // Heure du vrai dernier message (meello_messages), fallback sur la conversation
+        last_message_at: lastMsg?.created_at || c.last_message_at || '',
       }
     })
+    convs.sort((a, b) => (b.last_message_at || '').localeCompare(a.last_message_at || ''))
     setConversations(convs)
 
     const unreadIds = new Set(convs.filter(c => unreadSenderIds.has(c.other_user?.id)).map(c => c.id))
