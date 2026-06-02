@@ -133,9 +133,9 @@ export default function MessagesPage() {
       .select('conversation_id, content, sender_id, created_at')
       .in('conversation_id', convIds)
       .order('created_at', { ascending: false })
-    const lastMsgMap: Record<string, { content: string; sender_id: string }> = {}
+    const lastMsgMap: Record<string, { content: string; sender_id: string; created_at: string }> = {}
     for (const msg of (lastMsgs || [])) {
-      if (!lastMsgMap[msg.conversation_id]) lastMsgMap[msg.conversation_id] = { content: msg.content, sender_id: msg.sender_id }
+      if (!lastMsgMap[msg.conversation_id]) lastMsgMap[msg.conversation_id] = { content: msg.content, sender_id: msg.sender_id, created_at: msg.created_at }
     }
 
     const convs = data.map((c: any) => {
@@ -149,10 +149,14 @@ export default function MessagesPage() {
         id: c.id,
         other_user: profileMap[otherId] || null,
         last_message: preview,
-        last_message_at: c.last_message_at || '',
+        // L'heure vient du vrai dernier message (meello_messages) ;
+        // fallback sur conversations.last_message_at si besoin.
+        last_message_at: lastMsg?.created_at || c.last_message_at || '',
         unread: isUnread,
       }
     })
+    // Tri par heure réelle du dernier message (la plus récente en haut)
+    convs.sort((a, b) => (b.last_message_at || '').localeCompare(a.last_message_at || ''))
     setConversations(convs)
   }
 
