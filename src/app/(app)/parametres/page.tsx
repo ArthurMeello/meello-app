@@ -5,6 +5,42 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
+// Types de notifications : chaque ligne a un toggle App et un toggle E-mail
+const NOTIF_TYPES = [
+  { key: 'messages', label: 'Messages privés' },
+  { key: 'connections', label: 'Demandes de connexion' },
+  { key: 'recommendations', label: 'Recommandations' },
+  { key: 'community', label: 'Activité communauté' },
+]
+
+const DEFAULT_PREFS: Record<string, boolean> = {
+  messages_app: true, messages_email: true,
+  connections_app: true, connections_email: true,
+  recommendations_app: true, recommendations_email: true,
+  community_app: true, community_email: true,
+}
+
+// Petit interrupteur on/off
+function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={on}
+      style={{
+        width: '42px', height: '24px', borderRadius: '12px', border: 'none',
+        cursor: 'pointer', padding: 0, position: 'relative', flexShrink: 0,
+        backgroundColor: on ? '#E8501A' : '#D6D0C4', transition: 'background 0.18s',
+      }}
+    >
+      <span style={{
+        position: 'absolute', top: '2px', left: on ? '20px' : '2px',
+        width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'white',
+        transition: 'left 0.18s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+      }} />
+    </button>
+  )
+}
+
 export default function ParametresPage() {
   const router = useRouter()
   const [currentEmail, setCurrentEmail] = useState<string>('')
@@ -21,15 +57,51 @@ export default function ParametresPage() {
   const [pwSaving, setPwSaving] = useState(false)
   const [pwMsg, setPwMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
 
+  // Préférences de notification
+  const [userId, setUserId] = useState<string | null>(null)
+  const [prefs, setPrefs] = useState<Record<string, boolean> | null>(null)
+
   useEffect(() => {
     const load = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) setCurrentEmail(user.email || '')
+      if (user) {
+        setCurrentEmail(user.email || '')
+        setUserId(user.id)
+
+        // Charger (ou créer) les préférences de notification
+        const { data: existing } = await supabase
+          .from('notification_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .single()
+
+        if (existing) {
+          setPrefs(existing)
+        } else {
+          const { data: created } = await supabase
+            .from('notification_preferences')
+            .insert({ user_id: user.id })
+            .select()
+            .single()
+          setPrefs(created || DEFAULT_PREFS)
+        }
+      }
       setLoading(false)
     }
     load()
   }, [])
+
+  const togglePref = async (key: string) => {
+    if (!prefs || !userId) return
+    const next = { ...prefs, [key]: !prefs[key] }
+    setPrefs(next) // mise à jour optimiste
+    const supabase = createClient()
+    await supabase
+      .from('notification_preferences')
+      .update({ [key]: next[key], updated_at: new Date().toISOString() })
+      .eq('user_id', userId)
+  }
 
   const handleChangeEmail = async () => {
     setEmailMsg(null)
@@ -163,6 +235,40 @@ export default function ParametresPage() {
             {pwSaving ? 'Mise à jour…' : 'Changer mon mot de passe'}
           </button>
         </div>
+      </div>
+
+      {/* Notifications */}
+      <div style={sectionStyle}>
+        <h2 style={titleStyle}>Notifications</h2>
+        <p style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.55, margin: '0 0 1rem', lineHeight: 1.6 }}>
+          Choisis comment tu veux être prévenu pour chaque type d'activité.
+        </p>
+
+        {!prefs ? (
+          <div style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.4 }}>Chargement…</div>
+        ) : (
+          <div>
+            {/* En-tête colonnes */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 64px 64px', alignItems: 'center', paddingBottom: '0.6rem', borderBottom: '1px solid #F0EBE1' }}>
+              <span />
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2D2D2D', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>App</span>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2D2D2D', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>E-mail</span>
+            </div>
+
+            {/* Lignes */}
+            {NOTIF_TYPES.map((t, i) => (
+              <div key={t.key} style={{ display: 'grid', gridTemplateColumns: '1fr 64px 64px', alignItems: 'center', padding: '0.85rem 0', borderBottom: i < NOTIF_TYPES.length - 1 ? '1px solid #F5F0E8' : 'none' }}>
+                <span style={{ fontSize: '0.9rem', color: '#2D2D2D', fontWeight: 500 }}>{t.label}</span>
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <Toggle on={!!prefs[`${t.key}_app`]} onClick={() => togglePref(`${t.key}_app`)} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <Toggle on={!!prefs[`${t.key}_email`]} onClick={() => togglePref(`${t.key}_email`)} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Déconnexion */}
