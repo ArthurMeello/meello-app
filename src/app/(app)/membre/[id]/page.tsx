@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { notify } from '@/lib/notify'
 
 // ─── XP / Niveaux ─────────────────────────────────────────────────────────────
 function getLevelFromXP(totalXP: number): { level: number; currentXP: number; xpToNext: number } {
@@ -260,7 +261,7 @@ export default function MembrePublicPage() {
     if (data) {
       setConnectionId(data.id)
       setConnectionStatus('pending_sent')
-      await supabase.from('notifications').insert({ user_id: id, type: 'connection', content: `t'a envoyé une demande de connexion`, link: `/reseau`, from_user_id: currentUserId })
+      await notify({ userId: id, type: 'connection', content: `t'a envoyé une demande de connexion`, link: `/reseau`, fromUserId: currentUserId })
     }
   }
 
@@ -304,7 +305,7 @@ export default function MembrePublicPage() {
         if (!error) { const { data: urlData } = supabase.storage.from('proofs').getPublicUrl(path); proof_url = urlData.publicUrl }
       }
       await supabase.from('recommendations').insert({ target_id: id, author_id: currentUserId, content: recoText.trim(), proof_url, status: 'pending' })
-      await supabase.from('notifications').insert({ user_id: id, type: 'recommendation', content: `t'a laissé une recommandation (en attente de validation)`, link: `/membre/${id}`, from_user_id: currentUserId })
+      await notify({ userId: id, type: 'recommendation', content: `t'a laissé une recommandation (en attente de validation)`, link: `/membre/${id}`, fromUserId: currentUserId })
       setAlreadyRecommended(true)
     }
     const { data: recoData } = await supabase.from('recommendations').select('id, content, author_id, profiles!recommendations_author_id_fkey(first_name, last_name, avatar_url, activity)').eq('target_id', id).eq('status', 'approved').order('created_at', { ascending: false })

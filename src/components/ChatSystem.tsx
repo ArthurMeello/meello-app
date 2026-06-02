@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { notify } from '@/lib/notify'
 
 interface Conversation {
   id: string
@@ -367,12 +368,12 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
         .single()
 
       if (!existing) {
-        await supabase.from('notifications').insert({
-          user_id: receiverId,
+        await notify({
+          userId: receiverId,
           type: 'message',
           content: `t'a envoyé un message`,
           link: `/messages`,
-          from_user_id: userId,
+          fromUserId: userId,
         })
       }
     }

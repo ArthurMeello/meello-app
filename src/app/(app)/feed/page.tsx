@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { notify } from '@/lib/notify'
 import imageCompression from 'browser-image-compression'
 import type { Post } from '@/types'
 
@@ -282,16 +283,18 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
     if (isAdmin && postContent.includes('@all')) {
       const { data: allProfiles } = await supabase.from('profiles').select('id').eq('is_active', true)
       if (allProfiles) {
-        const notifs = allProfiles
-          .filter(p => p.id !== userId)
-          .map(p => ({
-            user_id: p.id,
-            type: 'mention',
-            content: `a publié un message pour toute la communauté`,
-            link: `/feed`,
-            from_user_id: userId,
-          }))
-        if (notifs.length > 0) await supabase.from('notifications').insert(notifs)
+        await Promise.all(
+          allProfiles
+            .filter(p => p.id !== userId)
+            .map(p => notify({
+              userId: p.id,
+              type: 'community',
+              dbType: 'mention',
+              content: `a publié un message pour toute la communauté`,
+              link: `/feed`,
+              fromUserId: userId,
+            }))
+        )
       }
       return
     }
@@ -307,14 +310,14 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
         m.first_name.toLowerCase() === tag
       )
       if (member && member.id !== userId) {
-        const { error: notifError } = await supabase.from('notifications').insert({
-          user_id: member.id,
-          type: 'mention',
+        await notify({
+          userId: member.id,
+          type: 'community',
+          dbType: 'mention',
           content: `t'a mentionné dans une publication`,
           link: `/feed?post=${postId}`,
-          from_user_id: userId,
+          fromUserId: userId,
         })
-        if (notifError) console.error('Notif mention error:', notifError)
       }
     }
   }
@@ -596,12 +599,13 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
         await supabase.from('reactions').insert({ post_id: post.id, author_id: currentUserId, emoji })
         // Notifier l'auteur du post (sauf si c'est soi-même)
         if (post.author_id && post.author_id !== currentUserId) {
-          await supabase.from('notifications').insert({
-            user_id: post.author_id,
-            type: 'reaction',
+          await notify({
+            userId: post.author_id,
+            type: 'community',
+            dbType: 'reaction',
             content: `a réagi à ton post avec ${emoji}`,
             link: `/feed?post=${post.id}`,
-            from_user_id: currentUserId,
+            fromUserId: currentUserId,
           })
         }
       }
@@ -609,13 +613,13 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
       await supabase.from('reactions').insert({ post_id: post.id, author_id: currentUserId, emoji })
       // Notifier l'auteur du post (sauf si c'est soi-même)
       if (post.author_id && post.author_id !== currentUserId) {
-        const { data: reactor } = await supabase.from('profiles').select('first_name').eq('id', currentUserId).single()
-        await supabase.from('notifications').insert({
-          user_id: post.author_id,
-          type: 'reaction',
+        await notify({
+          userId: post.author_id,
+          type: 'community',
+          dbType: 'reaction',
           content: `a réagi à ton post avec ${emoji}`,
           link: `/feed?post=${post.id}`,
-          from_user_id: currentUserId,
+          fromUserId: currentUserId,
         })
       }
     }
@@ -740,12 +744,13 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
 
     // Notifier l'auteur du post (sauf si c'est soi-même)
     if (post.author_id && post.author_id !== currentUserId) {
-      await supabase.from('notifications').insert({
-        user_id: post.author_id,
-        type: 'comment',
+      await notify({
+        userId: post.author_id,
+        type: 'community',
+        dbType: 'comment',
         content: `a commenté ton post`,
         link: `/feed?post=${post.id}`,
-        from_user_id: currentUserId,
+        fromUserId: currentUserId,
       })
     }
 
@@ -759,12 +764,13 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
         m.first_name.toLowerCase() === tag
       )
       if (member && member.id !== currentUserId && member.id !== post.author_id) {
-        await supabase.from('notifications').insert({
-          user_id: member.id,
-          type: 'mention',
+        await notify({
+          userId: member.id,
+          type: 'community',
+          dbType: 'mention',
           content: `t'a mentionné dans un commentaire`,
           link: `/feed?post=${post.id}`,
-          from_user_id: currentUserId,
+          fromUserId: currentUserId,
         })
       }
     }
@@ -824,12 +830,13 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     })
     // Notifier l'auteur du commentaire parent
     if (parentComment.author_id !== currentUserId) {
-      await supabase.from('notifications').insert({
-        user_id: parentComment.author_id,
-        type: 'comment',
+      await notify({
+        userId: parentComment.author_id,
+        type: 'community',
+        dbType: 'comment',
         content: `a répondu à ton commentaire`,
         link: `/feed?post=${post.id}`,
-        from_user_id: currentUserId,
+        fromUserId: currentUserId,
       })
     }
     // Notifier les mentions
@@ -841,12 +848,13 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
         `${m.first_name}${m.last_name}`.toLowerCase() === tag || m.first_name.toLowerCase() === tag
       )
       if (member && member.id !== currentUserId && member.id !== parentComment.author_id) {
-        await supabase.from('notifications').insert({
-          user_id: member.id,
-          type: 'mention',
+        await notify({
+          userId: member.id,
+          type: 'community',
+          dbType: 'mention',
           content: `t'a mentionné dans une réponse`,
           link: `/feed?post=${post.id}`,
-          from_user_id: currentUserId,
+          fromUserId: currentUserId,
         })
       }
     }

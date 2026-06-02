@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { notify } from '@/lib/notify'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 
@@ -123,12 +124,12 @@ export default function ReseauPage() {
       author_id: userId,
       content: recoText.trim(),
     })
-    await supabase.from('notifications').insert({
-      user_id: recoModal.id,
+    await notify({
+      userId: recoModal.id,
       type: 'recommendation',
       content: `t'a laissé une recommandation`,
       link: `/membre/${recoModal.id}`,
-      from_user_id: userId,
+      fromUserId: userId,
     })
     setAlreadyRecommended(prev => new Set([...prev, recoModal.id]))
     setRecoText('')

@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { notify } from '@/lib/notify'
 
 interface Conversation {
   id: string
@@ -269,9 +270,9 @@ export default function MessagesPage() {
         .eq('user_id', receiverId).eq('type', 'message')
         .eq('from_user_id', userId).eq('read', false).single()
       if (!existing) {
-        await supabase.from('notifications').insert({
-          user_id: receiverId, type: 'message',
-          content: `t'a envoyé un message`, link: `/messages`, from_user_id: userId,
+        await notify({
+          userId: receiverId, type: 'message',
+          content: `t'a envoyé un message`, link: `/messages`, fromUserId: userId,
         })
       }
     }
