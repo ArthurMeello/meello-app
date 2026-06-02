@@ -7,10 +7,11 @@ import { createClient } from '@/lib/supabase/client'
 
 // Types de notifications : chaque ligne a un toggle App et un toggle E-mail
 const NOTIF_TYPES = [
-  { key: 'messages', label: 'Messages privés' },
-  { key: 'connections', label: 'Demandes de connexion' },
-  { key: 'recommendations', label: 'Recommandations' },
-  { key: 'community', label: 'Activité communauté' },
+  // emailable: false => pas d'e-mail pour ce type (in-app uniquement)
+  { key: 'messages', label: 'Messages privés', emailable: false },
+  { key: 'connections', label: 'Demandes de connexion', emailable: true },
+  { key: 'recommendations', label: 'Recommandations', emailable: true },
+  { key: 'community', label: 'Activité communauté', emailable: true },
 ]
 
 const DEFAULT_PREFS: Record<string, boolean> = {
@@ -263,7 +264,11 @@ export default function ParametresPage() {
                   <Toggle on={!!prefs[`${t.key}_app`]} onClick={() => togglePref(`${t.key}_app`)} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <Toggle on={!!prefs[`${t.key}_email`]} onClick={() => togglePref(`${t.key}_email`)} />
+                  {t.emailable ? (
+                    <Toggle on={!!prefs[`${t.key}_email`]} onClick={() => togglePref(`${t.key}_email`)} />
+                  ) : (
+                    <span title="Non disponible pour les messages" style={{ color: '#2D2D2D', opacity: 0.25, fontWeight: 600 }}>—</span>
+                  )}
                 </div>
               </div>
             ))}
