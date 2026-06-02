@@ -68,6 +68,12 @@ export default function ParametresPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [prefs, setPrefs] = useState<Record<string, boolean> | null>(null)
 
+  // Suppression de compte
+  const [deleteModal, setDeleteModal] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
   useEffect(() => {
     const load = async () => {
       const supabase = createClient()
@@ -152,6 +158,27 @@ export default function ParametresPage() {
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/connexion')
+  }
+
+  const handleDeleteAccount = async () => {
+    setDeleteError(null)
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/delete-account', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        setDeleting(false)
+        setDeleteError(data.error || 'La suppression a échoué. Réessaie ou contacte le support.')
+        return
+      }
+      // Déconnexion locale puis redirection
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      router.push('/connexion')
+    } catch (e: any) {
+      setDeleting(false)
+      setDeleteError('Une erreur est survenue. Réessaie plus tard.')
+    }
   }
 
   const inputStyle: React.CSSProperties = {
@@ -306,6 +333,64 @@ export default function ParametresPage() {
           Se déconnecter
         </button>
       </div>
+
+      {/* Zone danger — suppression de compte */}
+      <div style={{ ...sectionStyle, border: '1px solid #F3C9BD' }}>
+        <h2 style={{ ...titleStyle, color: '#C62828' }}>Supprimer mon compte</h2>
+        <p style={{ fontSize: '0.88rem', color: '#2D2D2D', opacity: 0.65, margin: '0 0 1rem', lineHeight: 1.6 }}>
+          Cette action est définitive. Ton compte, ton profil, tes messages, publications, recommandations et toutes tes données seront supprimés. Tu seras aussi retiré(e) des listes de diffusion. Cette action est irréversible.
+        </p>
+        <button
+          onClick={() => { setDeleteModal(true); setDeleteConfirm(''); setDeleteError(null) }}
+          style={{ backgroundColor: 'white', color: '#C62828', border: '1.5px solid #C62828', borderRadius: '10px', padding: '0.6rem 1.25rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
+        >
+          Supprimer mon compte
+        </button>
+      </div>
+
+      {/* Modale de confirmation suppression */}
+      {deleteModal && (
+        <div
+          onClick={() => !deleting && setDeleteModal(false)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.75rem', width: '100%', maxWidth: '440px' }}>
+            <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#C62828', marginBottom: '0.6rem' }}>
+              Supprimer définitivement ton compte ?
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: '#2D2D2D', opacity: 0.7, lineHeight: 1.55, margin: '0 0 1.1rem' }}>
+              Toutes tes données seront effacées et tu seras retiré(e) des listes de diffusion. Cette action ne peut pas être annulée.
+            </p>
+            <label style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.7, fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>
+              Tape <strong style={{ color: '#C62828' }}>SUPPRIMER</strong> pour confirmer
+            </label>
+            <input
+              value={deleteConfirm}
+              onChange={e => setDeleteConfirm(e.target.value)}
+              placeholder="SUPPRIMER"
+              autoFocus
+              style={inputStyle}
+            />
+            {deleteError && <div style={{ fontSize: '0.82rem', color: '#C62828', marginTop: '0.6rem' }}>{deleteError}</div>}
+            <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+              <button
+                onClick={() => setDeleteModal(false)}
+                disabled={deleting}
+                style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.55rem 1.1rem', cursor: deleting ? 'default' : 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#2D2D2D' }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting || deleteConfirm !== 'SUPPRIMER'}
+                style={{ backgroundColor: '#C62828', color: 'white', border: 'none', borderRadius: '8px', padding: '0.55rem 1.1rem', cursor: (deleting || deleteConfirm !== 'SUPPRIMER') ? 'default' : 'pointer', fontSize: '0.9rem', fontWeight: 600, opacity: (deleting || deleteConfirm !== 'SUPPRIMER') ? 0.5 : 1 }}
+              >
+                {deleting ? 'Suppression…' : 'Supprimer définitivement'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
