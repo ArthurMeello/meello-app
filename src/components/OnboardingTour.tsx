@@ -53,8 +53,8 @@ const STEPS: Step[] = [
   { type: 'action', target: 'nav-evenements', mobileTarget: 'm-evenements', needsMenu: true, route: '/evenements', title: 'Les Événements', body: "Dernière étape. Clique sur « Événements »." },
   { type: 'info', route: '/evenements', title: 'Rencontre les autres en vrai', body: "Participe aux visios et événements pour rencontrer les membres. Rien ne vaut un vrai échange pour créer des liens durables." },
 
-  // — Fin
-  { type: 'info', route: '/evenements', title: "C'est parti ! 🚀", body: "Tu as fait le tour ! Pour bien démarrer : complète ton profil, puis présente-toi dans « La Communauté ». Bienvenue dans Meello !" },
+  // — Fin : on ramène l'utilisateur sur La Communauté pour qu'il se présente
+  { type: 'info', route: '/forum', title: "À toi de jouer ! 🚀", body: "Tu as fait le tour ! Pour bien démarrer, présente-toi dès maintenant dans la catégorie « Présentations » ci-dessous : dis qui tu es, ce que tu fais, et ce que tu cherches. C'est la meilleure façon de lancer tes premières connexions. Bienvenue dans Meello !" },
 ]
 
 export default function OnboardingTour({ userId }: { userId: string | null }) {
@@ -117,8 +117,8 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
     if (el) {
       setRect(el.getBoundingClientRect())
       const br = getComputedStyle(el).borderRadius
-      // +pad pour que le contour reste concentrique avec l'élément
-      setRadius(br && br !== '0px' ? `calc(${br} + ${8}px)` : '12px')
+      // Rayon exact de l'élément (pad = 0, on colle au pixel près)
+      setRadius(br && br !== '0px' ? br : '10px')
       setTargetMissing(false)
     } else {
       setRect(null)
@@ -171,11 +171,20 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
     }
   }, [active, step, pathname, next])
 
+  // Étape 'info' avec une route différente : y naviguer (ex: étape finale → /forum)
+  useEffect(() => {
+    if (!active || !step || step.type !== 'info') return
+    if (step.route && pathname !== step.route) {
+      setMobileMenu(false)
+      router.push(step.route)
+    }
+  }, [active, step, pathname, router])
+
   if (!active || !step) return null
 
   const isMobile = isMobileView()
   const isAction = step.type === 'action' && !!rect
-  const pad = 8
+  const pad = 0
 
   // Bulle : placement selon appareil + position de la cible
   let bubbleStyle: React.CSSProperties = {
@@ -217,8 +226,8 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
       <div style={{ position: 'fixed', top: rect.bottom + pad, left: 0, right: 0, bottom: 0, zIndex: 100001 }} />
       <div style={{ position: 'fixed', top: rect.top - pad, left: 0, width: Math.max(0, rect.left - pad), height: rect.height + pad * 2, zIndex: 100001 }} />
       <div style={{ position: 'fixed', top: rect.top - pad, left: rect.right + pad, right: 0, height: rect.height + pad * 2, zIndex: 100001 }} />
-      {/* Contour orange épousant la forme */}
-      <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, border: '2px solid #E8501A', borderRadius: radius, zIndex: 100002, pointerEvents: 'none' }} />
+      {/* Contour orange — dessiné À L'INTÉRIEUR (inset) pour ne rien faire dépasser */}
+      <div style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width, height: rect.height, boxShadow: 'inset 0 0 0 2px #E8501A', borderRadius: radius, zIndex: 100002, pointerEvents: 'none' }} />
     </>
   ) : (
     // Étape info (ou cible absente) : overlay plein qui bloque tout
