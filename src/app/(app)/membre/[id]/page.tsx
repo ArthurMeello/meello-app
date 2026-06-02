@@ -133,6 +133,11 @@ export default function MembrePublicPage() {
   const [alreadyRecommended, setAlreadyRecommended] = useState(false)
   const [proofFile, setProofFile] = useState<File | null>(null)
   const [editingRecoId, setEditingRecoId] = useState<string | null>(null)
+  // Relations (connexions acceptées)
+  const [connectionCount, setConnectionCount] = useState(0)
+  const [connectionsModal, setConnectionsModal] = useState(false)
+  const [connectionsList, setConnectionsList] = useState<any[]>([])
+  const [connectionsLoading, setConnectionsLoading] = useState(false)
   // Modale publications
   const [postsModal, setPostsModal] = useState(false)
   const [allPosts, setAllPosts] = useState([])
@@ -159,6 +164,14 @@ export default function MembrePublicPage() {
 
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).single()
       if (prof) setProfile(prof)
+
+      // Nombre de relations (connexions acceptées de ce membre)
+      const { count: connCount } = await supabase
+        .from('connections')
+        .select('id', { count: 'exact', head: true })
+        .or(`requester_id.eq.${id},receiver_id.eq.${id}`)
+        .eq('status', 'accepted')
+      setConnectionCount(connCount || 0)
 
       const { data: portfolioData } = await supabase.from('portfolio_items').select('id, title, description, media_url, link').eq('profile_id', id).order('created_at', { ascending: false })
       if (portfolioData) setPortfolio(portfolioData)
@@ -303,6 +316,27 @@ export default function MembrePublicPage() {
     setRemoveModal(false)
     setConnectionStatus('none')
     setConnectionId(null)
+  }
+
+  const openConnectionsModal = async () => {
+    if (currentUserId !== ADMIN_ID) return // réservé à l'admin
+    setConnectionsModal(true)
+    setConnectionsLoading(true)
+    const supabase = createClient()
+    const { data: conns } = await supabase
+      .from('connections')
+      .select('requester_id, receiver_id')
+      .or(`requester_id.eq.${id},receiver_id.eq.${id}`)
+      .eq('status', 'accepted')
+    // L'autre membre de chaque connexion
+    const otherIds = (conns || []).map((c: any) => c.requester_id === id ? c.receiver_id : c.requester_id)
+    if (otherIds.length === 0) { setConnectionsList([]); setConnectionsLoading(false); return }
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, avatar_url, activity')
+      .in('id', otherIds)
+    setConnectionsList(profiles || [])
+    setConnectionsLoading(false)
   }
 
   const openMessage = async () => {
@@ -502,6 +536,26 @@ export default function MembrePublicPage() {
               )
             })()}
 
+            {/* Nombre de relations — cliquable pour l'admin uniquement */}
+            <div
+              onClick={currentUserId === ADMIN_ID ? openConnectionsModal : undefined}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                marginBottom: '1rem',
+                cursor: currentUserId === ADMIN_ID ? 'pointer' : 'default',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8501A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              <span style={{ fontSize: '0.85rem', color: '#2D2D2D', fontWeight: 600 }}>
+                {connectionCount} {connectionCount > 1 ? 'relations' : 'relation'}
+              </span>
+              {currentUserId === ADMIN_ID && (
+                <span style={{ fontSize: '0.72rem', color: '#E8501A', fontWeight: 600 }}>(voir)</span>
+              )}
+            </div>
+
             {/* Niveau XP */}
             {(() => {
               const totalXP = profile.xp ?? 0
@@ -684,6 +738,40 @@ export default function MembrePublicPage() {
 
         </div>
       </div>
+
+      {/* Modal liste des relations — admin uniquement */}
+      {connectionsModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={() => setConnectionsModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '420px', maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.1rem 1.25rem', borderBottom: '1px solid #F5F0E8' }}>
+              <span style={{ fontWeight: 700, fontSize: '1rem', color: '#2D2D2D' }}>
+                Relations de {profile.first_name} ({connectionCount})
+              </span>
+              <button onClick={() => setConnectionsModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', lineHeight: 1, color: '#2D2D2D', opacity: 0.5, padding: 0 }}>×</button>
+            </div>
+            <div style={{ overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              {connectionsLoading ? (
+                <div style={{ padding: '1.5rem', textAlign: 'center', color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Chargement…</div>
+              ) : connectionsList.length === 0 ? (
+                <div style={{ padding: '1.5rem', textAlign: 'center', color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Aucune relation.</div>
+              ) : connectionsList.map(m => (
+                <a key={m.id} href={`/membre/${m.id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', textDecoration: 'none', borderRadius: '10px', padding: '0.5rem 0.6rem' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F5F0E8'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', overflow: 'hidden', flexShrink: 0 }}>
+                    {m.avatar_url ? <img src={m.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : `${(m.first_name || '?')[0]}${(m.last_name || '')[0] || ''}`.toUpperCase()}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '0.9rem', color: '#2D2D2D', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.first_name} {m.last_name}</div>
+                    {m.activity && <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.activity}</div>}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal confirmation suppression de relation */}
       {removeModal && (
