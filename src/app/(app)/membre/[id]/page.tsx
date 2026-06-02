@@ -455,7 +455,7 @@ export default function MembrePublicPage() {
                       style={{ background: 'none', border: `1.5px solid ${alreadyRecommended ? '#ccc' : '#E8501A'}`, borderRadius: '8px', padding: '0.5rem 1rem', fontWeight: 600, cursor: alreadyRecommended ? 'default' : 'pointer', fontSize: '0.85rem', color: alreadyRecommended ? '#aaa' : '#E8501A' }}>
                       {alreadyRecommended ? 'Déjà recommandé' : 'Recommander'}
                     </button>
-                    <div className="act-menu" style={{ position: 'relative', marginLeft: 'auto' }}>
+                    <div className="act-menu" style={{ position: 'relative' }}>
                       <button onClick={() => setMenuOpen(o => !o)}
                         style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#999' }}
                         title="Plus d'options"
