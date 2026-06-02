@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 /**
@@ -64,6 +64,7 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
   const [radius, setRadius] = useState('12px')
   const [targetMissing, setTargetMissing] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
   const checkedRef = useRef(false)
 
   useEffect(() => {
@@ -127,12 +128,16 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
   // Sur mobile, ouvrir le menu burger si l'étape cible une pill du menu
   useEffect(() => {
     if (!active || !step || step.type !== 'action') { setMobileMenu(false); return }
-    if (isMobileView() && step.needsMenu && pathname === step.route) {
-      // déjà sur la page : pas besoin d'ouvrir
-    } else if (isMobileView() && step.needsMenu) {
-      setMobileMenu(true)
+    if (!isMobileView() || !step.needsMenu) return
+    if (pathname === step.route) return // déjà arrivé : pas besoin du menu
+
+    // Le QG (et autres pages plein écran) masquent le menu burger via
+    // body.msg-conv-open → on retourne au feed pour récupérer le burger.
+    if (typeof document !== 'undefined' && document.body.classList.contains('msg-conv-open')) {
+      if (pathname !== '/feed') { router.push('/feed'); return }
     }
-  }, [active, stepIndex, step, pathname])
+    setMobileMenu(true)
+  }, [active, stepIndex, step, pathname, router])
 
   useEffect(() => {
     if (!active) return
@@ -174,14 +179,14 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
 
   // Bulle : placement selon appareil + position de la cible
   let bubbleStyle: React.CSSProperties = {
-    position: 'fixed', zIndex: 100002, maxWidth: '380px', width: 'calc(100% - 2rem)',
+    position: 'fixed', zIndex: 100003, maxWidth: '380px', width: 'calc(100% - 2rem)',
   }
   if (isMobile) {
     // Sur mobile, la bulle se place en haut ou en bas selon où est la cible,
     // pour ne pas la recouvrir.
     const targetLow = rect && rect.top > window.innerHeight / 2
     bubbleStyle = {
-      position: 'fixed', zIndex: 100002, left: '1rem', right: '1rem',
+      position: 'fixed', zIndex: 100003, left: '1rem', right: '1rem',
       maxWidth: 'none', width: 'auto',
       ...(targetLow
         ? { top: 'calc(1rem + env(safe-area-inset-top))' }
@@ -194,21 +199,30 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
     bubbleStyle = { ...bubbleStyle, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
   }
 
-  // Masque : 4 panneaux autour de l'élément cible (le laissent cliquable).
-  const overlay = '#1A1A2E'
-  const op = 0.7
+  // Masque visuel + blocage des clics.
+  const overlay = 'rgba(26,26,46,0.7)'
   const panels = (isAction && rect) ? (
     <>
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: Math.max(0, rect.top - pad), backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
-      <div style={{ position: 'fixed', top: rect.bottom + pad, left: 0, right: 0, bottom: 0, backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
-      <div style={{ position: 'fixed', top: rect.top - pad, left: 0, width: Math.max(0, rect.left - pad), height: rect.height + pad * 2, backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
-      <div style={{ position: 'fixed', top: rect.top - pad, left: rect.right + pad, right: 0, height: rect.height + pad * 2, backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
-      {/* Contour de l'élément cliquable — épouse le rayon réel de l'élément */}
-      <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, border: '2px solid #E8501A', borderRadius: radius, zIndex: 100001, pointerEvents: 'none' }} />
+      {/* Trou VISUEL parfaitement arrondi via box-shadow (pointer-events: none) */}
+      <div style={{
+        position: 'fixed',
+        top: rect.top - pad, left: rect.left - pad,
+        width: rect.width + pad * 2, height: rect.height + pad * 2,
+        borderRadius: radius,
+        boxShadow: `0 0 0 9999px ${overlay}`,
+        zIndex: 100000, pointerEvents: 'none',
+      }} />
+      {/* 4 panneaux TRANSPARENTS juste pour BLOQUER les clics hors cible */}
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: Math.max(0, rect.top - pad), zIndex: 100001 }} />
+      <div style={{ position: 'fixed', top: rect.bottom + pad, left: 0, right: 0, bottom: 0, zIndex: 100001 }} />
+      <div style={{ position: 'fixed', top: rect.top - pad, left: 0, width: Math.max(0, rect.left - pad), height: rect.height + pad * 2, zIndex: 100001 }} />
+      <div style={{ position: 'fixed', top: rect.top - pad, left: rect.right + pad, right: 0, height: rect.height + pad * 2, zIndex: 100001 }} />
+      {/* Contour orange épousant la forme */}
+      <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, border: '2px solid #E8501A', borderRadius: radius, zIndex: 100002, pointerEvents: 'none' }} />
     </>
   ) : (
-    // Étape info (ou mobile) : overlay plein qui bloque tout
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
+    // Étape info (ou cible absente) : overlay plein qui bloque tout
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: overlay, zIndex: 100000 }} />
   )
 
   return (
