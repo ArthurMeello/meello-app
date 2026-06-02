@@ -105,6 +105,15 @@ export default function ParametresPage() {
       .from('notification_preferences')
       .update({ [key]: next[key], updated_at: new Date().toISOString() })
       .eq('user_id', userId)
+
+    // Newsletter : synchroniser l'inscription à la liste Brevo
+    if (key === 'newsletter_email') {
+      fetch('/api/newsletter-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, subscribed: next[key] }),
+      }).catch(() => {})
+    }
   }
 
   const handleChangeEmail = async () => {
