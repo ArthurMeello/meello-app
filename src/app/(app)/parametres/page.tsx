@@ -5,13 +5,15 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-// Types de notifications : chaque ligne a un toggle App et un toggle E-mail
+// Types de notifications. Par défaut chaque ligne a un toggle App et E-mail.
+// appable: false  => pas de notif in-app (e-mail uniquement, ex: newsletter)
+// emailable: false => pas d'e-mail (in-app uniquement)
 const NOTIF_TYPES = [
-  // emailable: false => pas d'e-mail pour ce type (in-app uniquement)
   { key: 'messages', label: 'Messages privés', emailable: false },
   { key: 'connections', label: 'Demandes de connexion', emailable: true },
   { key: 'recommendations', label: 'Recommandations', emailable: true },
   { key: 'community', label: 'Activité communauté', emailable: false },
+  { key: 'newsletter', label: 'Newsletter', appable: false, emailable: true },
 ]
 
 const DEFAULT_PREFS: Record<string, boolean> = {
@@ -19,6 +21,7 @@ const DEFAULT_PREFS: Record<string, boolean> = {
   connections_app: true, connections_email: true,
   recommendations_app: true, recommendations_email: true,
   community_app: true, community_email: true,
+  newsletter_app: true, newsletter_email: true,
 }
 
 // Petit interrupteur on/off
@@ -261,7 +264,11 @@ export default function ParametresPage() {
               <div key={t.key} style={{ display: 'grid', gridTemplateColumns: '1fr 64px 64px', alignItems: 'center', padding: '0.85rem 0', borderBottom: i < NOTIF_TYPES.length - 1 ? '1px solid #F5F0E8' : 'none' }}>
                 <span style={{ fontSize: '0.9rem', color: '#2D2D2D', fontWeight: 500 }}>{t.label}</span>
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <Toggle on={!!prefs[`${t.key}_app`]} onClick={() => togglePref(`${t.key}_app`)} />
+                  {t.appable !== false ? (
+                    <Toggle on={!!prefs[`${t.key}_app`]} onClick={() => togglePref(`${t.key}_app`)} />
+                  ) : (
+                    <span title="Pas de notification dans l'app pour ce type" style={{ color: '#2D2D2D', opacity: 0.25, fontWeight: 600 }}>—</span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   {t.emailable ? (
