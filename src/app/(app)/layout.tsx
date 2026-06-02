@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import AppNav from '@/components/AppNav'
 import TopBar from '@/components/TopBar'
 import ChatSystem from '@/components/ChatSystem'
+import OnboardingTour from '@/components/OnboardingTour'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null)
@@ -31,6 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AppNav />
       <TopBar />
       <ChatSystem userId={userId} />
+      <OnboardingTour userId={userId} />
       <main style={{ marginLeft: '220px', flex: 1, padding: '2rem', maxWidth: '100%' }}>
         {children}
       </main>

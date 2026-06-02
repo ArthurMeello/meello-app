@@ -176,7 +176,7 @@ export default function AppNav() {
           {NAV_ITEMS.map(item => {
             const active = pathname.startsWith(item.href)
             return (
-              <Link key={item.href} href={item.href} style={{
+              <Link key={item.href} href={item.href} data-tour={`nav-${item.href.replace('/', '')}`} style={{
                 display: 'flex', alignItems: 'center', gap: '0.75rem',
                 padding: '0.65rem 0.75rem', borderRadius: '10px', textDecoration: 'none',
                 color: active ? '#E8501A' : '#F5F0E8',
@@ -210,7 +210,7 @@ export default function AppNav() {
               <span>Admin</span>
             </Link>
           )}
-          <Link href="/profil" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.75rem', borderRadius: '10px', textDecoration: 'none', color: pathname.startsWith('/profil') ? '#E8501A' : '#F5F0E8', backgroundColor: pathname.startsWith('/profil') ? 'rgba(232,80,26,0.12)' : 'transparent', fontSize: '0.95rem' }}>
+          <Link href="/profil" data-tour="nav-profil" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 0.75rem', borderRadius: '10px', textDecoration: 'none', color: pathname.startsWith('/profil') ? '#E8501A' : '#F5F0E8', backgroundColor: pathname.startsWith('/profil') ? 'rgba(232,80,26,0.12)' : 'transparent', fontSize: '0.95rem' }}>
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, flexShrink: 0, overflow: 'hidden' }}>
               {profile?.avatar_url ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
             </div>
