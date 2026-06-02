@@ -157,7 +157,7 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
 
   // Position de la bulle
   let bubbleStyle: React.CSSProperties = {
-    position: 'fixed', zIndex: 100002, maxWidth: '320px', width: 'calc(100% - 2rem)',
+    position: 'fixed', zIndex: 100002, maxWidth: '380px', width: 'calc(100% - 2rem)',
   }
   if (centered) {
     bubbleStyle = { ...bubbleStyle, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
@@ -218,7 +218,7 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
           {step.body}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-          <button onClick={finish} style={{ background: 'none', border: 'none', color: '#2D2D2D', opacity: 0.45, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+          <button onClick={finish} style={{ background: 'none', border: 'none', color: '#2D2D2D', opacity: 0.45, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', padding: 0, whiteSpace: 'nowrap', flexShrink: 0 }}>
             Passer le tutoriel
           </button>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
