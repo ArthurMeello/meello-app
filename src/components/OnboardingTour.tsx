@@ -2,80 +2,57 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 /**
- * Tutoriel d'onboarding façon "product tour".
- * Chaque étape met en surbrillance un élément réel de l'interface (via
- * l'attribut data-tour="...") et affiche une bulle explicative.
- * Certaines étapes nécessitent de naviguer vers une page (route) ;
- * le tour attend que l'élément cible apparaisse avant de l'afficher.
+ * Tutoriel d'onboarding "guidé par action".
+ *
+ * Deux types d'étapes :
+ *  - type 'action'  : invite à cliquer un onglet précis (data-tour). Seul cet
+ *                     onglet est cliquable, tout le reste de l'écran est bloqué.
+ *                     L'arrivée sur la page cible (route) fait avancer le tour.
+ *  - type 'info'    : explication centrée sur la page courante, avec « Suivant ».
  */
 
 interface Step {
-  target?: string          // sélecteur data-tour (sinon bulle centrée)
-  route?: string           // route à atteindre avant cette étape
+  type: 'action' | 'info'
+  target?: string        // onglet à cliquer (étapes 'action')
+  route: string          // page sur laquelle l'étape se déroule / qu'on doit atteindre
   title: string
   body: string
-  placement?: 'top' | 'bottom' | 'left' | 'right' | 'center'
 }
 
 const STEPS: Step[] = [
-  {
-    route: '/feed',
-    title: 'Bienvenue sur Meello 👋',
-    body: "Ravi de t'accueillir ! Laisse-moi te montrer l'essentiel en 1 minute. Tu pourras passer le tutoriel à tout moment.",
-    placement: 'center',
-  },
-  {
-    route: '/feed',
-    target: 'nav-profil',
-    title: 'Commence par ton profil',
-    body: "Première étape : complète ton profil (photo, bio, activité). Un profil complet inspire confiance et donne envie de se connecter avec toi. Clique ici pour y aller.",
-    placement: 'right',
-  },
-  {
-    route: '/feed',
-    target: 'nav-feed',
-    title: 'Présente-toi à la communauté',
-    body: "Le fil d'actualité, c'est ici. Poste un petit message de présentation : qui tu es, ce que tu fais, ce que tu cherches. C'est la meilleure façon de te faire connaître.",
-    placement: 'right',
-  },
-  {
-    route: '/feed',
-    target: 'nav-reseau',
-    title: 'Ton réseau',
-    body: "Bonne nouvelle : tu n'es pas seul ! En tant que fondateur, je suis déjà ta première connexion. Depuis l'annuaire, tu peux découvrir les autres membres et leur envoyer une demande de connexion.",
-    placement: 'right',
-  },
-  {
-    route: '/feed',
-    target: 'nav-annuaire',
-    title: "L'annuaire des membres",
-    body: "Parcours l'annuaire pour trouver des membres par activité ou par ville, et développe ton réseau.",
-    placement: 'right',
-  },
-  {
-    route: '/feed',
-    target: 'nav-qg',
-    title: 'Le QG',
-    body: "Le QG est le salon de discussion général de la communauté. Viens dire bonjour, poser des questions, échanger avec tout le monde.",
-    placement: 'right',
-  },
-  {
-    route: '/feed',
-    target: 'nav-evenements',
-    title: 'Les événements',
-    body: "Participe aux événements et visios de la communauté pour rencontrer les autres membres en vrai.",
-    placement: 'right',
-  },
-  {
-    route: '/feed',
-    title: "C'est parti ! 🚀",
-    body: "Tu as toutes les clés. Commence par compléter ton profil et te présenter — le reste viendra naturellement. Bienvenue dans Meello !",
-    placement: 'center',
-  },
+  // — Accueil
+  { type: 'info', route: '/feed', title: 'Bienvenue sur Meello 👋', body: "Ravi de t'accueillir ! Je vais te faire visiter les différentes pages, une par une. À chaque étape, clique sur l'onglet mis en avant pour avancer." },
+
+  // — Profil
+  { type: 'action', target: 'nav-profil', route: '/profil', title: 'Ton profil', body: "Commençons par ton profil. Clique sur « Mon profil » dans le menu." },
+  { type: 'info', route: '/profil', title: 'Complète ton profil', body: "Voici ta page profil. Ajoute ta photo, ta bio et ton activité : un profil complet inspire confiance et donne envie de se connecter avec toi. Tu pourras le remplir juste après le tutoriel." },
+
+  // — La Communauté (forum / présentations)
+  { type: 'action', target: 'nav-forum', route: '/forum', title: 'La Communauté', body: "Maintenant, découvrons « La Communauté ». Clique sur cet onglet." },
+  { type: 'info', route: '/forum', title: 'Présente-toi ici', body: "C'est le cœur de Meello. Tu y trouves des espaces d'échange par thème, dont la catégorie « Présentations » : c'est LÀ que chaque membre se présente. Va t'y présenter dès que possible, c'est la meilleure façon de te faire connaître et de lancer les premières conversations." },
+
+  // — Annuaire
+  { type: 'action', target: 'nav-annuaire', route: '/annuaire', title: "L'Annuaire", body: "Voyons comment trouver d'autres membres. Clique sur « Annuaire »." },
+  { type: 'info', route: '/annuaire', title: 'Trouve des membres', body: "L'annuaire liste tous les membres. Tu peux les filtrer par activité ou par ville pour repérer les personnes qui t'intéressent et leur envoyer une demande de connexion." },
+
+  // — Mon Réseau
+  { type: 'action', target: 'nav-reseau', route: '/reseau', title: 'Ton Réseau', body: "Regarde ton réseau. Clique sur « Mon Réseau »." },
+  { type: 'info', route: '/reseau', title: 'Tu as déjà un contact !', body: "Bonne nouvelle : tu n'es pas seul. En tant que fondateur, je suis déjà ta toute première connexion 🙌 Ici tu retrouves tes contacts, et tu gères les demandes reçues et envoyées." },
+
+  // — Le QG
+  { type: 'action', target: 'nav-qg', route: '/qg', title: 'Le QG', body: "Direction le salon de discussion. Clique sur « Le QG »." },
+  { type: 'info', route: '/qg', title: 'Discute en direct', body: "Le QG est le chat général de la communauté, en temps réel. Viens dire bonjour, poser des questions, réagir : c'est l'endroit le plus vivant de Meello." },
+
+  // — Événements
+  { type: 'action', target: 'nav-evenements', route: '/evenements', title: 'Les Événements', body: "Dernière étape. Clique sur « Événements »." },
+  { type: 'info', route: '/evenements', title: 'Rencontre les autres en vrai', body: "Participe aux visios et événements pour rencontrer les membres. Rien ne vaut un vrai échange pour créer des liens durables." },
+
+  // — Fin
+  { type: 'info', route: '/evenements', title: "C'est parti ! 🚀", body: "Tu as fait le tour ! Pour bien démarrer : complète ton profil, puis présente-toi dans « La Communauté ». Bienvenue dans Meello !" },
 ]
 
 export default function OnboardingTour({ userId }: { userId: string | null }) {
@@ -83,130 +60,108 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
   const [stepIndex, setStepIndex] = useState(0)
   const [rect, setRect] = useState<DOMRect | null>(null)
   const pathname = usePathname()
-  const router = useRouter()
   const checkedRef = useRef(false)
 
-  // Vérifier au montage si le tutoriel doit se lancer
   useEffect(() => {
     if (!userId || checkedRef.current) return
     checkedRef.current = true
     const check = async () => {
       const supabase = createClient()
       const { data } = await supabase.from('profiles').select('tutorial_done').eq('id', userId).single()
-      if (data && data.tutorial_done === false) {
-        setActive(true)
-      }
+      if (data && data.tutorial_done === false) setActive(true)
     }
     check()
   }, [userId])
 
   const step = STEPS[stepIndex]
 
-  // Repositionner la surbrillance sur l'élément ciblé
-  const updateRect = useCallback(() => {
-    if (!active || !step?.target) { setRect(null); return }
-    const el = document.querySelector(`[data-tour="${step.target}"]`)
-    if (el) {
-      setRect(el.getBoundingClientRect())
-    } else {
-      setRect(null)
-    }
-  }, [active, step])
-
-  // Naviguer vers la route de l'étape si besoin, puis localiser l'élément
-  useEffect(() => {
-    if (!active || !step) return
-    if (step.route && pathname !== step.route) {
-      router.push(step.route)
-      return
-    }
-    // Laisser le DOM se peindre, puis (re)mesurer
-    const t = setTimeout(updateRect, 120)
-    return () => clearTimeout(t)
-  }, [active, stepIndex, pathname, step, router, updateRect])
-
-  useEffect(() => {
-    if (!active) return
-    window.addEventListener('resize', updateRect)
-    window.addEventListener('scroll', updateRect, true)
-    return () => {
-      window.removeEventListener('resize', updateRect)
-      window.removeEventListener('scroll', updateRect, true)
-    }
-  }, [active, updateRect])
-
-  const finish = async () => {
+  const finish = useCallback(async () => {
     setActive(false)
     if (userId) {
       const supabase = createClient()
       await supabase.from('profiles').update({ tutorial_done: true }).eq('id', userId)
     }
-  }
+  }, [userId])
 
-  const next = () => {
-    if (stepIndex < STEPS.length - 1) setStepIndex(i => i + 1)
-    else finish()
-  }
-  const prev = () => { if (stepIndex > 0) setStepIndex(i => i - 1) }
+  const next = useCallback(() => {
+    setStepIndex(i => {
+      if (i < STEPS.length - 1) return i + 1
+      finish()
+      return i
+    })
+  }, [finish])
+
+  // Mesurer l'élément cible (étapes 'action')
+  const updateRect = useCallback(() => {
+    if (!active || step?.type !== 'action' || !step.target) { setRect(null); return }
+    const el = document.querySelector(`[data-tour="${step.target}"]`)
+    setRect(el ? el.getBoundingClientRect() : null)
+  }, [active, step])
+
+  useEffect(() => {
+    if (!active) return
+    const t = setTimeout(updateRect, 120)
+    window.addEventListener('resize', updateRect)
+    window.addEventListener('scroll', updateRect, true)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('resize', updateRect)
+      window.removeEventListener('scroll', updateRect, true)
+    }
+  }, [active, stepIndex, updateRect])
+
+  // Étape 'action' : quand l'utilisateur arrive sur la page cible → avancer
+  useEffect(() => {
+    if (!active || !step || step.type !== 'action') return
+    if (pathname === step.route) {
+      const t = setTimeout(() => next(), 350) // laisse la page se charger
+      return () => clearTimeout(t)
+    }
+  }, [active, step, pathname, next])
 
   if (!active || !step) return null
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+  const isAction = step.type === 'action' && !!rect && !isMobile
   const pad = 8
-  const hasSpot = !!rect
-  const centered = step.placement === 'center' || !hasSpot
 
-  // Position de la bulle
+  // Bulle : pour une étape action, on la place près de l'onglet ; sinon centrée
   let bubbleStyle: React.CSSProperties = {
     position: 'fixed', zIndex: 100002, maxWidth: '380px', width: 'calc(100% - 2rem)',
   }
-  if (centered) {
+  if (isAction && rect) {
+    bubbleStyle.top = Math.min(rect.top, window.innerHeight - 220) + 'px'
+    bubbleStyle.left = (rect.right + 16) + 'px'
+  } else {
     bubbleStyle = { ...bubbleStyle, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
-  } else if (rect) {
-    const placement = step.placement || 'bottom'
-    if (placement === 'right') {
-      bubbleStyle.top = Math.max(12, rect.top) + 'px'
-      bubbleStyle.left = (rect.right + 16) + 'px'
-    } else if (placement === 'left') {
-      bubbleStyle.top = Math.max(12, rect.top) + 'px'
-      bubbleStyle.right = (window.innerWidth - rect.left + 16) + 'px'
-    } else if (placement === 'top') {
-      bubbleStyle.bottom = (window.innerHeight - rect.top + 16) + 'px'
-      bubbleStyle.left = rect.left + 'px'
-    } else {
-      bubbleStyle.top = (rect.bottom + 16) + 'px'
-      bubbleStyle.left = rect.left + 'px'
-    }
   }
-
-  // Sur mobile, on force la bulle en bas de l'écran pour rester lisible
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
-  if (isMobile && !centered) {
+  if (isMobile) {
     bubbleStyle = {
       position: 'fixed', zIndex: 100002, left: '1rem', right: '1rem',
       bottom: 'calc(1rem + env(safe-area-inset-bottom))', maxWidth: 'none', width: 'auto',
     }
   }
 
+  // Masque : 4 panneaux autour de l'élément cible (le laissent cliquable).
+  const overlay = '#1A1A2E'
+  const op = 0.7
+  const panels = (isAction && rect) ? (
+    <>
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: Math.max(0, rect.top - pad), backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
+      <div style={{ position: 'fixed', top: rect.bottom + pad, left: 0, right: 0, bottom: 0, backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
+      <div style={{ position: 'fixed', top: rect.top - pad, left: 0, width: Math.max(0, rect.left - pad), height: rect.height + pad * 2, backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
+      <div style={{ position: 'fixed', top: rect.top - pad, left: rect.right + pad, right: 0, height: rect.height + pad * 2, backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
+      {/* Contour de l'élément cliquable */}
+      <div style={{ position: 'fixed', top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2, border: '2px solid #E8501A', borderRadius: '12px', zIndex: 100001, pointerEvents: 'none' }} />
+    </>
+  ) : (
+    // Étape info (ou mobile) : overlay plein qui bloque tout
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: overlay, opacity: op, zIndex: 100000 }} />
+  )
+
   return (
     <>
-      {/* Overlay sombre avec trou (spotlight) via box-shadow */}
-      {hasSpot ? (
-        <div
-          style={{
-            position: 'fixed',
-            top: rect.top - pad, left: rect.left - pad,
-            width: rect.width + pad * 2, height: rect.height + pad * 2,
-            borderRadius: '12px',
-            boxShadow: '0 0 0 9999px rgba(26,26,46,0.7)',
-            zIndex: 100000, pointerEvents: 'none',
-            transition: 'all 0.2s ease',
-          }}
-        />
-      ) : (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(26,26,46,0.7)', zIndex: 100000 }} />
-      )}
-
-      {/* Bulle explicative */}
+      {panels}
       <div style={{ ...bubbleStyle, backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 8px 40px rgba(0,0,0,0.25)' }}>
         <div style={{ fontSize: '0.7rem', color: '#E8501A', fontWeight: 700, marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Étape {stepIndex + 1} / {STEPS.length}
@@ -221,16 +176,13 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
           <button onClick={finish} style={{ background: 'none', border: 'none', color: '#2D2D2D', opacity: 0.45, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', padding: 0, whiteSpace: 'nowrap', flexShrink: 0 }}>
             Passer le tutoriel
           </button>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            {stepIndex > 0 && (
-              <button onClick={prev} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 0.9rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: '#2D2D2D' }}>
-                Précédent
-              </button>
-            )}
-            <button onClick={next} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700 }}>
+          {step.type === 'info' ? (
+            <button onClick={next} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.1rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
               {stepIndex === STEPS.length - 1 ? 'Terminer' : 'Suivant'}
             </button>
-          </div>
+          ) : (
+            <span style={{ fontSize: '0.8rem', color: '#E8501A', fontWeight: 700, whiteSpace: 'nowrap' }}>👆 Clique sur l'onglet</span>
+          )}
         </div>
       </div>
     </>
