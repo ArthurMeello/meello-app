@@ -51,7 +51,9 @@ function formatLastActive(d: string | null | undefined): string {
 }
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<'candidatures' | 'membres' | 'recommandations' | 'evenements'>('candidatures')
+  const [tab, setTab] = useState<'candidatures' | 'membres' | 'recommandations' | 'evenements' | 'activite'>('candidatures')
+  const [stats, setStats] = useState<any>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
   const [applications, setApplications] = useState<Application[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(false)
@@ -118,6 +120,21 @@ export default function AdminPage() {
       setMembers(data.map(m => ({ ...m, is_confirmed: statusMap[m.id] ?? false })))
     }
   }
+
+  const fetchStats = async () => {
+    setStatsLoading(true)
+    try {
+      const res = await fetch('/api/admin-stats')
+      const data = await res.json()
+      if (data.ok) setStats(data)
+    } catch {}
+    setStatsLoading(false)
+  }
+
+  // Charger les stats à l'ouverture de l'onglet Activité
+  useEffect(() => {
+    if (tab === 'activite' && !stats) fetchStats()
+  }, [tab])
 
   const handleApprove = async (app: Application) => {
     setLoading(true)
@@ -326,10 +343,10 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        {[{ key: 'candidatures', label: `Candidatures (${pending.length} en attente)` }, { key: 'membres', label: `Membres (${members.length})` }, { key: 'recommandations', label: `Recommandations (${pendingRecos.length} en attente)` }, { key: 'evenements', label: `Événements (${pendingEvents.length} en attente)` }].map(t => (
+        {[{ key: 'candidatures', label: `Candidatures (${pending.length} en attente)` }, { key: 'membres', label: `Membres (${members.length})` }, { key: 'recommandations', label: `Recommandations (${pendingRecos.length} en attente)` }, { key: 'evenements', label: `Événements (${pendingEvents.length} en attente)` }, { key: 'activite', label: `Activité` }].map(t => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key as 'candidatures' | 'membres' | 'recommandations')}
+            onClick={() => setTab(t.key as any)}
             style={{
               padding: '0.6rem 1.25rem',
               borderRadius: '10px',
@@ -837,6 +854,41 @@ export default function AdminPage() {
                 })}
               </div>
             )
+          )}
+        </div>
+      )}
+
+      {/* ── ACTIVITÉ ── */}
+      {tab === 'activite' && (
+        <div>
+          <p style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.55, marginBottom: '1.25rem', lineHeight: 1.6 }}>
+            Statistiques globales de la communauté. Aucune information sur le contenu des messages ni sur qui parle à qui.
+          </p>
+          {statsLoading || !stats ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#2D2D2D', opacity: 0.4 }}>Chargement…</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+              {[
+                { label: 'Messages échangés (total)', value: stats.totalMsgs, accent: true },
+                { label: 'Messages (7 derniers jours)', value: stats.msgs7 },
+                { label: 'Messages (30 derniers jours)', value: stats.msgs30 },
+                { label: 'Conversations (total)', value: stats.totalConvs },
+                { label: 'Conversations actives (7 j)', value: stats.activeConvs },
+                { label: 'Membres ayant déjà écrit', value: `${stats.activeSenders} / ${stats.totalMembers}` },
+              ].map((s, i) => (
+                <div key={i} style={{ backgroundColor: 'white', borderRadius: '14px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                  <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.8rem', fontWeight: 700, color: s.accent ? '#E8501A' : '#2D2D2D' }}>
+                    {s.value}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.55, marginTop: '0.25rem' }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {stats && (
+            <button onClick={() => { setStats(null); fetchStats() }} style={{ marginTop: '1.25rem', background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: '#2D2D2D' }}>
+              Actualiser
+            </button>
           )}
         </div>
       )}
