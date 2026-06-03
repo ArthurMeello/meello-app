@@ -175,13 +175,20 @@ export default function ForumCategoryPage() {
       </div>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '1rem' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          /* Bouton sous le titre/sous-titre sur mobile */
+          .forum-cat-header { flex-direction: column !important; align-items: stretch !important; }
+          .forum-cat-header .forum-cat-btn { align-self: flex-start; }
+        }
+      `}</style>
+      <div className="forum-cat-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '1rem' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.5rem', fontWeight: 700, color: '#2D2D2D', margin: 0 }}>{category?.name}</h1>
           {category?.description && <p style={{ color: '#2D2D2D', opacity: 0.45, fontSize: '0.88rem', margin: '0.3rem 0 0' }}>{category.description}</p>}
         </div>
         {currentUserId && (
-          <button onClick={() => setNewTopicModal(true)} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '10px', padding: '0.6rem 1.25rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+          <button className="forum-cat-btn" onClick={() => setNewTopicModal(true)} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '10px', padding: '0.6rem 1.25rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
             {category?.name === 'Présentations' ? '👋 Se présenter' : '+ Nouveau sujet'}
           </button>
         )}
