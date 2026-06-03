@@ -287,20 +287,20 @@ export default function AppNav() {
               )
             })}
             {userId === ADMIN_ID && (
-              <Link href="/admin" onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderRadius: '50px', textDecoration: 'none', background: 'rgba(232,80,26,0.15)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(232,80,26,0.4)', color: '#E8501A', fontWeight: 600, fontSize: '0.95rem', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}>
+              <Link href="/admin" onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderRadius: '50px', textDecoration: 'none', background: 'rgba(232,80,26,0.15)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(232,80,26,0.4)', color: '#E8501A', fontWeight: 600, fontSize: '0.95rem', boxShadow: '0 4px 24px rgba(0,0,0,0.12)', animation: 'slideIn 0.2s ease 0.24s both' }}>
                 <img src="/icons/admin.svg" alt="" style={{ width: '20px', height: '20px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' }} />
                 Admin {adminActions > 0 && `(${adminActions})`}
               </Link>
             )}
-            <Link href="/parametres" onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderRadius: '50px', textDecoration: 'none', background: pathname.startsWith('/parametres') ? 'rgba(232,80,26,0.85)' : '#1A1A2E', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: 'none', color: 'white', fontWeight: pathname.startsWith('/parametres') ? 700 : 500, fontSize: '0.95rem', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}>
+            <Link href="/parametres" onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderRadius: '50px', textDecoration: 'none', background: pathname.startsWith('/parametres') ? 'rgba(232,80,26,0.85)' : '#1A1A2E', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: 'none', color: 'white', fontWeight: pathname.startsWith('/parametres') ? 700 : 500, fontSize: '0.95rem', boxShadow: '0 4px 24px rgba(0,0,0,0.12)', animation: 'slideIn 0.2s ease 0.28s both' }}>
               <img src="/icons/settings.svg" alt="" style={{ width: '20px', height: '20px', filter: 'brightness(0) invert(1)' }} />
               Paramètres
             </Link>
-            <Link href="/aide" onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderRadius: '50px', textDecoration: 'none', background: pathname.startsWith('/aide') ? 'rgba(232,80,26,0.85)' : '#1A1A2E', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: 'none', color: 'white', fontWeight: pathname.startsWith('/aide') ? 700 : 500, fontSize: '0.95rem', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}>
+            <Link href="/aide" onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderRadius: '50px', textDecoration: 'none', background: pathname.startsWith('/aide') ? 'rgba(232,80,26,0.85)' : '#1A1A2E', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: 'none', color: 'white', fontWeight: pathname.startsWith('/aide') ? 700 : 500, fontSize: '0.95rem', boxShadow: '0 4px 24px rgba(0,0,0,0.12)', animation: 'slideIn 0.2s ease 0.32s both' }}>
               <img src="/icons/faq.svg" alt="" style={{ width: '20px', height: '20px', filter: 'brightness(0) invert(1)' }} />
               Aide & FAQ
             </Link>
-            <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderRadius: '50px', background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.2)', color: '#1A1A2E', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}>
+            <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderRadius: '50px', background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.2)', color: '#1A1A2E', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 24px rgba(0,0,0,0.1)', animation: 'slideIn 0.2s ease 0.36s both' }}>
               <img src="/icons/logout.svg" alt="" style={{ width: '20px', height: '20px', filter: 'brightness(0)' }} />
               Déconnexion
             </button>
