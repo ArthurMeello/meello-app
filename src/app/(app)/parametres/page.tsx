@@ -160,15 +160,6 @@ export default function ParametresPage() {
     router.push('/connexion')
   }
 
-  const replayTutorial = async () => {
-    if (!userId) return
-    const supabase = createClient()
-    await supabase.from('profiles').update({ tutorial_done: false }).eq('id', userId)
-    router.push('/feed')
-    // Déclencher le tutoriel (le composant OnboardingTour écoute cet événement)
-    setTimeout(() => window.dispatchEvent(new CustomEvent('meello:tour-replay')), 300)
-  }
-
   const handleDeleteAccount = async () => {
     setDeleteError(null)
     setDeleting(true)
@@ -329,23 +320,6 @@ export default function ParametresPage() {
             ))}
           </div>
         )}
-      </div>
-
-      {/* Tutoriel */}
-      <div style={sectionStyle}>
-        <h2 style={titleStyle}>Tutoriel</h2>
-        <p style={{ fontSize: '0.88rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 1rem', lineHeight: 1.6 }}>
-          Revois la visite guidée de Meello pour redécouvrir les différentes pages.
-        </p>
-        <button
-          onClick={replayTutorial}
-          style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '10px', padding: '0.6rem 1.25rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-        >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-          </svg>
-          Revoir le tutoriel
-        </button>
       </div>
 
       {/* Déconnexion */}

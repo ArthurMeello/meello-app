@@ -1,7 +1,9 @@
 // @ts-nocheck
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 const FAQ = [
   {
@@ -69,6 +71,24 @@ function FaqItem({ q, a, isLast }: { q: string; a: string; isLast?: boolean }) {
 }
 
 export default function AidePage() {
+  const router = useRouter()
+  const [userId, setUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      if (data.user) setUserId(data.user.id)
+    })
+  }, [])
+
+  const replayTutorial = async () => {
+    if (!userId) return
+    const supabase = createClient()
+    await supabase.from('profiles').update({ tutorial_done: false }).eq('id', userId)
+    router.push('/feed')
+    // Déclencher le tutoriel (OnboardingTour écoute cet événement)
+    setTimeout(() => window.dispatchEvent(new CustomEvent('meello:tour-replay')), 300)
+  }
+
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto' }}>
       <h1 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.6rem', color: '#2D2D2D', fontWeight: 700, marginBottom: '0.5rem' }}>
@@ -82,6 +102,24 @@ export default function AidePage() {
         {FAQ.map((item, i) => (
           <FaqItem key={i} q={item.q} a={item.a} isLast={i === FAQ.length - 1} />
         ))}
+      </div>
+
+      <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginTop: '1.5rem' }}>
+        <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.05rem', color: '#2D2D2D', fontWeight: 700, marginBottom: '0.5rem' }}>
+          Revoir le tutoriel
+        </h2>
+        <p style={{ color: '#2D2D2D', opacity: 0.7, lineHeight: 1.6, fontSize: '0.9rem', margin: '0 0 1rem' }}>
+          Refais la visite guidée de Meello pour redécouvrir les différentes pages.
+        </p>
+        <button
+          onClick={replayTutorial}
+          style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '10px', padding: '0.6rem 1.25rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+          </svg>
+          Revoir le tutoriel
+        </button>
       </div>
 
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginTop: '1.5rem' }}>
