@@ -251,7 +251,14 @@ export default function AppNav() {
 
         {/* Pills du menu */}
         {menuOpen && (
-          <div style={{ position: 'fixed', top: '80px', left: '16px', zIndex: 200, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{
+            position: 'fixed', top: '80px', left: '16px', right: '16px', zIndex: 200,
+            display: 'flex', flexDirection: 'column', gap: '10px',
+            maxHeight: 'calc(100dvh - 96px)', overflowY: 'auto',
+            paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
+            scrollbarWidth: 'none', msOverflowStyle: 'none',
+            alignItems: 'flex-start',
+          }}>
             {NAV_ITEMS.filter(item => item.href !== '/messages').map((item, i) => {
               const active = pathname.startsWith(item.href)
               return (
