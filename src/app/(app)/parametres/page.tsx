@@ -164,8 +164,9 @@ export default function ParametresPage() {
     if (!userId) return
     const supabase = createClient()
     await supabase.from('profiles').update({ tutorial_done: false }).eq('id', userId)
-    // Le tutoriel se relance au chargement du feed
     router.push('/feed')
+    // Déclencher le tutoriel (le composant OnboardingTour écoute cet événement)
+    setTimeout(() => window.dispatchEvent(new CustomEvent('meello:tour-replay')), 300)
   }
 
   const handleDeleteAccount = async () => {

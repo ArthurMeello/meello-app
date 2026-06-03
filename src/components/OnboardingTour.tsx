@@ -78,6 +78,16 @@ export default function OnboardingTour({ userId }: { userId: string | null }) {
     check()
   }, [userId])
 
+  // Relancer le tutoriel à la demande (bouton « Revoir le tutoriel »)
+  useEffect(() => {
+    const handler = () => {
+      setStepIndex(0)
+      setActive(true)
+    }
+    window.addEventListener('meello:tour-replay', handler)
+    return () => window.removeEventListener('meello:tour-replay', handler)
+  }, [])
+
   const step = STEPS[stepIndex]
 
   const finish = useCallback(async () => {
