@@ -32,7 +32,22 @@ interface Member {
   member_since: string | null
   hide_new_badge: boolean
   created_at: string
+  last_active?: string | null
   is_confirmed?: boolean
+}
+
+// "Vu il y a X" à partir d'un timestamp
+function formatLastActive(d: string | null | undefined): string {
+  if (!d) return 'Jamais vu'
+  const diff = Date.now() - new Date(d).getTime()
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return "Vu à l'instant"
+  if (min < 60) return `Vu il y a ${min} min`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `Vu il y a ${h} h`
+  const j = Math.floor(h / 24)
+  if (j < 7) return `Vu il y a ${j} j`
+  return `Vu le ${new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`
 }
 
 export default function AdminPage() {
@@ -89,7 +104,7 @@ export default function AdminPage() {
     const supabase = createClient()
     const { data } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name, email, activity, city, badges, member_since, hide_new_badge, created_at')
+      .select('id, first_name, last_name, email, activity, city, badges, member_since, hide_new_badge, created_at, last_active')
       .order('created_at', { ascending: true })
     if (data) {
       // Enrichir avec le statut de confirmation email
@@ -600,6 +615,15 @@ export default function AdminPage() {
               <div>
                 <div style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.9rem' }}>{member.first_name} {member.last_name}</div>
                 <div style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.5 }}>{member.email} · {member.activity} · {member.city}</div>
+                {(() => {
+                  const recent = member.last_active && (Date.now() - new Date(member.last_active).getTime()) < 7 * 24 * 60 * 60 * 1000
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.2rem' }}>
+                      <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: member.last_active ? (recent ? '#22C55E' : '#F5A623') : '#ccc', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.55 }}>{formatLastActive(member.last_active)}</span>
+                    </div>
+                  )
+                })()}
               </div>
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
                 {[

@@ -23,6 +23,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
       })
+
+      // Mettre à jour la dernière activité — au plus une fois / 5 min
+      try {
+        const key = 'meello:last-active-ping'
+        const lastPing = Number(localStorage.getItem(key) || 0)
+        if (Date.now() - lastPing > 5 * 60 * 1000) {
+          localStorage.setItem(key, String(Date.now()))
+          supabase.from('profiles').update({ last_active: new Date().toISOString() }).eq('id', user.id).then(() => {})
+        }
+      } catch {}
     }
     checkFirstLogin()
   }, [])
