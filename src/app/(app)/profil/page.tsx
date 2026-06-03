@@ -435,21 +435,36 @@ export default function ProfilPage() {
         <div className="profil-header" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem' }}>
           <div
             onClick={() => fileRef.current?.click()}
-            style={{
-              width: '72px', height: '72px', borderRadius: '50%',
-              backgroundColor: '#E8501A', color: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 700, fontSize: '1.4rem', flexShrink: 0, overflow: 'hidden',
-              cursor: 'pointer', position: 'relative',
-            }}
-            title="Changer la photo"
+            style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }}
+            title="Changer la photo de profil"
           >
-            {profile.avatar_url
-              ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}`.toUpperCase()}
-            {uploadingAvatar && (
-              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>...</div>
-            )}
+            <div
+              style={{
+                width: '72px', height: '72px', borderRadius: '50%',
+                backgroundColor: '#E8501A', color: 'white',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 700, fontSize: '1.4rem', overflow: 'hidden', position: 'relative',
+              }}
+            >
+              {profile.avatar_url
+                ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}`.toUpperCase()}
+              {uploadingAvatar && (
+                <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>...</div>
+              )}
+            </div>
+            {/* Badge appareil photo — indique qu'on peut changer la photo */}
+            <div style={{
+              position: 'absolute', bottom: '-2px', right: '-2px',
+              width: '26px', height: '26px', borderRadius: '50%',
+              backgroundColor: '#1A1A2E', border: '2.5px solid white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
           </div>
           <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
           <div style={{ flex: 1 }}>
@@ -467,6 +482,17 @@ export default function ProfilPage() {
               <div style={{ marginTop: '0.2rem', fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.4 }}>
                 Membre depuis {new Date(profile.member_since).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
               </div>
+            )}
+            {!profile.avatar_url && (
+              <button
+                onClick={() => fileRef.current?.click()}
+                style={{ marginTop: '0.4rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#E8501A', fontSize: '0.8rem', fontWeight: 600 }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+                </svg>
+                Ajouter une photo de profil
+              </button>
             )}
           </div>
           <div className="profil-actions" style={{ display: 'flex', gap: '0.5rem' }}>
