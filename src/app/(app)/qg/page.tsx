@@ -322,13 +322,42 @@ export default function QGPage() {
     if (!q || opts.length < 2 || !userId || pollSubmitting) return
     setPollSubmitting(true)
     const supabase = createClient()
-    const { data: poll } = await supabase.from('qg_polls').insert({ question: q, created_by: userId }).select('id').single()
-    if (poll) {
-      await supabase.from('qg_poll_options').insert(opts.map((label, i) => ({ poll_id: poll.id, label, position: i })))
-      await supabase.from('qg_messages').insert({ user_id: userId, content: '', poll_id: poll.id })
+
+    const { data: poll, error: pollErr } = await supabase.from('qg_polls').insert({ question: q, created_by: userId }).select('id').single()
+    if (pollErr || !poll) {
+      setPollSubmitting(false)
+      alert("Le sondage n'a pas pu être créé. Vérifie que les tables sondages (qg_polls...) ont bien été créées dans Supabase.\n\n" + (pollErr?.message || ''))
+      return
     }
+
+    const { data: optionRows, error: optErr } = await supabase
+      .from('qg_poll_options')
+      .insert(opts.map((label, i) => ({ poll_id: poll.id, label, position: i })))
+      .select('id, poll_id, label, position')
+    if (optErr) {
+      setPollSubmitting(false)
+      alert("Erreur lors de l'ajout des options.\n\n" + optErr.message)
+      return
+    }
+
+    const { data: msgRow, error: msgErr } = await supabase
+      .from('qg_messages')
+      .insert({ user_id: userId, content: '', poll_id: poll.id })
+      .select('id, content, created_at, user_id, poll_id')
+      .single()
+    if (msgErr || !msgRow) {
+      setPollSubmitting(false)
+      alert("Le sondage est créé mais n'a pas pu être publié dans le chat. Vérifie que la colonne poll_id existe sur qg_messages.\n\n" + (msgErr?.message || ''))
+      return
+    }
+
+    // Injecter le sondage et le message localement (sans attendre le realtime)
+    setPolls(prev => ({ ...prev, [poll.id]: { id: poll.id, question: q, created_by: userId, options: optionRows || [], votes: [] } }))
+    setMessages(prev => [...prev, { ...msgRow, profile }])
+
     setPollQuestion(''); setPollOptions(['', '']); setPollModal(false); setPollSubmitting(false)
     isAtBottom.current = true
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
   }
 
   // Voter (choix unique) : remplace le vote précédent du membre
