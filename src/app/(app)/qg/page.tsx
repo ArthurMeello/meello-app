@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { GHOST_ID, filterGhost } from '@/lib/ghost'
 import { notify } from '@/lib/notify'
+import SortableOptions from '@/components/SortableOptions'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 const PAGE_SIZE = 50
@@ -121,13 +122,13 @@ export default function QGPage() {
   // Sondages
   const [pollModal, setPollModal] = useState(false)
   const [pollQuestion, setPollQuestion] = useState('')
-  const [pollOptions, setPollOptions] = useState<string[]>(['', ''])
+  const [pollOptions, setPollOptions] = useState<{ id: string; value: string }[]>([{ id: 'o1', value: '' }, { id: 'o2', value: '' }])
   const [pollSubmitting, setPollSubmitting] = useState(false)
   const [polls, setPolls] = useState<Record<string, any>>({}) // poll_id -> { question, options, votes }
-  // Édition de sondage
+  // Édition de sondage — liste unifiée { id, value, existing }
   const [editPollId, setEditPollId] = useState<string | null>(null)
   const [editPollQuestion, setEditPollQuestion] = useState('')
-  const [editNewOptions, setEditNewOptions] = useState<string[]>([''])
+  const [editItems, setEditItems] = useState<{ id: string; value: string; existing?: boolean }[]>([])
   const [editPollSaving, setEditPollSaving] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
@@ -328,7 +329,7 @@ export default function QGPage() {
   // Créer un sondage : insère le sondage + ses options + un message QG qui le porte
   const createPoll = async () => {
     const q = pollQuestion.trim()
-    const opts = pollOptions.map(o => o.trim()).filter(Boolean)
+    const opts = pollOptions.map(o => o.value.trim()).filter(Boolean)
     if (!q || opts.length < 2 || !userId || pollSubmitting) return
     setPollSubmitting(true)
     const supabase = createClient()
@@ -365,7 +366,7 @@ export default function QGPage() {
     setPolls(prev => ({ ...prev, [poll.id]: { id: poll.id, question: q, created_by: userId, options: optionRows || [], votes: [] } }))
     setMessages(prev => [...prev, { ...msgRow, profile }])
 
-    setPollQuestion(''); setPollOptions(['', '']); setPollModal(false); setPollSubmitting(false)
+    setPollQuestion(''); setPollOptions([{ id: 'o1', value: '' }, { id: 'o2', value: '' }]); setPollModal(false); setPollSubmitting(false)
     isAtBottom.current = true
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
   }
@@ -425,41 +426,48 @@ export default function QGPage() {
     if (!p) return
     setEditPollId(pollId)
     setEditPollQuestion(p.question)
-    setEditNewOptions([''])
+    // Les options existantes (id DB) marquées existing:true
+    setEditItems(p.options.map((o: any) => ({ id: o.id, value: o.label, existing: true })))
   }
 
-  // Sauvegarder : maj question + ajout des nouvelles options (jamais de suppression)
+  // Sauvegarder : maj question + réordonnancement (position) + ajout des nouvelles options.
+  // Les options existantes ne sont jamais supprimées, juste réordonnées.
   const saveEditPoll = async () => {
     if (!editPollId) return
     const p = polls[editPollId]
     const q = editPollQuestion.trim()
-    const newOpts = editNewOptions.map(o => o.trim()).filter(Boolean)
-    if (!q) return
+    const items = editItems.filter(it => it.value.trim() !== '' || it.existing)
+    if (!q || items.filter(it => it.value.trim()).length < 2) return
     setEditPollSaving(true)
     const supabase = createClient()
 
-    // Maj question si changée
+    // 1) Question
     if (q !== p.question) {
       await supabase.from('qg_polls').update({ question: q }).eq('id', editPollId)
     }
-    // Ajout des nouvelles options
+
+    // 2) Réordonner les options existantes (maj position selon l'ordre actuel)
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i]
+      if (it.existing) {
+        await supabase.from('qg_poll_options').update({ position: i }).eq('id', it.id)
+      }
+    }
+
+    // 3) Insérer les nouvelles options à leur position
+    const newItems = items.map((it, i) => ({ it, pos: i })).filter(x => !x.it.existing && x.it.value.trim())
     let addedRows: any[] = []
-    if (newOpts.length > 0) {
-      const startPos = (p.options?.length || 0)
+    if (newItems.length > 0) {
       const { data, error } = await supabase
         .from('qg_poll_options')
-        .insert(newOpts.map((label, i) => ({ poll_id: editPollId, label, position: startPos + i })))
+        .insert(newItems.map(x => ({ poll_id: editPollId, label: x.it.value.trim(), position: x.pos })))
         .select('id, poll_id, label, position')
       if (error) { setEditPollSaving(false); alert("Erreur lors de l'ajout des options.\n\n" + error.message); return }
       addedRows = data || []
     }
 
-    // Maj locale
-    setPolls(prev => {
-      const cur = prev[editPollId]
-      if (!cur) return prev
-      return { ...prev, [editPollId]: { ...cur, question: q, options: [...cur.options, ...addedRows] } }
-    })
+    // 4) Recharger le sondage pour refléter le nouvel ordre
+    await loadPolls(supabase, [editPollId])
     setEditPollId(null); setEditPollSaving(false)
   }
 
@@ -725,24 +733,10 @@ export default function QGPage() {
               placeholder="Ex : Quel jour pour le prochain visio ?"
               style={{ width: '100%', padding: '0.6rem 0.85rem', border: '2px solid #E8E3D9', borderRadius: '10px', fontSize: '0.92rem', outline: 'none', fontFamily: 'inherit', marginBottom: '1rem' }}
             />
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.35rem' }}>Options</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {pollOptions.map((opt, i) => (
-                <div key={i} style={{ display: 'flex', gap: '0.4rem' }}>
-                  <input
-                    value={opt}
-                    onChange={e => setPollOptions(prev => prev.map((o, j) => j === i ? e.target.value : o))}
-                    placeholder={`Option ${i + 1}`}
-                    style={{ flex: 1, padding: '0.55rem 0.85rem', border: '2px solid #E8E3D9', borderRadius: '10px', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
-                  />
-                  {pollOptions.length > 2 && (
-                    <button onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', width: '38px', cursor: 'pointer', color: '#2D2D2D', opacity: 0.5, fontSize: '1.1rem', flexShrink: 0 }}>×</button>
-                  )}
-                </div>
-              ))}
-            </div>
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.35rem' }}>Options (glisse pour réordonner)</label>
+            <SortableOptions items={pollOptions} onChange={setPollOptions} minItems={2} />
             {pollOptions.length < 6 && (
-              <button onClick={() => setPollOptions(prev => [...prev, ''])} style={{ marginTop: '0.6rem', background: 'none', border: 'none', color: '#E8501A', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}>
+              <button onClick={() => setPollOptions(prev => [...prev, { id: `o${Date.now()}`, value: '' }])} style={{ marginTop: '0.6rem', background: 'none', border: 'none', color: '#E8501A', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}>
                 + Ajouter une option
               </button>
             )}
@@ -750,8 +744,8 @@ export default function QGPage() {
               <button onClick={() => setPollModal(false)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.55rem 1.1rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>Annuler</button>
               <button
                 onClick={createPoll}
-                disabled={pollSubmitting || !pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2}
-                style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.55rem 1.25rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, opacity: (pollSubmitting || !pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2) ? 0.5 : 1 }}
+                disabled={pollSubmitting || !pollQuestion.trim() || pollOptions.filter(o => o.value.trim()).length < 2}
+                style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.55rem 1.25rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, opacity: (pollSubmitting || !pollQuestion.trim() || pollOptions.filter(o => o.value.trim()).length < 2) ? 0.5 : 1 }}
               >
                 {pollSubmitting ? 'Création…' : 'Publier le sondage'}
               </button>
@@ -771,32 +765,17 @@ export default function QGPage() {
               onChange={e => setEditPollQuestion(e.target.value)}
               style={{ width: '100%', padding: '0.6rem 0.85rem', border: '2px solid #E8E3D9', borderRadius: '10px', fontSize: '0.92rem', outline: 'none', fontFamily: 'inherit', marginBottom: '1rem' }}
             />
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.35rem' }}>Options actuelles</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '1rem' }}>
-              {polls[editPollId].options.map((o: any) => (
-                <div key={o.id} style={{ padding: '0.5rem 0.85rem', border: '1px solid #F0EBE1', borderRadius: '10px', fontSize: '0.88rem', color: '#2D2D2D', backgroundColor: '#FAFAF7' }}>{o.label}</div>
-              ))}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, marginBottom: '0.5rem' }}>Les options déjà votées ne peuvent pas être supprimées.</div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.35rem' }}>Ajouter des options</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {editNewOptions.map((opt, i) => (
-                <div key={i} style={{ display: 'flex', gap: '0.4rem' }}>
-                  <input
-                    value={opt}
-                    onChange={e => setEditNewOptions(prev => prev.map((o, j) => j === i ? e.target.value : o))}
-                    placeholder={`Nouvelle option`}
-                    style={{ flex: 1, padding: '0.55rem 0.85rem', border: '2px solid #E8E3D9', borderRadius: '10px', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
-                  />
-                  {editNewOptions.length > 1 && (
-                    <button onClick={() => setEditNewOptions(prev => prev.filter((_, j) => j !== i))} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', width: '38px', cursor: 'pointer', color: '#2D2D2D', opacity: 0.5, fontSize: '1.1rem', flexShrink: 0 }}>×</button>
-                  )}
-                </div>
-              ))}
-            </div>
-            <button onClick={() => setEditNewOptions(prev => [...prev, ''])} style={{ marginTop: '0.6rem', background: 'none', border: 'none', color: '#E8501A', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}>
-              + Ajouter une autre option
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.35rem' }}>Options (glisse pour réordonner)</label>
+            <SortableOptions
+              items={editItems}
+              onChange={(next) => setEditItems(next.map(it => ({ ...it, existing: editItems.find(e => e.id === it.id)?.existing })))}
+              minItems={2}
+              placeholderPrefix="Option"
+            />
+            <button onClick={() => setEditItems(prev => [...prev, { id: `new-${Date.now()}`, value: '', existing: false }])} style={{ marginTop: '0.6rem', background: 'none', border: 'none', color: '#E8501A', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}>
+              + Ajouter une option
             </button>
+            <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, marginTop: '0.6rem' }}>Astuce : glisse les options par la poignée pour changer leur ordre.</div>
             <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
               <button onClick={() => setEditPollId(null)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.55rem 1.1rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>Annuler</button>
               <button onClick={saveEditPoll} disabled={editPollSaving || !editPollQuestion.trim()} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.55rem 1.25rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, opacity: (editPollSaving || !editPollQuestion.trim()) ? 0.5 : 1 }}>
