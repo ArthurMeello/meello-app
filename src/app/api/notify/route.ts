@@ -10,6 +10,7 @@ const TYPE_CONFIG: Record<string, { prefKey: string; emailSubject: string; email
   connection:     { prefKey: 'connections',     emailSubject: 'Nouvelle demande de connexion sur Meello',  emailable: true },
   recommendation: { prefKey: 'recommendations', emailSubject: 'Tu as reçu une recommandation sur Meello',  emailable: true },
   community:      { prefKey: 'community',        emailSubject: 'Nouvelle activité te concerne sur Meello',  emailable: false }, // in-app only (évite le spam)
+  qg:             { prefKey: 'qg',               emailSubject: 'Nouvelle activité dans le QG',              emailable: false }, // in-app only (activité du QG)
 }
 
 export async function POST(req: NextRequest) {

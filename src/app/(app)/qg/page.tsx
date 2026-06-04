@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { GHOST_ID, filterGhost } from '@/lib/ghost'
+import { notify } from '@/lib/notify'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 const PAGE_SIZE = 50
@@ -56,6 +57,50 @@ function renderContent(text: string) {
   )
 }
 
+// Carte d'un sondage dans le flux QG
+function PollCard({ poll, userId, onVote }: { poll: any; userId: string | null; onVote: (pollId: string, optionId: string) => void }) {
+  if (!poll) return <div style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.4 }}>Sondage…</div>
+  const totalVotes = poll.votes.length
+  const myVote = poll.votes.find((v: any) => v.user_id === userId)
+  return (
+    <div style={{ border: '1px solid #E8E3D9', borderRadius: '12px', padding: '0.85rem 1rem', backgroundColor: '#FAFAF7', maxWidth: '420px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E8501A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#2D2D2D' }}>{poll.question}</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+        {poll.options.map((opt: any) => {
+          const optVotes = poll.votes.filter((v: any) => v.option_id === opt.id)
+          const pct = totalVotes > 0 ? Math.round((optVotes.length / totalVotes) * 100) : 0
+          const isMine = myVote?.option_id === opt.id
+          return (
+            <div key={opt.id} onClick={() => onVote(poll.id, opt.id)} style={{ cursor: 'pointer', position: 'relative', borderRadius: '8px', overflow: 'hidden', border: isMine ? '1.5px solid #E8501A' : '1px solid #E8E3D9', backgroundColor: 'white' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${pct}%`, backgroundColor: isMine ? 'rgba(232,80,26,0.15)' : 'rgba(0,0,0,0.05)', transition: 'width 0.25s' }} />
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.7rem', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.85rem', color: '#2D2D2D', fontWeight: isMine ? 600 : 500 }}>{opt.label}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                  {/* Avatars des votants (votes visibles de tous) */}
+                  <div style={{ display: 'flex' }}>
+                    {optVotes.slice(0, 4).map((v: any, i: number) => (
+                      <div key={v.user_id} title={v.voter ? `${v.voter.first_name} ${v.voter.last_name}` : ''} style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 700, overflow: 'hidden', border: '1.5px solid white', marginLeft: i === 0 ? 0 : '-6px' }}>
+                        {v.voter?.avatar_url ? <img src={v.voter.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : `${(v.voter?.first_name || '?')[0] || ''}`}
+                      </div>
+                    ))}
+                  </div>
+                  <span style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.55, fontWeight: 600 }}>{pct}%</span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, marginTop: '0.5rem' }}>
+        {totalVotes} vote{totalVotes > 1 ? 's' : ''} · clique pour voter
+      </div>
+    </div>
+  )
+}
+
 export default function QGPage() {
   const router = useRouter()
   const [messages, setMessages] = useState<QGMessage[]>([])
@@ -68,6 +113,12 @@ export default function QGPage() {
   const [hasMore, setHasMore] = useState(true)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const [onlineModalOpen, setOnlineModalOpen] = useState(false)
+  // Sondages
+  const [pollModal, setPollModal] = useState(false)
+  const [pollQuestion, setPollQuestion] = useState('')
+  const [pollOptions, setPollOptions] = useState<string[]>(['', ''])
+  const [pollSubmitting, setPollSubmitting] = useState(false)
+  const [polls, setPolls] = useState<Record<string, any>>({}) // poll_id -> { question, options, votes }
   const bottomRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
   const oldestCreatedAt = useRef<string | null>(null)
@@ -120,6 +171,8 @@ export default function QGPage() {
           // Ignorer les messages du compte fantôme (sauf admin)
           if (msg.user_id === GHOST_ID && userIdRef.current !== ADMIN_ID) return
           const { data: prof } = await supabase.from('profiles').select('first_name, last_name, avatar_url, badges').eq('id', msg.user_id).single()
+          // Si c'est un sondage, charger ses données
+          if (msg.poll_id) await loadPolls(supabase, [msg.poll_id])
           const fullMsg = { ...msg, profile: prof }
           setMessages(prev => [...prev, fullMsg])
           if (isAtBottom.current) {
@@ -149,7 +202,7 @@ export default function QGPage() {
   const loadMessages = async (supabase: any, before: string | null) => {
     let query = supabase
       .from('qg_messages')
-      .select('id, content, created_at, user_id')
+      .select('id, content, created_at, user_id, poll_id')
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE)
 
@@ -163,10 +216,41 @@ export default function QGPage() {
     const { data: profiles } = await supabase.from('profiles').select('id, first_name, last_name, avatar_url, badges').in('id', userIds)
     const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, p]))
 
+    // Charger les sondages référencés dans ces messages
+    const pollIds = [...new Set(data.map((m: any) => m.poll_id).filter(Boolean))]
+    if (pollIds.length > 0) await loadPolls(supabase, pollIds)
+
     const msgs = data.reverse().map((m: any) => ({ ...m, profile: profileMap[m.user_id] || {} }))
     if (data.length < PAGE_SIZE) setHasMore(false)
     oldestCreatedAt.current = msgs[0]?.created_at || null
     return msgs
+  }
+
+  // Charger un ensemble de sondages (question, options, votes) dans le state `polls`
+  const loadPolls = async (supabase: any, pollIds: string[]) => {
+    const [{ data: pollRows }, { data: optionRows }, { data: voteRows }] = await Promise.all([
+      supabase.from('qg_polls').select('id, question, created_by').in('id', pollIds),
+      supabase.from('qg_poll_options').select('id, poll_id, label, position').in('poll_id', pollIds).order('position'),
+      supabase.from('qg_poll_votes').select('poll_id, option_id, user_id').in('poll_id', pollIds),
+    ])
+    // Profils des votants (pour afficher qui a voté quoi)
+    const voterIds = [...new Set((voteRows || []).map((v: any) => v.user_id))]
+    let voterMap: Record<string, any> = {}
+    if (voterIds.length > 0) {
+      const { data: vp } = await supabase.from('profiles').select('id, first_name, last_name, avatar_url').in('id', voterIds)
+      voterMap = Object.fromEntries((vp || []).map((p: any) => [p.id, p]))
+    }
+    setPolls(prev => {
+      const next = { ...prev }
+      for (const p of (pollRows || [])) {
+        next[p.id] = {
+          ...p,
+          options: (optionRows || []).filter((o: any) => o.poll_id === p.id),
+          votes: (voteRows || []).filter((v: any) => v.poll_id === p.id).map((v: any) => ({ ...v, voter: voterMap[v.user_id] })),
+        }
+      }
+      return next
+    })
   }
 
   const loadOnlineMembers = async (supabase: any) => {
@@ -229,6 +313,71 @@ export default function QGPage() {
     setNewMessage('')
     setSending(false)
     isAtBottom.current = true
+  }
+
+  // Créer un sondage : insère le sondage + ses options + un message QG qui le porte
+  const createPoll = async () => {
+    const q = pollQuestion.trim()
+    const opts = pollOptions.map(o => o.trim()).filter(Boolean)
+    if (!q || opts.length < 2 || !userId || pollSubmitting) return
+    setPollSubmitting(true)
+    const supabase = createClient()
+    const { data: poll } = await supabase.from('qg_polls').insert({ question: q, created_by: userId }).select('id').single()
+    if (poll) {
+      await supabase.from('qg_poll_options').insert(opts.map((label, i) => ({ poll_id: poll.id, label, position: i })))
+      await supabase.from('qg_messages').insert({ user_id: userId, content: '', poll_id: poll.id })
+    }
+    setPollQuestion(''); setPollOptions(['', '']); setPollModal(false); setPollSubmitting(false)
+    isAtBottom.current = true
+  }
+
+  // Voter (choix unique) : remplace le vote précédent du membre
+  const votePoll = async (pollId: string, optionId: string) => {
+    if (!userId) return
+    const supabase = createClient()
+    const poll = polls[pollId]
+    const myVote = poll?.votes?.find((v: any) => v.user_id === userId)
+
+    // Mise à jour optimiste locale
+    setPolls(prev => {
+      const p = prev[pollId]
+      if (!p) return prev
+      const others = p.votes.filter((v: any) => v.user_id !== userId)
+      const newVotes = (myVote && myVote.option_id === optionId)
+        ? others // re-clic sur le même = retrait du vote
+        : [...others, { poll_id: pollId, option_id: optionId, user_id: userId, voter: profile }]
+      return { ...prev, [pollId]: { ...p, votes: newVotes } }
+    })
+
+    if (myVote && myVote.option_id === optionId) {
+      // retirer le vote
+      await supabase.from('qg_poll_votes').delete().eq('poll_id', pollId).eq('user_id', userId)
+      return
+    }
+    // upsert le vote (un seul par membre)
+    await supabase.from('qg_poll_votes').upsert(
+      { poll_id: pollId, option_id: optionId, user_id: userId },
+      { onConflict: 'poll_id,user_id' }
+    )
+
+    // Notifier le créateur (anti-spam : une seule notif non lue par sondage et par votant)
+    if (poll && poll.created_by && poll.created_by !== userId) {
+      const { data: existing } = await supabase
+        .from('notifications').select('id')
+        .eq('user_id', poll.created_by).eq('type', 'qg_poll_vote')
+        .eq('from_user_id', userId).eq('read', false)
+        .limit(1)
+      if (!existing || existing.length === 0) {
+        await notify({
+          userId: poll.created_by,
+          type: 'qg',                 // catégorie réglable : "Activité du QG" (in-app)
+          dbType: 'qg_poll_vote',
+          content: `a voté à ton sondage dans le QG`,
+          link: `/qg`,
+          fromUserId: userId,
+        })
+      }
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -383,9 +532,13 @@ export default function QGPage() {
                           <span style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.35 }}>{formatTime(msg.created_at)}</span>
                         </div>
                       )}
-                      <div style={{ fontSize: '0.9rem', color: '#2D2D2D', lineHeight: 1.6, wordBreak: 'break-word' }}>
-                        {renderContent(msg.content)}
-                      </div>
+                      {msg.poll_id ? (
+                        <PollCard poll={polls[msg.poll_id]} userId={userId} onVote={votePoll} />
+                      ) : (
+                        <div style={{ fontSize: '0.9rem', color: '#2D2D2D', lineHeight: 1.6, wordBreak: 'break-word' }}>
+                          {renderContent(msg.content)}
+                        </div>
+                      )}
                     </div>
 
                     {isSameUser && (
@@ -414,6 +567,13 @@ export default function QGPage() {
         {/* Zone de saisie */}
         <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #F5F0E8' }}>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', backgroundColor: '#F5F0E8', borderRadius: '12px', padding: '0.65rem 1rem' }}>
+            <button
+              onClick={() => setPollModal(true)}
+              title="Créer un sondage"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem', display: 'flex', alignItems: 'center', flexShrink: 0, color: '#E8501A' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </button>
             <textarea
               value={newMessage}
               onChange={e => { setNewMessage(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px' }}
@@ -469,6 +629,53 @@ export default function QGPage() {
           <div style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.35, textAlign: 'center', marginTop: '1rem' }}>Aucun membre en ligne</div>
         )}
       </div>
+
+      {/* Modale création de sondage */}
+      {pollModal && (
+        <div onClick={() => setPollModal(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.75rem', width: '100%', maxWidth: '440px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: '0 0 1rem' }}>Créer un sondage</h3>
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.35rem' }}>Question</label>
+            <input
+              value={pollQuestion}
+              onChange={e => setPollQuestion(e.target.value)}
+              placeholder="Ex : Quel jour pour le prochain visio ?"
+              style={{ width: '100%', padding: '0.6rem 0.85rem', border: '2px solid #E8E3D9', borderRadius: '10px', fontSize: '0.92rem', outline: 'none', fontFamily: 'inherit', marginBottom: '1rem' }}
+            />
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.35rem' }}>Options</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {pollOptions.map((opt, i) => (
+                <div key={i} style={{ display: 'flex', gap: '0.4rem' }}>
+                  <input
+                    value={opt}
+                    onChange={e => setPollOptions(prev => prev.map((o, j) => j === i ? e.target.value : o))}
+                    placeholder={`Option ${i + 1}`}
+                    style={{ flex: 1, padding: '0.55rem 0.85rem', border: '2px solid #E8E3D9', borderRadius: '10px', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+                  />
+                  {pollOptions.length > 2 && (
+                    <button onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', width: '38px', cursor: 'pointer', color: '#2D2D2D', opacity: 0.5, fontSize: '1.1rem', flexShrink: 0 }}>×</button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {pollOptions.length < 6 && (
+              <button onClick={() => setPollOptions(prev => [...prev, ''])} style={{ marginTop: '0.6rem', background: 'none', border: 'none', color: '#E8501A', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}>
+                + Ajouter une option
+              </button>
+            )}
+            <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <button onClick={() => setPollModal(false)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.55rem 1.1rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>Annuler</button>
+              <button
+                onClick={createPoll}
+                disabled={pollSubmitting || !pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2}
+                style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.55rem 1.25rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, opacity: (pollSubmitting || !pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2) ? 0.5 : 1 }}
+              >
+                {pollSubmitting ? 'Création…' : 'Publier le sondage'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modale membres en ligne — mobile (et desktop si clic) */}
       {onlineModalOpen && (
