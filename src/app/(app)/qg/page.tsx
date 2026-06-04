@@ -566,14 +566,14 @@ export default function QGPage() {
 
         {/* Zone de saisie */}
         <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #F5F0E8' }}>
+          <button
+            onClick={() => setPollModal(true)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'none', border: '1px solid #E8E3D9', borderRadius: '20px', padding: '0.35rem 0.85rem', cursor: 'pointer', color: '#E8501A', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.6rem' }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Créer un sondage
+          </button>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', backgroundColor: '#F5F0E8', borderRadius: '12px', padding: '0.65rem 1rem' }}>
-            <button
-              onClick={() => setPollModal(true)}
-              title="Créer un sondage"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem', display: 'flex', alignItems: 'center', flexShrink: 0, color: '#E8501A' }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            </button>
             <textarea
               value={newMessage}
               onChange={e => { setNewMessage(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px' }}
