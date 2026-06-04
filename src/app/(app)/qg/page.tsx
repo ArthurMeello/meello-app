@@ -58,7 +58,7 @@ function renderContent(text: string) {
 }
 
 // Carte d'un sondage dans le flux QG
-function PollCard({ poll, userId, onVote }: { poll: any; userId: string | null; onVote: (pollId: string, optionId: string) => void }) {
+function PollCard({ poll, userId, onVote, onEdit, canEdit }: { poll: any; userId: string | null; onVote: (pollId: string, optionId: string) => void; onEdit: (pollId: string) => void; canEdit: boolean }) {
   if (!poll) return <div style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.4 }}>Sondage…</div>
   const totalVotes = poll.votes.length
   const myVote = poll.votes.find((v: any) => v.user_id === userId)
@@ -66,7 +66,12 @@ function PollCard({ poll, userId, onVote }: { poll: any; userId: string | null; 
     <div style={{ border: '1px solid #E8E3D9', borderRadius: '12px', padding: '0.85rem 1rem', backgroundColor: '#FAFAF7', maxWidth: '420px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E8501A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#2D2D2D' }}>{poll.question}</span>
+        <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#2D2D2D', flex: 1 }}>{poll.question}</span>
+        {canEdit && (
+          <button onClick={() => onEdit(poll.id)} title="Modifier le sondage" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.15rem', display: 'flex', flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+        )}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
         {poll.options.map((opt: any) => {
@@ -119,6 +124,11 @@ export default function QGPage() {
   const [pollOptions, setPollOptions] = useState<string[]>(['', ''])
   const [pollSubmitting, setPollSubmitting] = useState(false)
   const [polls, setPolls] = useState<Record<string, any>>({}) // poll_id -> { question, options, votes }
+  // Édition de sondage
+  const [editPollId, setEditPollId] = useState<string | null>(null)
+  const [editPollQuestion, setEditPollQuestion] = useState('')
+  const [editNewOptions, setEditNewOptions] = useState<string[]>([''])
+  const [editPollSaving, setEditPollSaving] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
   const oldestCreatedAt = useRef<string | null>(null)
@@ -409,6 +419,50 @@ export default function QGPage() {
     }
   }
 
+  // Ouvrir la modale d'édition d'un sondage
+  const openEditPoll = (pollId: string) => {
+    const p = polls[pollId]
+    if (!p) return
+    setEditPollId(pollId)
+    setEditPollQuestion(p.question)
+    setEditNewOptions([''])
+  }
+
+  // Sauvegarder : maj question + ajout des nouvelles options (jamais de suppression)
+  const saveEditPoll = async () => {
+    if (!editPollId) return
+    const p = polls[editPollId]
+    const q = editPollQuestion.trim()
+    const newOpts = editNewOptions.map(o => o.trim()).filter(Boolean)
+    if (!q) return
+    setEditPollSaving(true)
+    const supabase = createClient()
+
+    // Maj question si changée
+    if (q !== p.question) {
+      await supabase.from('qg_polls').update({ question: q }).eq('id', editPollId)
+    }
+    // Ajout des nouvelles options
+    let addedRows: any[] = []
+    if (newOpts.length > 0) {
+      const startPos = (p.options?.length || 0)
+      const { data, error } = await supabase
+        .from('qg_poll_options')
+        .insert(newOpts.map((label, i) => ({ poll_id: editPollId, label, position: startPos + i })))
+        .select('id, poll_id, label, position')
+      if (error) { setEditPollSaving(false); alert("Erreur lors de l'ajout des options.\n\n" + error.message); return }
+      addedRows = data || []
+    }
+
+    // Maj locale
+    setPolls(prev => {
+      const cur = prev[editPollId]
+      if (!cur) return prev
+      return { ...prev, [editPollId]: { ...cur, question: q, options: [...cur.options, ...addedRows] } }
+    })
+    setEditPollId(null); setEditPollSaving(false)
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -562,7 +616,7 @@ export default function QGPage() {
                         </div>
                       )}
                       {msg.poll_id ? (
-                        <PollCard poll={polls[msg.poll_id]} userId={userId} onVote={votePoll} />
+                        <PollCard poll={polls[msg.poll_id]} userId={userId} onVote={votePoll} onEdit={openEditPoll} canEdit={!!polls[msg.poll_id] && (polls[msg.poll_id].created_by === userId || userId === ADMIN_ID)} />
                       ) : (
                         <div style={{ fontSize: '0.9rem', color: '#2D2D2D', lineHeight: 1.6, wordBreak: 'break-word' }}>
                           {renderContent(msg.content)}
@@ -700,6 +754,53 @@ export default function QGPage() {
                 style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.55rem 1.25rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, opacity: (pollSubmitting || !pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2) ? 0.5 : 1 }}
               >
                 {pollSubmitting ? 'Création…' : 'Publier le sondage'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modale édition de sondage */}
+      {editPollId && polls[editPollId] && (
+        <div onClick={() => setEditPollId(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.75rem', width: '100%', maxWidth: '440px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: '0 0 1rem' }}>Modifier le sondage</h3>
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.35rem' }}>Question</label>
+            <input
+              value={editPollQuestion}
+              onChange={e => setEditPollQuestion(e.target.value)}
+              style={{ width: '100%', padding: '0.6rem 0.85rem', border: '2px solid #E8E3D9', borderRadius: '10px', fontSize: '0.92rem', outline: 'none', fontFamily: 'inherit', marginBottom: '1rem' }}
+            />
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.35rem' }}>Options actuelles</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '1rem' }}>
+              {polls[editPollId].options.map((o: any) => (
+                <div key={o.id} style={{ padding: '0.5rem 0.85rem', border: '1px solid #F0EBE1', borderRadius: '10px', fontSize: '0.88rem', color: '#2D2D2D', backgroundColor: '#FAFAF7' }}>{o.label}</div>
+              ))}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4, marginBottom: '0.5rem' }}>Les options déjà votées ne peuvent pas être supprimées.</div>
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.35rem' }}>Ajouter des options</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {editNewOptions.map((opt, i) => (
+                <div key={i} style={{ display: 'flex', gap: '0.4rem' }}>
+                  <input
+                    value={opt}
+                    onChange={e => setEditNewOptions(prev => prev.map((o, j) => j === i ? e.target.value : o))}
+                    placeholder={`Nouvelle option`}
+                    style={{ flex: 1, padding: '0.55rem 0.85rem', border: '2px solid #E8E3D9', borderRadius: '10px', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+                  />
+                  {editNewOptions.length > 1 && (
+                    <button onClick={() => setEditNewOptions(prev => prev.filter((_, j) => j !== i))} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', width: '38px', cursor: 'pointer', color: '#2D2D2D', opacity: 0.5, fontSize: '1.1rem', flexShrink: 0 }}>×</button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setEditNewOptions(prev => [...prev, ''])} style={{ marginTop: '0.6rem', background: 'none', border: 'none', color: '#E8501A', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', padding: 0 }}>
+              + Ajouter une autre option
+            </button>
+            <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <button onClick={() => setEditPollId(null)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.55rem 1.1rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>Annuler</button>
+              <button onClick={saveEditPoll} disabled={editPollSaving || !editPollQuestion.trim()} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.55rem 1.25rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, opacity: (editPollSaving || !editPollQuestion.trim()) ? 0.5 : 1 }}>
+                {editPollSaving ? 'Enregistrement…' : 'Enregistrer'}
               </button>
             </div>
           </div>
