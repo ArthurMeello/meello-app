@@ -558,6 +558,8 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
   const [replyContent, setReplyContent] = useState('')
   const [replyMentionSuggestions, setReplyMentionSuggestions] = useState<{ id: string; first_name: string; last_name: string }[]>([])
   const replyInputRef = useRef<HTMLTextAreaElement>(null)
+  const commentSendingRef = useRef(false)
+  const replySendingRef = useRef(false)
 
   const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
   const EQUIPE_ID = '00000000-0000-0000-0000-000000000001'
@@ -739,9 +741,12 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
 
   const handleComment = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (commentSendingRef.current) return
     if (!comment.trim()) return
+    commentSendingRef.current = true
     const supabase = createClient()
     const commentContent = comment.trim()
+    setComment('')
     await supabase.from('comments').insert({ post_id: post.id, content: commentContent, author_id: currentUserId })
 
     // Notifier l'auteur du post (sauf si c'est soi-même)
@@ -777,10 +782,10 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
       }
     }
 
-    setComment('')
     if (commentInputRef.current) commentInputRef.current.style.height = 'auto'
     setCommentCount(c => c + 1)
     loadComments()
+    commentSendingRef.current = false
   }
 
   const handleReplyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -821,9 +826,12 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
 
   const handleReply = async (e: React.FormEvent, parentComment: { id: string; author_id: string }) => {
     e.preventDefault()
+    if (replySendingRef.current) return
     if (!replyContent.trim()) return
+    replySendingRef.current = true
     const supabase = createClient()
     const content = replyContent.trim()
+    setReplyContent('')
     await supabase.from('comments').insert({
       post_id: post.id,
       content,
@@ -860,10 +868,10 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
         })
       }
     }
-    setReplyContent('')
     setReplyingTo(null)
     setCommentCount(c => c + 1)
     loadComments()
+    replySendingRef.current = false
   }
 
   const reactionCounts = EMOJIS.map(emoji => ({
