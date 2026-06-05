@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import ImageCropPosition from '@/components/ImageCropPosition'
 import type { Profile } from '@/types'
 
 // ─── XP / Niveaux ─────────────────────────────────────────────────────────────
@@ -923,27 +924,22 @@ export default function ProfilPage() {
             </div>
             {(() => {
               const isVideo = portfolioFile?.type.startsWith('video/') || portfolioPreview?.includes('.mp4') || portfolioPreview?.includes('.mov')
+              if (portfolioPreview && !isVideo) {
+                return (
+                  <>
+                    <ImageCropPosition src={portfolioPreview} position={portfolioForm.image_position} onChange={pos => setPortfolioForm(p => ({ ...p, image_position: pos }))} />
+                    <button onClick={() => portfolioFileRef.current?.click()} style={{ marginTop: '0.4rem', background: 'none', border: 'none', color: '#E8501A', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', padding: 0 }}>Changer l'image</button>
+                  </>
+                )
+              }
               return (
-                <>
-                  <div onClick={() => portfolioFileRef.current?.click()} style={{ border: '2px dashed #E8E3D9', borderRadius: '12px', height: portfolioPreview ? '180px' : '130px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', backgroundColor: '#FAFAFA', position: 'relative' }}>
-                    {portfolioPreview ? (
-                      <>
-                        {isVideo
-                          ? <video src={portfolioPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : <img src={portfolioPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: `center ${portfolioForm.image_position}%` }} />}
-                        <div style={{ position: 'absolute', bottom: '0.5rem', right: '0.5rem', backgroundColor: 'rgba(0,0,0,0.5)', color: 'white', borderRadius: '6px', padding: '0.2rem 0.5rem', fontSize: '0.72rem' }}>Changer</div>
-                      </>
-                    ) : (
-                      <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Cliquer pour ajouter une image ou vidéo</span>
-                    )}
-                  </div>
-                  {portfolioPreview && !isVideo && (
-                    <div style={{ marginTop: '0.5rem' }}>
-                      <label style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.55, fontWeight: 600 }}>Cadrage vertical de l'image</label>
-                      <input type="range" min={0} max={100} value={portfolioForm.image_position} onChange={e => setPortfolioForm(p => ({ ...p, image_position: Number(e.target.value) }))} style={{ width: '100%', accentColor: '#E8501A' }} />
-                    </div>
+                <div onClick={() => portfolioFileRef.current?.click()} style={{ border: '2px dashed #E8E3D9', borderRadius: '12px', height: portfolioPreview ? '180px' : '130px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', backgroundColor: '#FAFAFA', position: 'relative' }}>
+                  {portfolioPreview && isVideo ? (
+                    <video src={portfolioPreview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Cliquer pour ajouter une image ou vidéo</span>
                   )}
-                </>
+                </div>
               )
             })()}
             <input ref={portfolioFileRef} type="file" accept="image/*,video/*" onChange={handlePortfolioFileChange} style={{ display: 'none' }} />
@@ -971,19 +967,14 @@ export default function ProfilPage() {
               </h3>
               <button onClick={closeServiceModal} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#2D2D2D', opacity: 0.4, lineHeight: 1 }}>×</button>
             </div>
-            <div onClick={() => serviceFileRef.current?.click()} style={{ border: '2px dashed #E8E3D9', borderRadius: '12px', height: servicePreview ? '180px' : '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', backgroundColor: '#FAFAFA', position: 'relative' }}>
-              {servicePreview
-                ? <>
-                    <img src={servicePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: `center ${serviceForm.image_position}%` }} />
-                    <div style={{ position: 'absolute', bottom: '0.5rem', right: '0.5rem', backgroundColor: 'rgba(0,0,0,0.5)', color: 'white', borderRadius: '6px', padding: '0.2rem 0.5rem', fontSize: '0.72rem' }}>Changer</div>
-                  </>
-                : <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Image du produit/service (facultatif)</span>
-              }
-            </div>
-            {servicePreview && (
-              <div>
-                <label style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.55, fontWeight: 600 }}>Cadrage vertical de l'image</label>
-                <input type="range" min={0} max={100} value={serviceForm.image_position} onChange={e => setServiceForm(p => ({ ...p, image_position: Number(e.target.value) }))} style={{ width: '100%', accentColor: '#E8501A' }} />
+            {servicePreview ? (
+              <>
+                <ImageCropPosition src={servicePreview} position={serviceForm.image_position} onChange={pos => setServiceForm(p => ({ ...p, image_position: pos }))} />
+                <button onClick={() => serviceFileRef.current?.click()} style={{ marginTop: '0.4rem', background: 'none', border: 'none', color: '#E8501A', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', padding: 0, alignSelf: 'flex-start' }}>Changer l'image</button>
+              </>
+            ) : (
+              <div onClick={() => serviceFileRef.current?.click()} style={{ border: '2px dashed #E8E3D9', borderRadius: '12px', height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', backgroundColor: '#FAFAFA' }}>
+                <span style={{ color: '#2D2D2D', opacity: 0.4, fontSize: '0.9rem' }}>Image du produit/service (facultatif)</span>
               </div>
             )}
             <input ref={serviceFileRef} type="file" accept="image/*" onChange={handleServiceFileChange} style={{ display: 'none' }} />
