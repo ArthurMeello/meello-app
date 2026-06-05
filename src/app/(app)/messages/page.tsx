@@ -40,6 +40,7 @@ export default function MessagesPage() {
   const [mobileView, setMobileView] = useState<'list' | 'conv'>('list')
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const sendingRef = useRef(false)
   const typingChannelRef = useRef<any>(null)
   const typingTimeoutRef = useRef<any>(null)
   const activeConvRef = useRef<Conversation | null>(null)
@@ -262,9 +263,12 @@ export default function MessagesPage() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (sendingRef.current) return
     if (!newMessage.trim() || !activeConv || !userId) return
+    sendingRef.current = true
     const supabase = createClient()
     const msgContent = newMessage.trim()
+    setNewMessage('')
 
     const { data: insertedMsg } = await supabase.from('meello_messages').insert({
       conversation_id: activeConv.id,
@@ -307,9 +311,9 @@ export default function MessagesPage() {
         : c)
       return [...updated].sort((a, b) => (b.last_message_at || '').localeCompare(a.last_message_at || ''))
     })
-    setNewMessage('')
     if (inputRef.current) inputRef.current.style.height = 'auto'
     fetchConversations(userId)
+    sendingRef.current = false
   }
 
   const renderContent = (text: string, isMe: boolean) =>

@@ -50,6 +50,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   const channelRef = useRef<any>(null)
   const activeConvRef = useRef<Conversation | null>(null)
   const readPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const sendingRef = useRef(false)
 
   useEffect(() => {
     if (!userId) return
@@ -342,10 +343,15 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Verrou anti double-envoi (clic/Entrée rapides)
+    if (sendingRef.current) return
     if (!newMessage.trim() || !activeConv || !userId) return
+    sendingRef.current = true
 
     const supabase = createClient()
     const msgContent = newMessage.trim()
+    // Vider le champ immédiatement pour éviter un 2e déclenchement
+    setNewMessage('')
 
     const { data: insertedMsg } = await supabase.from('meello_messages').insert({
       conversation_id: activeConv.id,
@@ -402,11 +408,11 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
         : c)
       return updated.sort((a, b) => (b.last_message_at || '').localeCompare(a.last_message_at || ''))
     })
-    setNewMessage('')
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
     }
     fetchConversations(userId)
+    sendingRef.current = false
   }
 
   const renderMessageContent = (text: string, isMe: boolean) => {
