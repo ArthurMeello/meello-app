@@ -175,10 +175,10 @@ export default function MembrePublicPage() {
         .eq('status', 'accepted')
       setConnectionCount(connCount || 0)
 
-      const { data: portfolioData } = await supabase.from('portfolio_items').select('id, title, description, media_url, link').eq('profile_id', id).order('created_at', { ascending: false })
+      const { data: portfolioData } = await supabase.from('portfolio_items').select('id, title, description, media_url, link, image_position').eq('profile_id', id).order('created_at', { ascending: false })
       if (portfolioData) setPortfolio(portfolioData)
 
-      const { data: servicesData } = await supabase.from('service_items').select('id, title, description, image_url, price, link, link_label').eq('profile_id', id).order('created_at', { ascending: false })
+      const { data: servicesData } = await supabase.from('service_items').select('id, title, description, image_url, price, link, link_label, image_position').eq('profile_id', id).order('created_at', { ascending: false })
       if (servicesData) setServices(servicesData)
 
       const { data: recoData } = await supabase.from('recommendations').select('id, content, author_id, profiles!recommendations_author_id_fkey(first_name, last_name, avatar_url, activity)').eq('target_id', id).eq('status', 'approved').order('created_at', { ascending: false })
@@ -611,7 +611,7 @@ export default function MembrePublicPage() {
                     onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.1)'}
                     onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
                   >
-                    {item.image_url && <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />}
+                    {item.image_url && <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '130px', objectFit: 'cover', objectPosition: `center ${item.image_position ?? 50}%`, display: 'block' }} />}
                     <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#2D2D2D' }}>{item.title}</div>
                       {item.price && <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#E8501A' }}>{item.price}</div>}
@@ -638,7 +638,7 @@ export default function MembrePublicPage() {
                   >
                     {item.media_url.match(/\.(mp4|mov|webm)$/i)
                       ? <video src={item.media_url} style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />
-                      : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />}
+                      : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '130px', objectFit: 'cover', objectPosition: `center ${item.image_position ?? 50}%`, display: 'block' }} />}
                     <div style={{ padding: '0.75rem' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#2D2D2D', marginBottom: '0.2rem' }}>{item.title}</div>
                       {item.description && <p style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.2rem', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>}
@@ -752,7 +752,7 @@ export default function MembrePublicPage() {
             {(itemModal.item.image_url || itemModal.item.media_url) && (
               itemModal.type === 'portfolio' && itemModal.item.media_url?.match(/\.(mp4|mov|webm)$/i)
                 ? <video src={itemModal.item.media_url} controls style={{ width: '100%', maxHeight: '320px', objectFit: 'cover', display: 'block', borderRadius: '16px 16px 0 0' }} />
-                : <img src={itemModal.item.image_url || itemModal.item.media_url} alt={itemModal.item.title} style={{ width: '100%', maxHeight: '320px', objectFit: 'cover', display: 'block', borderRadius: '16px 16px 0 0' }} />
+                : <img src={itemModal.item.image_url || itemModal.item.media_url} alt={itemModal.item.title} style={{ width: '100%', maxHeight: '320px', objectFit: 'cover', objectPosition: `center ${itemModal.item.image_position ?? 50}%`, display: 'block', borderRadius: '16px 16px 0 0' }} />
             )}
             <div style={{ padding: '1.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>

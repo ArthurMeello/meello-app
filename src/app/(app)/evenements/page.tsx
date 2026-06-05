@@ -15,7 +15,7 @@ export default function EvenementsPage() {
   const [participants, setParticipants] = useState<Record<string, { id: string; first_name: string; last_name: string; avatar_url: string | null }[]>>({})
   const [participantsModal, setParticipantsModal] = useState<string | null>(null) // event_id
   const [createModal, setCreateModal] = useState(false)
-  const [form, setForm] = useState({ title: '', description: '', event_date: '', event_time: '10:00', duration_minutes: '', visio_link: '', max_participants: '' })
+  const [form, setForm] = useState({ title: '', description: '', event_date: '', event_time: '10:00', duration_minutes: '', visio_link: '', max_participants: '', cover_position: 50 })
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -109,6 +109,7 @@ export default function EvenementsPage() {
       title: form.title,
       description: form.description || null,
       cover_url,
+      cover_position: form.cover_position,
       event_date: datetime,
       duration_minutes: form.duration_minutes ? parseInt(form.duration_minutes) : null,
       visio_link: form.visio_link,
@@ -120,7 +121,7 @@ export default function EvenementsPage() {
     if (data) {
       alert('Ton événement a été soumis et sera publié après validation par l\'équipe Meello. 🎉')
       setCreateModal(false)
-      setForm({ title: '', description: '', event_date: '', event_time: '10:00', duration_minutes: '', visio_link: '', max_participants: '' })
+      setForm({ title: '', description: '', event_date: '', event_time: '10:00', duration_minutes: '', visio_link: '', max_participants: '', cover_position: 50 })
       setCoverFile(null); setCoverPreview(null)
     }
     setSubmitting(false)
@@ -242,7 +243,7 @@ export default function EvenementsPage() {
               {/* Cover */}
               {event.cover_url ? (
                 <div style={{ height: '270px', overflow: 'hidden' }}>
-                  <img src={event.cover_url} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  <img src={event.cover_url} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: `center ${event.cover_position ?? 50}%`, display: 'block' }} />
                 </div>
               ) : (
                 <div style={{ height: '120px', background: 'linear-gradient(135deg, #E8501A 0%, #F5A623 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -374,10 +375,16 @@ export default function EvenementsPage() {
               <div>
                 <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.6, display: 'block', marginBottom: '0.4rem' }}>Image de couverture <span style={{ opacity: 0.5, fontWeight: 400 }}>(format horizontal recommandé)</span></label>
                 {coverPreview ? (
-                  <div style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', marginBottom: '0.4rem' }}>
-                    <img src={coverPreview} alt="" style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
-                    <button onClick={() => { setCoverFile(null); setCoverPreview(null) }} style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', color: 'white', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-                  </div>
+                  <>
+                    <div style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', marginBottom: '0.4rem' }}>
+                      <img src={coverPreview} alt="" style={{ width: '100%', height: '140px', objectFit: 'cover', objectPosition: `center ${form.cover_position}%`, display: 'block' }} />
+                      <button onClick={() => { setCoverFile(null); setCoverPreview(null) }} style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', color: 'white', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                    </div>
+                    <div style={{ marginBottom: '0.4rem' }}>
+                      <label style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.55, fontWeight: 600 }}>Cadrage vertical</label>
+                      <input type="range" min={0} max={100} value={form.cover_position} onChange={e => setForm(f => ({ ...f, cover_position: Number(e.target.value) }))} style={{ width: '100%', accentColor: '#E8501A' }} />
+                    </div>
+                  </>
                 ) : (
                   <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100px', border: '2px dashed #E8E3D9', borderRadius: '10px', cursor: 'pointer', color: '#2D2D2D', opacity: 0.4, fontSize: '0.85rem', gap: '0.4rem' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
