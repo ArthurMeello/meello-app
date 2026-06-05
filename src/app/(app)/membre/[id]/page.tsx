@@ -607,9 +607,9 @@ export default function MembrePublicPage() {
               <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>Produits & Services</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
                 {services.map(item => (
-                  <div key={item.id} onClick={() => setItemModal({ type: 'service', item })} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.1)'}
-                    onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+                  <div key={item.id} onClick={() => setItemModal({ type: 'service', item })} style={{ borderRadius: '18px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.6)', background: 'linear-gradient(160deg, rgba(255,255,255,0.85) 0%, rgba(250,248,244,0.7) 100%)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease', boxShadow: '0 4px 20px rgba(45,45,45,0.06), inset 0 1px 0 rgba(255,255,255,0.7)' }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(45,45,45,0.14), inset 0 1px 0 rgba(255,255,255,0.8)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 20px rgba(45,45,45,0.06), inset 0 1px 0 rgba(255,255,255,0.7)' }}
                   >
                     {item.image_url && <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '130px', objectFit: 'cover', objectPosition: `center ${item.image_position ?? 50}%`, display: 'block' }} />}
                     <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -632,9 +632,9 @@ export default function MembrePublicPage() {
               <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>Portfolio</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
                 {portfolio.map(item => (
-                  <div key={item.id} onClick={() => setItemModal({ type: 'portfolio', item })} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.1)'}
-                    onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+                  <div key={item.id} onClick={() => setItemModal({ type: 'portfolio', item })} style={{ borderRadius: '18px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.6)', background: 'linear-gradient(160deg, rgba(255,255,255,0.85) 0%, rgba(250,248,244,0.7) 100%)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease', boxShadow: '0 4px 20px rgba(45,45,45,0.06), inset 0 1px 0 rgba(255,255,255,0.7)' }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(45,45,45,0.14), inset 0 1px 0 rgba(255,255,255,0.8)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 20px rgba(45,45,45,0.06), inset 0 1px 0 rgba(255,255,255,0.7)' }}
                   >
                     {item.media_url.match(/\.(mp4|mov|webm)$/i)
                       ? <video src={item.media_url} style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />

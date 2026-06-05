@@ -846,7 +846,7 @@ export default function ProfilPage() {
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
           {services.map(item => (
-            <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
+            <div key={item.id} style={{ borderRadius: '18px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.6)', background: 'linear-gradient(160deg, rgba(255,255,255,0.85) 0%, rgba(250,248,244,0.7) 100%)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 4px 20px rgba(45,45,45,0.06), inset 0 1px 0 rgba(255,255,255,0.7)', display: 'flex', flexDirection: 'column' }}>
               {item.image_url && <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', objectPosition: `center ${item.image_position ?? 50}%`, display: 'block' }} />}
               <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                 <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D' }}>{item.title}</div>
@@ -887,7 +887,7 @@ export default function ProfilPage() {
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
           {portfolio.map(item => (
-            <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', position: 'relative' }}>
+            <div key={item.id} style={{ borderRadius: '18px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.6)', background: 'linear-gradient(160deg, rgba(255,255,255,0.85) 0%, rgba(250,248,244,0.7) 100%)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 4px 20px rgba(45,45,45,0.06), inset 0 1px 0 rgba(255,255,255,0.7)', position: 'relative' }}>
               {item.media_url.match(/\.(mp4|mov|webm)$/i)
                 ? <video src={item.media_url} controls style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
                 : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '140px', objectFit: 'cover', objectPosition: `center ${item.image_position ?? 50}%`, display: 'block' }} />
