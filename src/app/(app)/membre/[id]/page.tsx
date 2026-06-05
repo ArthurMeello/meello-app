@@ -667,9 +667,9 @@ export default function MembrePublicPage() {
                 <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Retrouvez-moi sur</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {profile.website && (
-                    <a href={profile.website} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#E8501A', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500 }}>
-                      <img src="/icons/website.svg" alt="Site web" style={{ width: '16px', height: '16px', filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' }} />
-                      <span>{profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
+                    <a href={profile.website} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#E8501A', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500, minWidth: 0 }}>
+                      <img src="/icons/website.svg" alt="Site web" style={{ width: '16px', height: '16px', flexShrink: 0, filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' }} />
+                      <span style={{ wordBreak: 'break-all', minWidth: 0 }}>{profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
                     </a>
                   )}
                   <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
