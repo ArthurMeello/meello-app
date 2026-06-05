@@ -361,7 +361,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
       backgroundColor: 'rgba(0,0,0,0.5)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '1rem',
-    }} onClick={onClose}>
+    }}>
       <div
         onClick={e => e.stopPropagation()}
         style={{
@@ -875,13 +875,23 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
 
   // Rendu du contenu avec titre en gras, liens et @mentions cliquables
   const renderContent = (text: string) => {
-    return text.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
-      /^https?:\/\//.test(part)
-        ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
-        : part.startsWith('**') && part.endsWith('**')
-          ? <strong key={i}>{part.slice(2, -2)}</strong>
-          : part
-    )
+    // Gère : URLs, liens enrichis [texte](lien), et **gras**
+    return text.split(/(https?:\/\/[^\s]+|\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
+      if (/^https?:\/\//.test(part)) {
+        return <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: '#E8501A', textDecoration: 'underline' }}>{part}</a>
+      }
+      // Lien enrichi : [le qg](/qg) → texte orange cliquable, sans URL visible
+      const mdLink = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
+      if (mdLink) {
+        const href = mdLink[2]
+        const isExternal = /^https?:\/\//.test(href)
+        return <a key={i} href={href} {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})} style={{ color: '#E8501A', fontWeight: 700, textDecoration: 'none' }}>{mdLink[1].replace(/\*\*/g, '')}</a>
+      }
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i}>{part.slice(2, -2)}</strong>
+      }
+      return part
+    })
   }
 
   // Rendu d'un texte de commentaire/réponse avec @mentions et liens cliquables
