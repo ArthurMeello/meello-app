@@ -944,7 +944,7 @@ export default function ProfilPage() {
             })()}
             <input ref={portfolioFileRef} type="file" accept="image/*,video/*" onChange={handlePortfolioFileChange} style={{ display: 'none' }} />
             <input value={portfolioForm.title} onChange={e => setPortfolioForm(p => ({ ...p, title: e.target.value }))} placeholder="Titre du projet *" style={inputStyle} />
-            <textarea value={portfolioForm.description} onChange={e => setPortfolioForm(p => ({ ...p, description: e.target.value }))} placeholder="Description (facultatif)" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
+            <textarea value={portfolioForm.description} onChange={e => setPortfolioForm(p => ({ ...p, description: e.target.value }))} placeholder="Description (facultatif)" rows={6} style={{ ...inputStyle, resize: 'vertical', minHeight: '140px', lineHeight: 1.5 }} />
             <input value={portfolioForm.link} onChange={e => setPortfolioForm(p => ({ ...p, link: e.target.value }))} placeholder="Lien externe (facultatif)" style={inputStyle} />
             <button
               onClick={handleSavePortfolio}
@@ -979,7 +979,7 @@ export default function ProfilPage() {
             )}
             <input ref={serviceFileRef} type="file" accept="image/*" onChange={handleServiceFileChange} style={{ display: 'none' }} />
             <input value={serviceForm.title} onChange={e => setServiceForm(p => ({ ...p, title: e.target.value }))} placeholder="Titre du produit / service *" style={inputStyle} />
-            <textarea value={serviceForm.description} onChange={e => setServiceForm(p => ({ ...p, description: e.target.value }))} placeholder="Description (facultatif)" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
+            <textarea value={serviceForm.description} onChange={e => setServiceForm(p => ({ ...p, description: e.target.value }))} placeholder="Description (facultatif)" rows={6} style={{ ...inputStyle, resize: 'vertical', minHeight: '140px', lineHeight: 1.5 }} />
             <input value={serviceForm.price} onChange={e => setServiceForm(p => ({ ...p, price: e.target.value }))} placeholder="Prix (ex: 150€, À partir de 380€, Sur devis...)" style={inputStyle} />
             <input value={serviceForm.link} onChange={e => setServiceForm(p => ({ ...p, link: e.target.value }))} placeholder="Lien (facultatif)" style={inputStyle} />
             {serviceForm.link && (
