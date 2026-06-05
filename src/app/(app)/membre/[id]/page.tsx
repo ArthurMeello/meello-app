@@ -182,13 +182,17 @@ export default function MembrePublicPage() {
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).single()
       if (prof) setProfile({ ...prof, first_name: titleCase(prof.first_name), last_name: titleCase(prof.last_name), city: titleCase(prof.city) })
 
-      // Nombre de relations (connexions acceptées de ce membre)
-      const { count: connCount } = await supabase
+      // Nombre de relations (connexions acceptées), en excluant le compte fantôme
+      const { data: connRows } = await supabase
         .from('connections')
-        .select('id', { count: 'exact', head: true })
+        .select('requester_id, receiver_id')
         .or(`requester_id.eq.${id},receiver_id.eq.${id}`)
         .eq('status', 'accepted')
-      setConnectionCount(connCount || 0)
+      const realConns = (connRows || []).filter((c: any) => {
+        const other = c.requester_id === id ? c.receiver_id : c.requester_id
+        return other !== GHOST_ID
+      })
+      setConnectionCount(realConns.length)
 
       const { data: portfolioData } = await supabase.from('portfolio_items').select('id, title, description, media_url, link, image_position').eq('profile_id', id).order('created_at', { ascending: false })
       if (portfolioData) setPortfolio(portfolioData)

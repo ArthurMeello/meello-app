@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { titleCase } from '@/lib/format'
+import { GHOST_ID } from '@/lib/ghost'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 
@@ -61,15 +62,20 @@ export default function ReseauPage() {
       .or(`requester_id.eq.${uid},receiver_id.eq.${uid}`)
 
     if (data) {
-      const mapped = data.map((c: any) => {
-        const ou = c.requester_id === uid ? c.receiver : c.requester
-        return {
-          id: c.id,
-          status: c.status,
-          direction: c.requester_id === uid ? 'sent' : 'received',
-          other_user: ou ? { ...ou, first_name: titleCase(ou.first_name), last_name: titleCase(ou.last_name), city: titleCase(ou.city) } : ou,
-        }
-      })
+      const mapped = data
+        .filter((c: any) => {
+          const otherId = c.requester_id === uid ? c.receiver_id : c.requester_id
+          return otherId !== GHOST_ID || uid === ADMIN_ID
+        })
+        .map((c: any) => {
+          const ou = c.requester_id === uid ? c.receiver : c.requester
+          return {
+            id: c.id,
+            status: c.status,
+            direction: c.requester_id === uid ? 'sent' : 'received',
+            other_user: ou ? { ...ou, first_name: titleCase(ou.first_name), last_name: titleCase(ou.last_name), city: titleCase(ou.city) } : ou,
+          }
+        })
       setConnections(mapped)
     }
     setLoading(false)
