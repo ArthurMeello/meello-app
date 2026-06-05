@@ -748,7 +748,7 @@ export default function MembrePublicPage() {
       {/* Modal détail produit/service ou portfolio */}
       {itemModal && (
         <div onClick={() => setItemModal(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '480px', maxHeight: '88vh', overflowY: 'auto' }}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '720px', maxHeight: '88vh', overflowY: 'auto' }}>
             {(itemModal.item.image_url || itemModal.item.media_url) && (
               itemModal.type === 'portfolio' && itemModal.item.media_url?.match(/\.(mp4|mov|webm)$/i)
                 ? <video src={itemModal.item.media_url} controls style={{ width: '100%', maxHeight: '320px', objectFit: 'cover', display: 'block', borderRadius: '16px 16px 0 0' }} />
