@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { filterGhost } from '@/lib/ghost'
+import { titleCase } from '@/lib/format'
 import type { Profile } from '@/types'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
@@ -93,8 +94,9 @@ export default function AnnuairePage() {
         .eq('is_active', true)
         .order('created_at', { ascending: true })
 
-      // Masquer le compte fantôme (sauf pour l'admin)
+      // Masquer le compte fantôme (sauf pour l'admin) + normaliser la casse
       const data = filterGhost(rawData || [], p => p.id, user?.id)
+        .map(p => ({ ...p, first_name: titleCase(p.first_name), last_name: titleCase(p.last_name), city: titleCase(p.city) }))
 
       if (data) {
         setProfiles(data)

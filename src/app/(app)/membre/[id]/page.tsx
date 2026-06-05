@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { GHOST_ID } from '@/lib/ghost'
+import { titleCase } from '@/lib/format'
 
 // ─── XP / Niveaux ─────────────────────────────────────────────────────────────
 function getLevelFromXP(totalXP: number): { level: number; currentXP: number; xpToNext: number } {
@@ -179,7 +180,7 @@ export default function MembrePublicPage() {
       }
 
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).single()
-      if (prof) setProfile(prof)
+      if (prof) setProfile({ ...prof, first_name: titleCase(prof.first_name), last_name: titleCase(prof.last_name), city: titleCase(prof.city) })
 
       // Nombre de relations (connexions acceptées de ce membre)
       const { count: connCount } = await supabase
