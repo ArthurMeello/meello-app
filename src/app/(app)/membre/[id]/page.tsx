@@ -75,9 +75,23 @@ function MiniPostCard({ post, isLast }: { post: any; isLast?: boolean }) {
       {post.image_url && (
         <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: '160px', objectFit: 'cover', borderRadius: '10px', marginBottom: '0.6rem', display: 'block' }} />
       )}
-      <p style={{ fontSize: '0.88rem', color: '#2D2D2D', lineHeight: 1.6, margin: '0 0 0.5rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-        {(post.content || '').replace(/<[^>]*>/g, '').replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1')}
-      </p>
+      {(() => {
+        const raw = (post.content || '').replace(/<[^>]*>/g, '').replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1')
+        // Un post peut commencer par un titre en **gras** sur la 1re ligne
+        const m = raw.match(/^\s*\*\*(.+?)\*\*\s*\n?([\s\S]*)$/)
+        const title = m ? m[1].trim() : null
+        const body = (m ? m[2] : raw).replace(/\*\*/g, '').trim()
+        return (
+          <>
+            {title && <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D', marginBottom: '0.2rem' }}>{title}</div>}
+            {body && (
+              <p style={{ fontSize: '0.88rem', color: '#2D2D2D', lineHeight: 1.6, margin: '0 0 0.5rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                {body}
+              </p>
+            )}
+          </>
+        )
+      })()}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.4 }}>{formatDate(post.created_at)}</span>
         {reactionEntries.length > 0 && (
