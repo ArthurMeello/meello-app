@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { titleCase } from '@/lib/format'
 
 const NAV_ITEMS = [
   { href: '/feed', label: "Fil d'actualité", svg: '/icons/feed.svg' },
@@ -134,7 +135,7 @@ export default function AppNav() {
         .from('profiles')
         .select('id, first_name, last_name, avatar_url')
         .in('id', fromIds)
-      if (profiles) profiles.forEach((p: any) => { profilesMap[p.id] = p })
+      if (profiles) profiles.forEach((p: any) => { profilesMap[p.id] = { ...p, first_name: titleCase(p.first_name), last_name: titleCase(p.last_name) } })
     }
 
     setNotifsList(data.map((n: any) => ({

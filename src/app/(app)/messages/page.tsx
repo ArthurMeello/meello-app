@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
+import { titleCase } from '@/lib/format'
 
 interface Conversation {
   id: string
@@ -115,7 +116,7 @@ export default function MessagesPage() {
       .from('profiles')
       .select('id, first_name, last_name, avatar_url, activity')
       .in('id', otherIds)
-    const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, p]))
+    const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, { ...p, first_name: titleCase(p.first_name), last_name: titleCase(p.last_name) }]))
 
     // Notifs non lues
     const { data: unreadNotifs } = await supabase

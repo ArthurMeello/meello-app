@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { GHOST_ID, filterGhost } from '@/lib/ghost'
 import { notify } from '@/lib/notify'
 import SortableOptions from '@/components/SortableOptions'
+import { titleCase } from '@/lib/format'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 const PAGE_SIZE = 50
@@ -184,7 +185,7 @@ export default function QGPage() {
           const { data: prof } = await supabase.from('profiles').select('first_name, last_name, avatar_url, badges').eq('id', msg.user_id).single()
           // Si c'est un sondage, charger ses données
           if (msg.poll_id) await loadPolls(supabase, [msg.poll_id])
-          const fullMsg = { ...msg, profile: prof }
+          const fullMsg = { ...msg, profile: prof ? { ...prof, first_name: titleCase(prof.first_name), last_name: titleCase(prof.last_name) } : prof }
           setMessages(prev => [...prev, fullMsg])
           if (isAtBottom.current) {
             setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
@@ -225,7 +226,7 @@ export default function QGPage() {
 
     const userIds = [...new Set(data.map((m: any) => m.user_id))]
     const { data: profiles } = await supabase.from('profiles').select('id, first_name, last_name, avatar_url, badges').in('id', userIds)
-    const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, p]))
+    const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, { ...p, first_name: titleCase(p.first_name), last_name: titleCase(p.last_name) }]))
 
     // Charger les sondages référencés dans ces messages
     const pollIds = [...new Set(data.map((m: any) => m.poll_id).filter(Boolean))]
@@ -277,7 +278,7 @@ export default function QGPage() {
 
     const userIds = data.map((p: any) => p.user_id)
     const { data: profiles } = await supabase.from('profiles').select('id, first_name, last_name, avatar_url').in('id', userIds)
-    const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, p]))
+    const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, { ...p, first_name: titleCase(p.first_name), last_name: titleCase(p.last_name) }]))
 
     setOnlineMembers(data.map((p: any) => ({ ...p, profile: profileMap[p.user_id] || {} })))
   }

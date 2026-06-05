@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import ImageCropPosition from '@/components/ImageCropPosition'
+import { titleCase } from '@/lib/format'
 import type { Profile } from '@/types'
 
 // ─── XP / Niveaux ─────────────────────────────────────────────────────────────
@@ -148,7 +149,7 @@ export default function ProfilPage() {
     }
 
     if (prof) {
-      setProfile(prof)
+      setProfile({ ...prof, first_name: titleCase(prof.first_name), last_name: titleCase(prof.last_name), city: titleCase(prof.city) })
       setForm(prof)
     }
 

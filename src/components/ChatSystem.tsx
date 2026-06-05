@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
+import { titleCase } from '@/lib/format'
 
 interface Conversation {
   id: string
@@ -113,7 +114,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
             // Ouvrir automatiquement la conversation avec tout l'historique
             const convObj = {
               id: conv.id,
-              other_user: senderProfile,
+              other_user: senderProfile ? { ...senderProfile, first_name: titleCase(senderProfile.first_name), last_name: titleCase(senderProfile.last_name) } : senderProfile,
               last_message: msg.content,
               last_message_at: msg.created_at,
             }
@@ -159,7 +160,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
         .single()
       const convObj: Conversation = {
         id: conv.id,
-        other_user: otherProfile,
+        other_user: otherProfile ? { ...otherProfile, first_name: titleCase(otherProfile.first_name), last_name: titleCase(otherProfile.last_name) } : otherProfile,
         last_message: conv.last_message || '',
         last_message_at: conv.last_message_at || '',
       }
@@ -198,7 +199,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       .select('id, first_name, last_name, avatar_url, activity')
       .in('id', otherIds)
 
-    const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, p]))
+    const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, { ...p, first_name: titleCase(p.first_name), last_name: titleCase(p.last_name) }]))
 
     // Récupérer les notifs message non lues pour savoir quelles convs sont non lues
     const { data: unreadNotifs } = await supabase

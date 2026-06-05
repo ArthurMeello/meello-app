@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { titleCase } from '@/lib/format'
 
 interface Notification {
   id: string
@@ -109,7 +110,7 @@ export default function TopBar() {
         .select('id, first_name, last_name, avatar_url')
         .in('id', fromIds)
       if (profiles) {
-        profiles.forEach(p => { profilesMap[p.id] = p })
+        profiles.forEach(p => { profilesMap[p.id] = { ...p, first_name: titleCase(p.first_name), last_name: titleCase(p.last_name) } })
       }
     }
 

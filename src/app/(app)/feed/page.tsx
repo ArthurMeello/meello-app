@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { GHOST_ID } from '@/lib/ghost'
+import { titleCase } from '@/lib/format'
 import imageCompression from 'browser-image-compression'
 import type { Post } from '@/types'
 
@@ -40,7 +41,7 @@ function FeedPageInner() {
     fetchPosts()
     // Charger tous les membres pour résoudre les mentions
     createClient().from('profiles').select('id, first_name, last_name').eq('is_active', true).then(({ data }) => {
-      if (data) setAllMembers(data.filter(m => m.id !== GHOST_ID))
+      if (data) setAllMembers(data.filter(m => m.id !== GHOST_ID).map(m => ({ ...m, first_name: titleCase(m.first_name), last_name: titleCase(m.last_name) })))
     })
     // Récupérer l'ID de la catégorie Présentations
     createClient().from('forum_categories').select('id').eq('name', 'Présentations').single().then(({ data }) => {
@@ -70,7 +71,7 @@ function FeedPageInner() {
       .order('pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(50)
-    if (data) setPosts(data as Post[])
+    if (data) setPosts(data.map((p: any) => p.profiles ? { ...p, profiles: { ...p.profiles, first_name: titleCase(p.profiles.first_name), last_name: titleCase(p.profiles.last_name) } } : p) as Post[])
   }
 
   const initials = userProfile?.first_name?.[0]?.toUpperCase() || '?'
@@ -192,7 +193,7 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
     const load = async () => {
       const supabase = createClient()
       const { data } = await supabase.from('profiles').select('id, first_name, last_name').eq('is_active', true)
-      if (data) setAllMembers(data.filter(m => m.id !== userId && m.id !== GHOST_ID))
+      if (data) setAllMembers(data.filter(m => m.id !== userId && m.id !== GHOST_ID).map(m => ({ ...m, first_name: titleCase(m.first_name), last_name: titleCase(m.last_name) })))
     }
     load()
   }, [userId])
@@ -687,7 +688,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
       .select('id, content, author_id, parent_id, profiles(first_name, last_name, avatar_url, activity)')
       .eq('post_id', post.id)
       .order('created_at', { ascending: true })
-    if (data) setComments(data as unknown as typeof comments)
+    if (data) setComments(data.map((c: any) => c.profiles ? { ...c, profiles: { ...c.profiles, first_name: titleCase(c.profiles.first_name), last_name: titleCase(c.profiles.last_name) } } : c) as unknown as typeof comments)
   }
 
   const toggleComments = () => {
