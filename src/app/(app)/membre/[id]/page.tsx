@@ -133,6 +133,8 @@ export default function MembrePublicPage() {
   const [alreadyRecommended, setAlreadyRecommended] = useState(false)
   const [proofFile, setProofFile] = useState<File | null>(null)
   const [editingRecoId, setEditingRecoId] = useState<string | null>(null)
+  // Modale détail d'un item (produit/service ou portfolio)
+  const [itemModal, setItemModal] = useState<any>(null) // { type, item }
   // Relations (connexions acceptées)
   const [connectionCount, setConnectionCount] = useState(0)
   const [connectionsModal, setConnectionsModal] = useState(false)
@@ -605,17 +607,18 @@ export default function MembrePublicPage() {
               <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>Produits & Services</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
                 {services.map(item => (
-                  <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
+                  <div key={item.id} onClick={() => setItemModal({ type: 'service', item })} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.1)'}
+                    onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+                  >
                     {item.image_url && <img src={item.image_url} alt={item.title} style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />}
                     <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#2D2D2D' }}>{item.title}</div>
                       {item.price && <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#E8501A' }}>{item.price}</div>}
-                      {item.description && <p style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.4 }}>{item.description}</p>}
-                      {item.link && (
-                        <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', alignSelf: 'flex-start', fontSize: '0.75rem', color: 'white', backgroundColor: '#E8501A', fontWeight: 600, textDecoration: 'none', padding: '0.3rem 0.7rem', borderRadius: '6px', marginTop: '0.4rem' }}>
-                          {item.link_label || 'En savoir plus'}
-                        </a>
+                      {item.description && (
+                        <p style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
                       )}
+                      <span style={{ fontSize: '0.75rem', color: '#E8501A', fontWeight: 600, marginTop: '0.2rem' }}>… lire plus</span>
                     </div>
                   </div>
                 ))}
@@ -629,14 +632,17 @@ export default function MembrePublicPage() {
               <h2 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', marginBottom: '1rem' }}>Portfolio</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
                 {portfolio.map(item => (
-                  <div key={item.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA' }}>
+                  <div key={item.id} onClick={() => setItemModal({ type: 'portfolio', item })} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E8E3D9', backgroundColor: '#FAFAFA', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.1)'}
+                    onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+                  >
                     {item.media_url.match(/\.(mp4|mov|webm)$/i)
-                      ? <video src={item.media_url} controls style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />
+                      ? <video src={item.media_url} style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />
                       : <img src={item.media_url} alt={item.title} style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block' }} />}
                     <div style={{ padding: '0.75rem' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#2D2D2D', marginBottom: '0.2rem' }}>{item.title}</div>
-                      {item.description && <p style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.4rem', lineHeight: 1.4 }}>{item.description}</p>}
-                      {item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a>}
+                      {item.description && <p style={{ fontSize: '0.78rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.2rem', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>}
+                      <span style={{ fontSize: '0.75rem', color: '#E8501A', fontWeight: 600 }}>… lire plus</span>
                     </div>
                   </div>
                 ))}
@@ -738,6 +744,34 @@ export default function MembrePublicPage() {
 
         </div>
       </div>
+
+      {/* Modal détail produit/service ou portfolio */}
+      {itemModal && (
+        <div onClick={() => setItemModal(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '480px', maxHeight: '88vh', overflowY: 'auto' }}>
+            {(itemModal.item.image_url || itemModal.item.media_url) && (
+              itemModal.type === 'portfolio' && itemModal.item.media_url?.match(/\.(mp4|mov|webm)$/i)
+                ? <video src={itemModal.item.media_url} controls style={{ width: '100%', maxHeight: '320px', objectFit: 'cover', display: 'block', borderRadius: '16px 16px 0 0' }} />
+                : <img src={itemModal.item.image_url || itemModal.item.media_url} alt={itemModal.item.title} style={{ width: '100%', maxHeight: '320px', objectFit: 'cover', display: 'block', borderRadius: '16px 16px 0 0' }} />
+            )}
+            <div style={{ padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+                <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.25rem', color: '#2D2D2D', margin: 0 }}>{itemModal.item.title}</h3>
+                <button onClick={() => setItemModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1, color: '#2D2D2D', opacity: 0.4, padding: 0, flexShrink: 0 }}>×</button>
+              </div>
+              {itemModal.item.price && <div style={{ fontSize: '1rem', fontWeight: 700, color: '#E8501A', marginTop: '0.4rem' }}>{itemModal.item.price}</div>}
+              {itemModal.item.description && (
+                <p style={{ fontSize: '0.92rem', color: '#2D2D2D', opacity: 0.8, lineHeight: 1.6, margin: '1rem 0', whiteSpace: 'pre-wrap' }}>{itemModal.item.description}</p>
+              )}
+              {itemModal.item.link && (
+                <a href={itemModal.item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', backgroundColor: '#E8501A', color: 'white', fontWeight: 600, textDecoration: 'none', padding: '0.6rem 1.25rem', borderRadius: '10px', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                  {itemModal.type === 'portfolio' ? 'Voir le projet →' : (itemModal.item.link_label || 'En savoir plus →')}
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal liste des relations — admin uniquement */}
       {connectionsModal && (
