@@ -102,7 +102,9 @@ export default function EvenementsPage() {
 
   const handleSubmit = async () => {
     if (!form.title || !form.event_date || !form.visio_link || !currentUserId) return
-    const selectedDatetime = new Date(`${form.event_date}T${form.event_time}:00`)
+    const [vy, vm, vd] = form.event_date.split('-').map(Number)
+    const [vh, vmi] = form.event_time.split(':').map(Number)
+    const selectedDatetime = new Date(vy, vm - 1, vd, vh, vmi, 0)
     if (selectedDatetime <= new Date()) {
       alert('La date et l\'heure de l\'événement doivent être dans le futur.')
       return
@@ -121,7 +123,11 @@ export default function EvenementsPage() {
       }
     }
 
-    const datetime = `${form.event_date}T${form.event_time}:00`
+    // Construire la date en heure LOCALE puis l'envoyer en ISO (UTC) pour un
+    // stockage cohérent, évitant tout décalage de fuseau à la relecture.
+    const [yy, mm, dd] = form.event_date.split('-').map(Number)
+    const [hh, mi] = form.event_time.split(':').map(Number)
+    const datetime = new Date(yy, mm - 1, dd, hh, mi, 0).toISOString()
 
     if (editingEventId) {
       // ── MODIFICATION ──
