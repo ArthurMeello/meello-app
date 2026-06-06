@@ -402,8 +402,8 @@ export default function EvenementsPage() {
                 )}
 
                 <div style={{ marginTop: 'auto', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.5rem' }}>
-                  {/* Bouton participation */}
-                  {!isPast && currentUserId && event.status === 'published' && event.author_id !== currentUserId && (
+                  {/* Bouton participation (créateur inclus) */}
+                  {!isPast && currentUserId && event.status === 'published' && (
                     <button
                       onClick={() => toggleParticipation(event)}
                       disabled={!!joining || (!isParticipating && !!isFull)}
