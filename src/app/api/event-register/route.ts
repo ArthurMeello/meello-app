@@ -40,6 +40,10 @@ export async function POST(req: NextRequest) {
   const timeStr = eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
   const durationStr = event.duration_minutes ? ` (${event.duration_minutes} min)` : ''
 
+  // Le champ visio peut contenir un bloc collé : on en extrait l'URL propre
+  const visioMatch = (event.visio_link || '').match(/https?:\/\/[^\s<]+/)
+  const visioUrl = visioMatch ? visioMatch[0] : (event.visio_link || '')
+
   const icsBase64 = Buffer.from(generateIcs(event)).toString('base64')
 
   // Notification au créateur de l'événement (sauf s'il s'inscrit lui-même)
@@ -69,7 +73,7 @@ export async function POST(req: NextRequest) {
         firstName: user.first_name,
         body: `Ta participation à l'événement <strong>${event.title}</strong> a bien été enregistrée !<br><br>
         📅 <strong>${dateStr} à ${timeStr}${durationStr}</strong><br><br>
-        ${event.visio_link ? `🔗 Lien pour rejoindre la visio : <a href="${event.visio_link}" style="color:#E8501A;">${event.visio_link}</a><br><br>` : ''}
+        ${visioUrl ? `🔗 <a href="${visioUrl}" style="color:#E8501A;font-weight:600;">Rejoindre la visio →</a><br><br>` : ''}
         Un fichier .ics est joint à cet email pour ajouter l'événement directement à ton calendrier (Google, Outlook, Apple…).<br><br>
         Tu recevras également un rappel le matin même. À très vite !`,
         cta: { label: 'Voir l\'événement →', href: 'https://app.meello.fr/evenements' },
@@ -104,7 +108,7 @@ export async function POST(req: NextRequest) {
           firstName: user.first_name,
           body: `C'est aujourd'hui ! L'événement <strong>${event.title}</strong> commence à <strong>${timeStr}${durationStr}</strong>.<br><br>
           Clique sur le bouton ci-dessous pour rejoindre la visio.`,
-          cta: { label: 'Rejoindre la visio →', href: event.visio_link },
+          cta: { label: 'Rejoindre la visio →', href: visioUrl },
         }),
       }),
     })
