@@ -29,6 +29,7 @@ export default function AppNav() {
   const [notifications, setNotifications] = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [qgUnread, setQgUnread] = useState(false)
+  const [eventsUnread, setEventsUnread] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifsOpen, setNotifsOpen] = useState(false)
   const [notifsList, setNotifsList] = useState<any[]>([])
@@ -83,6 +84,33 @@ export default function AppNav() {
     setQgUnread((newer?.length || 0) > 0)
   }
 
+  // Y a-t-il un nouvel événement publié depuis la dernière visite ?
+  const checkEventsUnread = async (uid: string) => {
+    const supabase = createClient()
+    const { data: lastRead } = await supabase
+      .from('events_last_read')
+      .select('last_read_at')
+      .eq('user_id', uid)
+      .single()
+    let query = supabase
+      .from('events')
+      .select('created_at')
+      .eq('status', 'published')
+      .neq('author_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    if (lastRead?.last_read_at) query = query.gt('created_at', lastRead.last_read_at)
+    const { data: newer } = await query
+    setEventsUnread((newer?.length || 0) > 0)
+  }
+
+  // Masquer la pastille événements en direct quand on visite la page
+  useEffect(() => {
+    const handler = () => setEventsUnread(false)
+    window.addEventListener('meello:events-read', handler)
+    return () => window.removeEventListener('meello:events-read', handler)
+  }, [])
+
   useEffect(() => {
     const loadProfile = async () => {
       const supabase = createClient()
@@ -99,6 +127,7 @@ export default function AppNav() {
       const { count: msgCount } = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('type', 'message').eq('read', false)
       setUnreadMessages(msgCount || 0)
       checkQgUnread(user.id)
+      checkEventsUnread(user.id)
       loadNotifs(user.id)
       if (user.id === ADMIN_ID) {
         const [{ count: appCount }, { count: recoCount }] = await Promise.all([
@@ -200,6 +229,9 @@ export default function AppNav() {
                     <span style={{ position: 'absolute', top: '-5px', right: '-6px', backgroundColor: '#E8501A', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #1A1A2E' }}>{unreadMessages > 9 ? '9+' : unreadMessages}</span>
                   )}
                   {item.href === '/qg' && qgUnread && (
+                    <span style={{ position: 'absolute', top: '-3px', right: '-4px', backgroundColor: '#E8501A', borderRadius: '50%', width: '10px', height: '10px', border: '1.5px solid #1A1A2E' }} />
+                  )}
+                  {item.href === '/evenements' && eventsUnread && (
                     <span style={{ position: 'absolute', top: '-3px', right: '-4px', backgroundColor: '#E8501A', borderRadius: '50%', width: '10px', height: '10px', border: '1.5px solid #1A1A2E' }} />
                   )}
                 </div>

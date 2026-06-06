@@ -16,6 +16,9 @@ export default function EvenementsPage() {
   const [participants, setParticipants] = useState<Record<string, { id: string; first_name: string; last_name: string; avatar_url: string | null }[]>>({})
   const [participantsModal, setParticipantsModal] = useState<string | null>(null) // event_id
   const [createModal, setCreateModal] = useState(false)
+  const [editingEventId, setEditingEventId] = useState<string | null>(null) // null = création, sinon édition
+  const [editOldDate, setEditOldDate] = useState<string | null>(null) // pour détecter le changement d'horaire
+  const [deletingEvent, setDeletingEvent] = useState<any>(null) // event en cours de suppression (modale confirm)
   const [form, setForm] = useState({ title: '', description: '', event_date: '', event_time: '10:00', duration_minutes: '', visio_link: '', max_participants: '', cover_position: 50 })
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
@@ -24,8 +27,7 @@ export default function EvenementsPage() {
 
   const isAdmin = currentUserId === ADMIN_ID
 
-  useEffect(() => {
-    const load = async () => {
+  const fetchEvents = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
@@ -61,8 +63,22 @@ export default function EvenementsPage() {
         }
       }
       setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchEvents()
+    // Marquer les événements comme "vus" (masque la pastille de la nav)
+    const markRead = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      await supabase.from('events_last_read').upsert(
+        { user_id: user.id, last_read_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+      window.dispatchEvent(new CustomEvent('meello:events-read'))
     }
-    load()
+    markRead()
   }, [])
 
   const now = new Date()
@@ -106,6 +122,39 @@ export default function EvenementsPage() {
     }
 
     const datetime = `${form.event_date}T${form.event_time}:00`
+
+    if (editingEventId) {
+      // ── MODIFICATION ──
+      const updatePayload: any = {
+        title: form.title,
+        description: form.description || null,
+        cover_position: form.cover_position,
+        event_date: datetime,
+        duration_minutes: form.duration_minutes ? parseInt(form.duration_minutes) : null,
+        visio_link: form.visio_link,
+        max_participants: form.max_participants ? parseInt(form.max_participants) : null,
+      }
+      if (cover_url) updatePayload.cover_url = cover_url
+      const { data } = await supabase.from('events').update(updatePayload).eq('id', editingEventId).select().single()
+
+      // Prévenir les inscrits SI l'horaire a changé
+      if (data && editOldDate && new Date(editOldDate).getTime() !== new Date(datetime).getTime()) {
+        fetch('/api/event-changed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId: editingEventId, type: 'rescheduled', event: data, oldDate: editOldDate }),
+        }).catch(() => {})
+      }
+      alert('Événement mis à jour. ✅')
+      setCreateModal(false); setEditingEventId(null); setEditOldDate(null)
+      setForm({ title: '', description: '', event_date: '', event_time: '10:00', duration_minutes: '', visio_link: '', max_participants: '', cover_position: 50 })
+      setCoverFile(null); setCoverPreview(null)
+      fetchEvents()
+      setSubmitting(false)
+      return
+    }
+
+    // ── CRÉATION ──
     const { data } = await supabase.from('events').insert({
       title: form.title,
       description: form.description || null,
@@ -126,6 +175,43 @@ export default function EvenementsPage() {
       setCoverFile(null); setCoverPreview(null)
     }
     setSubmitting(false)
+  }
+
+  // Ouvrir la modale en mode édition, pré-remplie
+  const openEditEvent = (event: any) => {
+    const d = new Date(event.event_date)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    setForm({
+      title: event.title || '',
+      description: event.description || '',
+      event_date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+      event_time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+      duration_minutes: event.duration_minutes ? String(event.duration_minutes) : '',
+      visio_link: event.visio_link || '',
+      max_participants: event.max_participants ? String(event.max_participants) : '',
+      cover_position: event.cover_position ?? 50,
+    })
+    setCoverPreview(event.cover_url || null)
+    setCoverFile(null)
+    setEditingEventId(event.id)
+    setEditOldDate(event.event_date)
+    setCreateModal(true)
+  }
+
+  // Supprimer un événement + prévenir les inscrits
+  const handleDeleteEvent = async () => {
+    if (!deletingEvent) return
+    const supabase = createClient()
+    // Prévenir les inscrits AVANT la suppression (les participants existent encore)
+    await fetch('/api/event-changed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId: deletingEvent.id, type: 'cancelled', event: deletingEvent }),
+    }).catch(() => {})
+    await supabase.from('event_participants').delete().eq('event_id', deletingEvent.id)
+    await supabase.from('events').delete().eq('id', deletingEvent.id)
+    setDeletingEvent(null)
+    fetchEvents()
   }
 
   const toggleParticipation = async (event: any) => {
@@ -321,7 +407,17 @@ export default function EvenementsPage() {
                     </button>
                   )}
 
-
+                  {/* Actions du créateur (ou admin) — événements à venir */}
+                  {!isPast && (event.author_id === currentUserId || isAdmin) && (
+                    <>
+                      <button onClick={() => openEditEvent(event)} style={{ padding: '0.55rem 1rem', borderRadius: '8px', border: '1.5px solid #E8E3D9', background: 'white', color: '#2D2D2D', fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Modifier
+                      </button>
+                      <button onClick={() => setDeletingEvent(event)} style={{ padding: '0.55rem 1rem', borderRadius: '8px', border: '1.5px solid #E8C9C0', background: 'white', color: '#C62828', fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Supprimer
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -366,10 +462,17 @@ export default function EvenementsPage() {
       {createModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
           <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.75rem', width: '100%', maxWidth: '540px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: '0 0 1.25rem' }}>Proposer un événement</h3>
-            <p style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.45, margin: '-0.75rem 0 1.25rem', lineHeight: 1.5 }}>
-              Ton événement sera soumis à validation avant d'être publié.
-            </p>
+            <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.2rem', color: '#2D2D2D', margin: '0 0 1.25rem' }}>{editingEventId ? 'Modifier l\'événement' : 'Proposer un événement'}</h3>
+            {!editingEventId && (
+              <p style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.45, margin: '-0.75rem 0 1.25rem', lineHeight: 1.5 }}>
+                Ton événement sera soumis à validation avant d'être publié.
+              </p>
+            )}
+            {editingEventId && (
+              <p style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.45, margin: '-0.75rem 0 1.25rem', lineHeight: 1.5 }}>
+                Si tu changes la date ou l'heure, les inscrits seront prévenus par e-mail.
+              </p>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               {/* Cover */}
@@ -424,10 +527,26 @@ export default function EvenementsPage() {
             </div>
 
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem', justifyContent: 'flex-end' }}>
-              <button onClick={() => setCreateModal(false)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem' }}>Annuler</button>
+              <button onClick={() => { setCreateModal(false); setEditingEventId(null); setEditOldDate(null) }} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.9rem' }}>Annuler</button>
               <button onClick={handleSubmit} disabled={!form.title || !form.event_date || !form.visio_link || submitting} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1.25rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', opacity: (!form.title || !form.event_date || !form.visio_link) ? 0.5 : 1 }}>
-                {submitting ? 'Envoi...' : 'Soumettre'}
+                {submitting ? 'Envoi...' : editingEventId ? 'Enregistrer' : 'Soumettre'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modale confirmation suppression d'événement */}
+      {deletingEvent && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.75rem', width: '100%', maxWidth: '420px' }}>
+            <h3 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.15rem', color: '#C62828', margin: '0 0 0.6rem' }}>Supprimer cet événement ?</h3>
+            <p style={{ fontSize: '0.9rem', color: '#2D2D2D', opacity: 0.7, lineHeight: 1.55, margin: '0 0 1.5rem' }}>
+              « {deletingEvent.title} » sera définitivement supprimé. Les personnes inscrites seront prévenues par e-mail de l'annulation. Cette action est irréversible.
+            </p>
+            <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setDeletingEvent(null)} style={{ background: 'none', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.55rem 1.1rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>Annuler</button>
+              <button onClick={handleDeleteEvent} style={{ backgroundColor: '#C62828', color: 'white', border: 'none', borderRadius: '8px', padding: '0.55rem 1.25rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>Supprimer</button>
             </div>
           </div>
         </div>
