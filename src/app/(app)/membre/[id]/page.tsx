@@ -128,7 +128,9 @@ function MiniPostCard({ post, isLast }: { post: any; isLast?: boolean }) {
 }
 
 export default function MembrePublicPage() {
-  const { id } = useParams()
+  const params = useParams()
+  // useParams peut renvoyer string | string[] : on force en string
+  const id = Array.isArray(params?.id) ? params.id[0] : params?.id
   const router = useRouter()
   const [profile, setProfile] = useState(null)
   const [portfolio, setPortfolio] = useState([])
@@ -167,7 +169,9 @@ export default function MembrePublicPage() {
   const POSTS_PER_PAGE = 10
 
   useEffect(() => {
+    if (!id) return
     const load = async () => {
+     try {
       const supabase = createClient()
 
       const { data: { user } } = await supabase.auth.getUser()
@@ -246,6 +250,10 @@ export default function MembrePublicPage() {
       }
 
       setLoading(false)
+     } catch (e) {
+       console.error('Erreur chargement profil membre:', e)
+       setLoading(false)
+     }
     }
     load()
   }, [id])
