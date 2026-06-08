@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 // appable: false  => pas de notif in-app (e-mail uniquement, ex: newsletter)
 // emailable: false => pas d'e-mail (in-app uniquement)
 const NOTIF_TYPES = [
-  { key: 'messages', label: 'Messages privés', emailable: false },
+  { key: 'messages', label: 'Messages privés', emailable: true },
   { key: 'connections', label: 'Demandes de connexion', emailable: true },
   { key: 'recommendations', label: 'Recommandations', emailable: true },
   { key: 'community', label: 'Activité communauté', emailable: false },
