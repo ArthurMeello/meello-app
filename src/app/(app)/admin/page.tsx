@@ -652,10 +652,7 @@ export default function AdminPage() {
                 const pal = getPalier(lvl.level)
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                    <div title={`${member.xp ?? 0} XP`} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#F9F9F9', borderRadius: '999px', padding: '0.25rem 0.6rem 0.25rem 0.25rem', border: '1px solid rgba(0,0,0,0.06)' }}>
-                      <span style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: pal.color, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.72rem', flexShrink: 0 }}>{lvl.level}</span>
-                      <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#2D2D2D' }}>{pal.name}</span>
-                    </div>
+                    <span title={`Niveau ${lvl.level} · ${member.xp ?? 0} XP`} style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: pal.color, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', flexShrink: 0 }}>{lvl.level}</span>
                     <FlammeBadge weeks={member.streak_weeks || 0} size="sm" />
                   </div>
                 )
