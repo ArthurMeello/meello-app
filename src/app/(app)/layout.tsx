@@ -7,7 +7,11 @@ import AppNav from '@/components/AppNav'
 import TopBar from '@/components/TopBar'
 import ChatSystem from '@/components/ChatSystem'
 import OnboardingTour from '@/components/OnboardingTour'
+import FlammeQuotidienne from '@/components/FlammeQuotidienne'
 import { awardXp } from '@/lib/awardXp'
+
+// Compte admin (Arthur Dron) — la modale flamme n'est testée que sur lui pour l'instant.
+const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null)
@@ -54,6 +58,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <TopBar />
       <ChatSystem userId={userId} />
       <OnboardingTour userId={userId} />
+      <FlammeQuotidienne userId={userId} enabled={userId === ADMIN_ID} />
       <main style={{ marginLeft: '220px', flex: 1, padding: '2rem', maxWidth: '100%' }}>
         {children}
       </main>
