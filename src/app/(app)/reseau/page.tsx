@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { awardXp } from '@/lib/awardXp'
+import AvatarNiveau from '@/components/AvatarNiveau'
 import { titleCase } from '@/lib/format'
 import { GHOST_ID } from '@/lib/ghost'
 
@@ -57,8 +58,8 @@ export default function ReseauPage() {
       .from('connections')
       .select(`
         id, status, requester_id, receiver_id,
-        requester:profiles!connections_requester_id_fkey(id, first_name, last_name, activity, city, avatar_url, last_active),
-        receiver:profiles!connections_receiver_id_fkey(id, first_name, last_name, activity, city, avatar_url, last_active)
+        requester:profiles!connections_requester_id_fkey(id, first_name, last_name, activity, city, avatar_url, last_active, xp),
+        receiver:profiles!connections_receiver_id_fkey(id, first_name, last_name, activity, city, avatar_url, last_active, xp)
       `)
       .or(`requester_id.eq.${uid},receiver_id.eq.${uid}`)
 
@@ -295,9 +296,7 @@ function MemberInfo({ user }: { user: Connection['other_user'] }) {
   const initials = `${(user.first_name || '?')[0]}${(user.last_name || '')[0] || ''}`.toUpperCase()
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-      <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0, overflow: 'hidden' }}>
-        {user.avatar_url ? <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
-      </div>
+      <AvatarNiveau avatarUrl={user.avatar_url} xp={(user as any).xp ?? 0} initials={initials} size={40} userId={user.id} />
       <div>
         <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           {user.first_name} {user.last_name}
