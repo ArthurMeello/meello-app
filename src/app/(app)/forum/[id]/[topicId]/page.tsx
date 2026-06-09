@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import AvatarNiveau from '@/components/AvatarNiveau'
 
 interface Reply {
   id: string
@@ -115,7 +116,7 @@ export default function ForumTopicPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setCurrentUserId(user.id)
-        const { data: prof } = await supabase.from('profiles').select('first_name, last_name, avatar_url').eq('id', user.id).single()
+        const { data: prof } = await supabase.from('profiles').select('first_name, last_name, avatar_url, xp').eq('id', user.id).single()
         if (prof) setCurrentProfile(prof)
       }
 
@@ -124,14 +125,14 @@ export default function ForumTopicPage() {
 
       const { data: topicData } = await supabase
         .from('forum_topics')
-        .select('id, title, content, created_at, author_id, profiles!forum_topics_author_id_fkey(first_name, last_name, avatar_url, activity, city)')
+        .select('id, title, content, created_at, author_id, profiles!forum_topics_author_id_fkey(first_name, last_name, avatar_url, activity, city, xp)')
         .eq('id', topicId)
         .single()
       if (topicData) setTopic(topicData)
 
       const { data: repliesData } = await supabase
         .from('forum_replies')
-        .select('id, content, created_at, author_id, profiles!forum_replies_author_id_fkey(first_name, last_name, avatar_url, activity, city)')
+        .select('id, content, created_at, author_id, profiles!forum_replies_author_id_fkey(first_name, last_name, avatar_url, activity, city, xp)')
         .eq('topic_id', topicId)
         .order('created_at', { ascending: true })
       if (repliesData) setReplies(repliesData)
@@ -154,7 +155,7 @@ export default function ForumTopicPage() {
     const { data } = await supabase
       .from('forum_replies')
       .insert({ topic_id: topicId, author_id: currentUserId, content: replyContent.trim() })
-      .select('id, content, created_at, author_id, profiles!forum_replies_author_id_fkey(first_name, last_name, avatar_url, activity, city)')
+      .select('id, content, created_at, author_id, profiles!forum_replies_author_id_fkey(first_name, last_name, avatar_url, activity, city, xp)')
       .single()
     if (data) {
       setReplies(prev => [...prev, data])
@@ -230,12 +231,10 @@ export default function ForumTopicPage() {
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
-  const Avatar = ({ profile, size = 40 }: { profile: any; size?: number }) => {
+  const Avatar = ({ profile, size = 40, userId }: { profile: any; size?: number; userId?: string | null }) => {
     const initials = `${(profile?.first_name || '?')[0]}${(profile?.last_name || '')[0] || ''}`.toUpperCase()
     return (
-      <div style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: `${size * 0.35}px`, overflow: 'hidden', flexShrink: 0 }}>
-        {profile?.avatar_url ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
-      </div>
+      <AvatarNiveau avatarUrl={profile?.avatar_url} xp={profile?.xp ?? 0} initials={initials} size={size} userId={userId} />
     )
   }
 
@@ -314,7 +313,7 @@ export default function ForumTopicPage() {
               )}
             </div>
             <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
-              <Link href={`/membre/${topic.author_id}`}><Avatar profile={topic.profiles} size={42} /></Link>
+              <Link href={`/membre/${topic.author_id}`}><Avatar profile={topic.profiles} size={42} userId={topic.author_id} /></Link>
               <div style={{ flex: 1 }}>
                 <div style={{ marginBottom: '0.6rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -413,7 +412,7 @@ export default function ForumTopicPage() {
               return (
                 <div key={reply.id} style={{ backgroundColor: 'white', borderRadius: '14px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
                   <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                    <Link href={`/membre/${reply.author_id}`}><Avatar profile={reply.profiles} size={36} /></Link>
+                    <Link href={`/membre/${reply.author_id}`}><Avatar profile={reply.profiles} size={36} userId={reply.author_id} /></Link>
                     <div style={{ flex: 1 }}>
                       <div style={{ marginBottom: '0.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -473,7 +472,7 @@ export default function ForumTopicPage() {
       {currentUserId ? (
         <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-            <Avatar profile={currentProfile} size={36} />
+            <Avatar profile={currentProfile} size={36} userId={currentUserId} />
             <div style={{ flex: 1 }}>
               <FormatToolbar textareaRef={textareaRef} value={replyContent} setValue={setReplyContent} />
               <textarea
