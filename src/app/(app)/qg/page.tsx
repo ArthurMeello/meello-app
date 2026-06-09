@@ -612,6 +612,7 @@ export default function QGPage() {
                           xp={msg.profile?.xp ?? 0}
                           initials={`${(msg.profile?.first_name || '?')[0]}${(msg.profile?.last_name || '')[0] || ''}`.toUpperCase()}
                           size={36}
+                          userId={msg.user_id}
                         />
                       )}
                     </div>

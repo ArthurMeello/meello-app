@@ -3,6 +3,9 @@
 
 import { getLevelFromXP, getPalier } from '@/lib/gamification'
 
+// Compte officiel "L'Équipe Meello" : pas de niveau affiché.
+const TEAM_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+
 // Avatar rond + médaillon de niveau en bas à droite (numéro, couleur du palier).
 // À utiliser partout où l'on affiche la photo d'un membre (sauf réactions).
 //
@@ -19,15 +22,19 @@ export default function AvatarNiveau({
   initials = '',
   size = 48,
   showLevel = true,
+  userId,
 }: {
   avatarUrl?: string | null
   xp?: number
   initials?: string
   size?: number
   showLevel?: boolean
+  userId?: string | null
 }) {
   const { level } = getLevelFromXP(xp || 0)
   const palier = getPalier(level)
+  // Le compte officiel "L'Équipe Meello" n'a pas de niveau.
+  const displayLevel = showLevel && userId !== TEAM_ID
 
   // Taille du médaillon proportionnelle à l'avatar (≈ 42%, borné).
   const badgeSize = Math.max(16, Math.min(30, Math.round(size * 0.42)))
@@ -56,7 +63,7 @@ export default function AvatarNiveau({
           : initials}
       </div>
 
-      {showLevel && (
+      {displayLevel && (
         <span
           title={`Niveau ${level} · ${palier.name}`}
           style={{

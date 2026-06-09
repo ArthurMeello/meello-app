@@ -975,7 +975,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', opacity: deleting ? 0.5 : 1 }} onClick={() => setReactionPopover(null)}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
-        <AvatarNiveau avatarUrl={profile?.avatar_url} xp={profile?.xp ?? 0} initials={initials} size={40} />
+        <AvatarNiveau avatarUrl={profile?.avatar_url} xp={profile?.xp ?? 0} initials={initials} size={40} userId={post.author_id} />
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <a href={`/membre/${post.author_id}`} style={{ color: '#2D2D2D', textDecoration: 'none', fontWeight: 600 }}

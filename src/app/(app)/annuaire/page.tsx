@@ -339,7 +339,7 @@ function MemberCard({ profile }: { profile: Profile }) {
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)' }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
-          <AvatarNiveau avatarUrl={profile.avatar_url} xp={profile.xp ?? 0} initials={initials} size={48} />
+          <AvatarNiveau avatarUrl={profile.avatar_url} xp={profile.xp ?? 0} initials={initials} size={48} userId={profile.id} />
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               {profile.first_name} {profile.last_name}

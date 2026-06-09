@@ -454,7 +454,7 @@ export default function MembrePublicPage() {
           <div className="profil-block-main" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
             {/* Avatar + nom + actions */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.25rem' }}>
-              <AvatarNiveau avatarUrl={profile.avatar_url} xp={profile.xp ?? 0} initials={initials} size={72} />
+              <AvatarNiveau avatarUrl={profile.avatar_url} xp={profile.xp ?? 0} initials={initials} size={72} userId={profile.id} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.4rem', color: '#2D2D2D', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   {profile.first_name} {profile.last_name}
