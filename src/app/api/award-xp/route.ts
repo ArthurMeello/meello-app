@@ -39,6 +39,21 @@ function connectionXP(previousAcceptedCount: number): number {
   return 0
 }
 
+// ─── Boost x2 de lancement ───────────────────────────────────────────────────
+// Double les XP gagnés si :
+//   - le membre a moins de 30 jours d'ancienneté (boost de bienvenue), OU
+//   - on est encore dans le mois de lancement (jusqu'à LAUNCH_BOOST_END).
+// Ajuste LAUNCH_BOOST_END à 30 jours après la mise en ligne.
+const LAUNCH_BOOST_END = new Date('2026-07-09T00:00:00Z')
+
+function isBoostActive(memberSince: string | null): boolean {
+  const now = Date.now()
+  if (now < LAUNCH_BOOST_END.getTime()) return true
+  if (!memberSince) return false
+  const days = (now - new Date(memberSince).getTime()) / (1000 * 60 * 60 * 24)
+  return days <= 30
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { userId, action } = await req.json()
@@ -102,15 +117,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ─── Récupérer le total actuel ────────────────────────────────────────────
+    // ─── Récupérer le total actuel + ancienneté ──────────────────────────────
     const { data: profile } = await supabase
       .from('profiles')
-      .select('xp')
+      .select('xp, member_since')
       .eq('id', userId)
       .single()
     if (!profile) {
       return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
     }
+
+    // ─── Boost x2 de lancement (ne s'applique pas aux actions à 0 XP) ─────────
+    const boost = xpEarned > 0 && isBoostActive(profile.member_since)
+    if (boost) xpEarned = xpEarned * 2
 
     // ─── Logguer + mettre à jour le total ─────────────────────────────────────
     await supabase.from('xp_logs').insert({
@@ -126,6 +145,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       awarded: xpEarned,
+      boost,
       totalXP: newTotalXP,
       level: prog.level,
       currentXP: prog.currentXP,

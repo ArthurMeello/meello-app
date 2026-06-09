@@ -4,6 +4,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { getLevelFromXP, getPalier } from '@/lib/gamification'
+import FlammeBadge from '@/components/FlammeBadge'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 
@@ -34,6 +36,8 @@ interface Member {
   created_at: string
   last_active?: string | null
   is_confirmed?: boolean
+  xp?: number
+  streak_weeks?: number
 }
 
 // "Vu il y a X" à partir d'un timestamp
@@ -106,7 +110,7 @@ export default function AdminPage() {
     const supabase = createClient()
     const { data } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name, email, activity, city, badges, member_since, hide_new_badge, created_at, last_active')
+      .select('id, first_name, last_name, email, activity, city, badges, member_since, hide_new_badge, created_at, last_active, xp, streak_weeks')
       .order('created_at', { ascending: true })
     if (data) {
       // Enrichir avec le statut de confirmation email
@@ -642,6 +646,20 @@ export default function AdminPage() {
                   )
                 })()}
               </div>
+              {/* Niveau + flamme (gamification) */}
+              {(() => {
+                const lvl = getLevelFromXP(member.xp ?? 0)
+                const pal = getPalier(lvl.level)
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                    <div title={`${member.xp ?? 0} XP`} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#F9F9F9', borderRadius: '999px', padding: '0.25rem 0.6rem 0.25rem 0.25rem', border: '1px solid rgba(0,0,0,0.06)' }}>
+                      <span style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: pal.color, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.72rem', flexShrink: 0 }}>{lvl.level}</span>
+                      <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#2D2D2D' }}>{pal.name}</span>
+                    </div>
+                    <FlammeBadge weeks={member.streak_weeks || 0} size="sm" />
+                  </div>
+                )
+              })()}
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
                 {[
                   { key: 'fondateur', label: 'Fondateur' },
