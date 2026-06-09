@@ -4,7 +4,7 @@
 import { getLevelFromXP, getPalier } from '@/lib/gamification'
 
 // Compte officiel "L'Équipe Meello" : pas de niveau affiché.
-const TEAM_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
+const TEAM_ID = '00000000-0000-0000-0000-000000000001'
 
 // Avatar rond + médaillon de niveau en bas à droite (numéro, couleur du palier).
 // À utiliser partout où l'on affiche la photo d'un membre (sauf réactions).
