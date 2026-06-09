@@ -2,6 +2,7 @@
 'use client'
 
 import { getPalierFlamme } from '@/lib/gamification'
+import IconFlamme from '@/components/IconFlamme'
 
 // Badge flamme : nombre de semaines consécutives actives + couleur selon le palier.
 // Ne s'affiche pas si weeks < 1.
@@ -41,9 +42,7 @@ export default function FlammeBadge({ weeks, size = 'md' }: { weeks: number; siz
         whiteSpace: 'nowrap',
       }}
     >
-      <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 2c.5 3-1.5 4.5-3 6.5C7.5 10.5 7 12 7 13.5 7 17 9.5 19 12 19s5-2 5-5.5c0-2-1-3.5-2.2-5C13.5 7 13 5 13.5 3.5 13 4 12.4 4.5 12 5c-.3-1-.2-2 0-3z" />
-      </svg>
+      <IconFlamme size={iconSize} color="currentColor" />
       {weeks}
     </div>
   )

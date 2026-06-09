@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import IconFlamme from '@/components/IconFlamme'
 
 // Modale "cheminement de la flamme" : affichée 1x/jour à la 1re ouverture.
 // Montre les 5 jours ouvrés, les jours actifs, et la progression vers
@@ -46,9 +47,7 @@ export default function FlammeQuotidienne({ userId, enabled }: { userId: string 
         style={{ backgroundColor: 'white', borderRadius: '20px', padding: '1.75rem', maxWidth: '380px', width: '100%', boxShadow: '0 12px 40px rgba(0,0,0,0.2)' }}
       >
         <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="#E8501A" aria-hidden="true" style={{ display: 'block', margin: '0 auto 0.5rem' }}>
-            <path d="M12 2c.5 3-1.5 4.5-3 6.5C7.5 10.5 7 12 7 13.5 7 17 9.5 19 12 19s5-2 5-5.5c0-2-1-3.5-2.2-5C13.5 7 13 5 13.5 3.5 13 4 12.4 4.5 12 5c-.3-1-.2-2 0-3z" />
-          </svg>
+          <IconFlamme size={48} color="#E8501A" style={{ display: 'block', margin: '0 auto 0.5rem' }} />
           <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.3rem', fontWeight: 700, color: '#2D2D2D' }}>
             {data.streakWeeks > 0 ? `${data.streakWeeks} semaine${data.streakWeeks > 1 ? 's' : ''} d'affilée` : 'Lance ta série !'}
           </div>
@@ -72,9 +71,7 @@ export default function FlammeQuotidienne({ userId, enabled }: { userId: string 
                 }}
               >
                 {d.active ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                    <path d="M12 2c.5 3-1.5 4.5-3 6.5C7.5 10.5 7 12 7 13.5 7 17 9.5 19 12 19s5-2 5-5.5c0-2-1-3.5-2.2-5C13.5 7 13 5 13.5 3.5 13 4 12.4 4.5 12 5c-.3-1-.2-2 0-3z" />
-                  </svg>
+                  <IconFlamme size={20} color="white" />
                 ) : (
                   <span style={{ fontSize: '1.1rem' }}>·</span>
                 )}
