@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { GHOST_ID, filterGhost } from '@/lib/ghost'
 import { notify } from '@/lib/notify'
 import { awardXp } from '@/lib/awardXp'
+import AvatarNiveau from '@/components/AvatarNiveau'
 import SortableOptions from '@/components/SortableOptions'
 import { titleCase } from '@/lib/format'
 
@@ -183,7 +184,7 @@ export default function QGPage() {
           const msg = payload.new
           // Ignorer les messages du compte fantôme (sauf admin)
           if (msg.user_id === GHOST_ID && userIdRef.current !== ADMIN_ID) return
-          const { data: prof } = await supabase.from('profiles').select('first_name, last_name, avatar_url, badges').eq('id', msg.user_id).single()
+          const { data: prof } = await supabase.from('profiles').select('first_name, last_name, avatar_url, badges, xp').eq('id', msg.user_id).single()
           // Si c'est un sondage, charger ses données
           if (msg.poll_id) await loadPolls(supabase, [msg.poll_id])
           const fullMsg = { ...msg, profile: prof ? { ...prof, first_name: titleCase(prof.first_name), last_name: titleCase(prof.last_name) } : prof }
@@ -226,7 +227,7 @@ export default function QGPage() {
     if (!data || data.length === 0) { setHasMore(false); return [] }
 
     const userIds = [...new Set(data.map((m: any) => m.user_id))]
-    const { data: profiles } = await supabase.from('profiles').select('id, first_name, last_name, avatar_url, badges').in('id', userIds)
+    const { data: profiles } = await supabase.from('profiles').select('id, first_name, last_name, avatar_url, badges, xp').in('id', userIds)
     const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, { ...p, first_name: titleCase(p.first_name), last_name: titleCase(p.last_name) }]))
 
     // Charger les sondages référencés dans ces messages
@@ -606,12 +607,12 @@ export default function QGPage() {
                     {/* Avatar */}
                     <div style={{ width: '36px', flexShrink: 0, marginTop: '2px' }}>
                       {!isSameUser && (
-                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.75rem', overflow: 'hidden', flexShrink: 0 }}>
-                          {msg.profile?.avatar_url
-                            ? <img src={msg.profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            : `${(msg.profile?.first_name || '?')[0]}${(msg.profile?.last_name || '')[0] || ''}`.toUpperCase()
-                          }
-                        </div>
+                        <AvatarNiveau
+                          avatarUrl={msg.profile?.avatar_url}
+                          xp={msg.profile?.xp ?? 0}
+                          initials={`${(msg.profile?.first_name || '?')[0]}${(msg.profile?.last_name || '')[0] || ''}`.toUpperCase()}
+                          size={36}
+                        />
                       )}
                     </div>
 

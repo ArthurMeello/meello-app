@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { awardXp } from '@/lib/awardXp'
 import WeeklyChallenges from '@/components/WeeklyChallenges'
+import AvatarNiveau from '@/components/AvatarNiveau'
 import { GHOST_ID } from '@/lib/ghost'
 import { titleCase } from '@/lib/format'
 import imageCompression from 'browser-image-compression'
@@ -69,7 +70,7 @@ function FeedPageInner() {
     const supabase = createClient()
     const { data } = await supabase
       .from('posts')
-      .select('*, profiles(first_name, last_name, avatar_url, activity, badges, member_since, hide_new_badge)')
+      .select('*, profiles(first_name, last_name, avatar_url, activity, badges, member_since, hide_new_badge, xp)')
       .order('pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(50)
@@ -974,16 +975,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', opacity: deleting ? 0.5 : 1 }} onClick={() => setReactionPopover(null)}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
-        <div style={{
-          width: '40px', height: '40px', borderRadius: '50%',
-          backgroundColor: '#E8501A', color: 'white',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: 700, fontSize: '0.85rem', flexShrink: 0, overflow: 'hidden',
-        }}>
-          {profile?.avatar_url
-            ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-            : initials}
-        </div>
+        <AvatarNiveau avatarUrl={profile?.avatar_url} xp={profile?.xp ?? 0} initials={initials} size={40} />
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 600, color: '#2D2D2D', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <a href={`/membre/${post.author_id}`} style={{ color: '#2D2D2D', textDecoration: 'none', fontWeight: 600 }}

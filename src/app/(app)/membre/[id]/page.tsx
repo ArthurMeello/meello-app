@@ -8,6 +8,7 @@ import { notify } from '@/lib/notify'
 import { GHOST_ID } from '@/lib/ghost'
 import { titleCase } from '@/lib/format'
 import { getLevelFromXP, getLevelColor, getPalier } from '@/lib/gamification'
+import AvatarNiveau from '@/components/AvatarNiveau'
 
 const socialLinkStyle: React.CSSProperties = {
   display: 'inline-flex',
@@ -454,9 +455,7 @@ export default function MembrePublicPage() {
           <div className="profil-block-main" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
             {/* Avatar + nom + actions */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.25rem' }}>
-              <div style={{ width: '72px', height: '72px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.4rem', flexShrink: 0, overflow: 'hidden' }}>
-                {profile.avatar_url ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
-              </div>
+              <AvatarNiveau avatarUrl={profile.avatar_url} xp={profile.xp ?? 0} initials={initials} size={72} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.4rem', color: '#2D2D2D', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   {profile.first_name} {profile.last_name}
