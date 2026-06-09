@@ -46,7 +46,9 @@ export default function FlammeQuotidienne({ userId, enabled }: { userId: string 
         style={{ backgroundColor: 'white', borderRadius: '20px', padding: '1.75rem', maxWidth: '380px', width: '100%', boxShadow: '0 12px 40px rgba(0,0,0,0.2)' }}
       >
         <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-          <div style={{ fontSize: '2.5rem', lineHeight: 1, marginBottom: '0.5rem' }}>🔥</div>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="#E8501A" aria-hidden="true" style={{ display: 'block', margin: '0 auto 0.5rem' }}>
+            <path d="M12 2c.5 3-1.5 4.5-3 6.5C7.5 10.5 7 12 7 13.5 7 17 9.5 19 12 19s5-2 5-5.5c0-2-1-3.5-2.2-5C13.5 7 13 5 13.5 3.5 13 4 12.4 4.5 12 5c-.3-1-.2-2 0-3z" />
+          </svg>
           <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.3rem', fontWeight: 700, color: '#2D2D2D' }}>
             {data.streakWeeks > 0 ? `${data.streakWeeks} semaine${data.streakWeeks > 1 ? 's' : ''} d'affilée` : 'Lance ta série !'}
           </div>
@@ -67,10 +69,15 @@ export default function FlammeQuotidienne({ userId, enabled }: { userId: string 
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   backgroundColor: d.active ? '#E8501A' : '#F1EFE8',
                   color: d.active ? 'white' : '#B4B2A9',
-                  fontSize: '1.1rem',
                 }}
               >
-                {d.active ? '🔥' : '·'}
+                {d.active ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                    <path d="M12 2c.5 3-1.5 4.5-3 6.5C7.5 10.5 7 12 7 13.5 7 17 9.5 19 12 19s5-2 5-5.5c0-2-1-3.5-2.2-5C13.5 7 13 5 13.5 3.5 13 4 12.4 4.5 12 5c-.3-1-.2-2 0-3z" />
+                  </svg>
+                ) : (
+                  <span style={{ fontSize: '1.1rem' }}>·</span>
+                )}
               </div>
               <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.5, fontWeight: 600 }}>{d.label}</div>
             </div>
