@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
+import { awardXp } from '@/lib/awardXp'
 import { titleCase } from '@/lib/format'
 import { GHOST_ID } from '@/lib/ghost'
 
@@ -86,6 +87,11 @@ export default function ReseauPage() {
     await supabase.from('connections').update({ status: 'accepted' }).eq('id', id)
     // Créer la conversation si elle n'existe pas
     const conn = connections.find(c => c.id === id)
+    // XP : connexion acceptée → on crédite les DEUX participants (dégressif côté serveur)
+    if (conn && userId) {
+      awardXp(userId, 'connection_accepted')
+      if (conn.other_user?.id) awardXp(conn.other_user.id, 'connection_accepted')
+    }
     if (conn && userId) {
       const { data: existing } = await supabase
         .from('conversations')

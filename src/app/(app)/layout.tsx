@@ -7,6 +7,7 @@ import AppNav from '@/components/AppNav'
 import TopBar from '@/components/TopBar'
 import ChatSystem from '@/components/ChatSystem'
 import OnboardingTour from '@/components/OnboardingTour'
+import { awardXp } from '@/lib/awardXp'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null)
@@ -33,6 +34,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           supabase.from('profiles').update({ last_active: new Date().toISOString() }).eq('id', user.id).then(() => {})
         }
       } catch {}
+
+      // XP : connexion du jour (plafonné 1/jour côté serveur)
+      awardXp(user.id, 'daily_login')
     }
     checkFirstLogin()
   }, [])

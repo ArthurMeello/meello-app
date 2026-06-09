@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { awardXp } from '@/lib/awardXp'
 import ImageCropPosition from '@/components/ImageCropPosition'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
@@ -175,6 +176,8 @@ export default function EvenementsPage() {
     }).select().single()
 
     if (data) {
+      // XP : organiser un événement
+      if (currentUserId) awardXp(currentUserId, 'event_created')
       alert('Ton événement a été soumis et sera publié après validation par l\'équipe Meello. 🎉')
       setCreateModal(false)
       setForm({ title: '', description: '', event_date: '', event_time: '10:00', duration_minutes: '', visio_link: '', max_participants: '', cover_position: 50 })
@@ -236,6 +239,8 @@ export default function EvenementsPage() {
       })
     } else {
       await supabase.from('event_participants').insert({ event_id: event.id, user_id: currentUserId })
+      // XP : participer à un événement (plafonné 3/jour côté serveur)
+      if (currentUserId) awardXp(currentUserId, 'event_joined')
       setParticipants(prev => ({
         ...prev,
         [event.id]: [...(prev[event.id] || []), {

@@ -5,39 +5,10 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import ImageCropPosition from '@/components/ImageCropPosition'
 import { titleCase } from '@/lib/format'
+import { getLevelFromXP, getLevelColor, getPalier } from '@/lib/gamification'
+import { awardXp } from '@/lib/awardXp'
+import FlammeBadge from '@/components/FlammeBadge'
 import type { Profile } from '@/types'
-
-// ─── XP / Niveaux ─────────────────────────────────────────────────────────────
-function getLevelFromXP(totalXP: number): { level: number; currentXP: number; xpToNext: number } {
-  let level = 1
-  let accumulated = 0
-  while (level < 50) {
-    const xpForNext = Math.floor(50 * Math.pow(1.18, level - 1))
-    if (accumulated + xpForNext > totalXP) {
-      return { level, currentXP: totalXP - accumulated, xpToNext: xpForNext }
-    }
-    accumulated += xpForNext
-    level++
-  }
-  return { level: 50, currentXP: 0, xpToNext: 0 }
-}
-
-const LEVEL_COLORS = [
-  '#9E9E9E', // 1-9 : gris
-  '#4CAF50', // 10-19 : vert
-  '#2196F3', // 20-29 : bleu
-  '#9C27B0', // 30-39 : violet
-  '#FF9800', // 40-49 : orange
-  '#E8501A', // 50 : rouge Meello
-]
-function getLevelColor(level: number): string {
-  if (level >= 50) return LEVEL_COLORS[5]
-  if (level >= 40) return LEVEL_COLORS[4]
-  if (level >= 30) return LEVEL_COLORS[3]
-  if (level >= 20) return LEVEL_COLORS[2]
-  if (level >= 10) return LEVEL_COLORS[1]
-  return LEVEL_COLORS[0]
-}
 
 const COMPLETION_FIELDS = [
   { key: 'avatar_url', label: 'Photo de profil', points: 10 },
@@ -364,6 +335,8 @@ export default function ProfilPage() {
         link_label: serviceForm.link ? (serviceForm.link_label || 'En savoir plus') : null,
         image_position: serviceForm.image_position,
       })
+      // XP : première fiche produit/service (unique, garanti côté serveur)
+      if (profile.id) awardXp(profile.id, 'first_service')
     }
 
     setSavingService(false)
@@ -399,6 +372,13 @@ export default function ProfilPage() {
     await loadProfile()
     setUploadingAvatar(false)
   }
+
+  // XP : profil complété à 100% (unique, garanti côté serveur via `once`)
+  useEffect(() => {
+    if (!profile?.id) return
+    const c = getCompletion(profile, portfolio.length > 0, services.length > 0)
+    if (c >= 100) awardXp(profile.id, 'profile_completed')
+  }, [profile, portfolio.length, services.length])
 
   if (!profile) {
     return (
@@ -474,8 +454,11 @@ export default function ProfilPage() {
           </div>
           <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.4rem', color: '#2D2D2D', fontWeight: 700 }}>
-              {profile.first_name} {profile.last_name}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+              <div style={{ fontFamily: 'var(--font-clash)', fontSize: '1.4rem', color: '#2D2D2D', fontWeight: 700 }}>
+                {profile.first_name} {profile.last_name}
+              </div>
+              <FlammeBadge weeks={profile.streak_weeks || 0} size="md" />
             </div>
             <div style={{ color: '#2D2D2D', opacity: 0.6, fontSize: '0.9rem' }}>{profile.activity}</div>
             {profile.city && (
@@ -595,12 +578,10 @@ export default function ProfilPage() {
         {(() => {
           const totalXP = profile.xp ?? 0
           const { level, currentXP, xpToNext } = getLevelFromXP(totalXP)
-          const color = getLevelColor(level)
-          const isMax = level === 50
+          const palier = getPalier(level)
+          const color = palier.color
+          const isMax = level >= 100
           const pct = isMax ? 100 : Math.round((currentXP / xpToNext) * 100)
-          const memberSince = new Date(profile.member_since || Date.now())
-          const daysSinceJoin = Math.floor((Date.now() - memberSince.getTime()) / (1000 * 60 * 60 * 24))
-          const boostActive = daysSinceJoin <= 30
           return (
             <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#F9F9F9', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
@@ -614,15 +595,10 @@ export default function ProfilPage() {
                     {level}
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D' }}>Niveau {level}</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D' }}>Niveau {level} · {palier.name}</div>
                     <div style={{ fontSize: '0.75rem', color: '#2D2D2D', opacity: 0.5 }}>{totalXP} XP au total</div>
                   </div>
                 </div>
-                {boostActive && (
-                  <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#F5A623', backgroundColor: '#FFF8E8', padding: '0.2rem 0.6rem', borderRadius: '20px', border: '1px solid rgba(245,166,35,0.3)' }}>
-                    ⚡ Boost x2 actif
-                  </div>
-                )}
               </div>
               {!isMax ? (
                 <>
@@ -635,7 +611,7 @@ export default function ProfilPage() {
                   </div>
                 </>
               ) : (
-                <div style={{ fontSize: '0.82rem', color, fontWeight: 600, marginTop: '0.2rem' }}>🏆 Niveau maximum atteint !</div>
+                <div style={{ fontSize: '0.82rem', color, fontWeight: 600, marginTop: '0.2rem' }}>🏆 Légende Meello, niveau maximum atteint !</div>
               )}
             </div>
           )

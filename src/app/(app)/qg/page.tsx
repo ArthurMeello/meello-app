@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { GHOST_ID, filterGhost } from '@/lib/ghost'
 import { notify } from '@/lib/notify'
+import { awardXp } from '@/lib/awardXp'
 import SortableOptions from '@/components/SortableOptions'
 import { titleCase } from '@/lib/format'
 
@@ -400,6 +401,9 @@ export default function QGPage() {
       { poll_id: pollId, option_id: optionId, user_id: userId },
       { onConflict: 'poll_id,user_id' }
     )
+
+    // XP : répondre à un sondage (plafonné 3/jour côté serveur)
+    awardXp(userId, 'poll_vote')
 
     // Notifier le créateur (anti-spam : une seule notif non lue par sondage et par votant)
     if (poll && poll.created_by && poll.created_by !== userId) {

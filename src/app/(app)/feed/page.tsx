@@ -5,6 +5,8 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
+import { awardXp } from '@/lib/awardXp'
+import WeeklyChallenges from '@/components/WeeklyChallenges'
 import { GHOST_ID } from '@/lib/ghost'
 import { titleCase } from '@/lib/format'
 import imageCompression from 'browser-image-compression'
@@ -77,7 +79,14 @@ function FeedPageInner() {
   const initials = userProfile?.first_name?.[0]?.toUpperCase() || '?'
 
   return (
-    <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+    <div className="feed-layout" style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', alignItems: 'flex-start' }}>
+      <style>{`
+        .feed-sidebar { display: none; }
+        @media (min-width: 1024px) {
+          .feed-sidebar { display: block; width: 300px; flex-shrink: 0; position: sticky; top: 1.5rem; }
+        }
+      `}</style>
+      <div style={{ maxWidth: '680px', width: '100%', flexShrink: 1 }}>
       <h1 style={{ fontFamily: 'var(--font-clash)', fontSize: '1.75rem', color: '#2D2D2D', marginBottom: '1.5rem' }}>
         Fil d'actualité
       </h1>
@@ -161,6 +170,12 @@ La meilleure façon de commencer ? Te présenter aux autres membres. Dis-leur qu
           </div>
         )}
       </div>
+      </div>
+
+      {/* Colonne droite (desktop) : défis de la semaine */}
+      <aside className="feed-sidebar">
+        <WeeklyChallenges userId={userId} />
+      </aside>
     </div>
   )
 }
@@ -350,6 +365,8 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
 
     if (newPost?.id) {
       await sendMentionNotifications(newPost.id, fullContent)
+      // Tracking défi "Partage ton actu" (0 XP, sert au suivi du défi)
+      if (userId) awardXp(userId, 'post_created')
     }
 
     setLoading(false)
@@ -615,6 +632,11 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
       }
     } else {
       await supabase.from('reactions').insert({ post_id: post.id, author_id: currentUserId, emoji })
+      // XP : seulement pour l'ajout d'une réaction (pas le changement d'emoji),
+      // et pas pour réagir à son propre post.
+      if (post.author_id !== currentUserId) {
+        awardXp(currentUserId, 'like_post')
+      }
       // Notifier l'auteur du post (sauf si c'est soi-même)
       if (post.author_id && post.author_id !== currentUserId) {
         await notify({
@@ -749,6 +771,11 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
     setComment('')
     await supabase.from('comments').insert({ post_id: post.id, content: commentContent, author_id: currentUserId })
 
+    // XP : commenter un post (pas son propre post)
+    if (post.author_id !== currentUserId) {
+      awardXp(currentUserId, 'comment_post')
+    }
+
     // Notifier l'auteur du post (sauf si c'est soi-même)
     if (post.author_id && post.author_id !== currentUserId) {
       await notify({
@@ -838,6 +865,10 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
       author_id: currentUserId,
       parent_id: parentComment.id,
     })
+    // XP : répondre est aussi un commentaire (plafonné 3/jour côté serveur)
+    if (parentComment.author_id !== currentUserId) {
+      awardXp(currentUserId, 'comment_post')
+    }
     // Notifier l'auteur du commentaire parent
     if (parentComment.author_id !== currentUserId) {
       await notify({

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { filterGhost } from '@/lib/ghost'
 import { titleCase } from '@/lib/format'
+import FlammeBadge from '@/components/FlammeBadge'
 import type { Profile } from '@/types'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
@@ -336,13 +337,13 @@ function MemberCard({ profile }: { profile: Profile }) {
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(0,0,0,0.12)' }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#E8501A', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1rem', flexShrink: 0, overflow: 'hidden' }}>
             {profile.avatar_url
               ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : initials}
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontWeight: 700, color: '#2D2D2D', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               {profile.first_name} {profile.last_name}
               {profile.id === ADMIN_ID && <img src="/icons/badge-check.svg" alt="Admin" title="Fondateur Meello" style={{ width: '15px', height: '15px', flexShrink: 0 }} />}
@@ -351,6 +352,7 @@ function MemberCard({ profile }: { profile: Profile }) {
               {profile.activity}
             </div>
           </div>
+          <FlammeBadge weeks={profile.streak_weeks || 0} size="sm" />
         </div>
 
         {profile.city && (

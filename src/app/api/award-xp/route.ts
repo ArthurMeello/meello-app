@@ -1,59 +1,47 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getProgression } from '@/lib/gamification'
 
-// ─── Définition des actions et leurs XP de base ───────────────────────────────
-const XP_CONFIG: Record<string, { base: number; dailyCap: number }> = {
-  // Forum
-  forum_topic:        { base: 20, dailyCap: 3 },   // Créer un sujet
-  forum_reply:        { base: 10, dailyCap: 5 },   // Répondre dans un sujet
-  forum_like_given:  { base: 2,  dailyCap: 10 },  // Liker une réponse
+// ─── Barème XP (aligné sur GAMIFICATION_MEELLO.md) ───────────────────────────
+// dailyCap : nombre max de fois que l'action crédite par jour (null = pas de cap journalier)
+// once     : gain unique (une seule fois par membre, à vie)
+const XP_CONFIG: Record<string, { base: number; dailyCap?: number; once?: boolean }> = {
+  // Gains uniques
+  profile_completed: { base: 150, once: true }, // Profil complété à 100%
+  first_service:     { base: 50,  once: true }, // Première fiche produit / service
 
-  // Réseau
-  connection_accepted: { base: 15, dailyCap: 5 },  // Connexion acceptée
-  message_sent:        { base: 3,  dailyCap: 10 }, // Envoyer un message
+  // Feed / engagement (XP pour celui qui agit). "posts" = feed + communauté.
+  comment_post: { base: 8, dailyCap: 3 },  // Commenter un post
+  like_post:    { base: 2, dailyCap: 5 },  // Liker un post
+  poll_vote:    { base: 2, dailyCap: 3 },  // Répondre à un sondage (voter)
 
-  // Événements
-  event_joined:    { base: 25, dailyCap: 2 },  // Rejoindre un événement
-  event_created:   { base: 40, dailyCap: 1 },  // Créer un événement
+  // Événements (on récompense, on ne surveille pas)
+  event_joined:  { base: 15, dailyCap: 3 },  // Participer à un événement
+  event_created: { base: 100, dailyCap: 2 }, // Organiser un événement
 
-  // Profil
-  profile_completed: { base: 50, dailyCap: 1 }, // Atteindre 100% de complétion (une fois)
-  profile_updated:   { base: 5,  dailyCap: 1 }, // Mettre à jour son profil
+  // Connexions : géré séparément (dégressif) — voir plus bas. Pas de base fixe ici.
+  connection_accepted: { base: 0 },
 
-  // Recommendations
-  reco_given:      { base: 20, dailyCap: 3 },  // Donner une recommandation
-  reco_received:   { base: 10, dailyCap: 3 },  // Recevoir une recommandation
+  // Tracking seul (0 XP) : sert au suivi des défis hebdo (ex : publier un post).
+  post_created: { base: 0 },
+
+  // Revenir (régularité)
+  daily_login: { base: 5, dailyCap: 1 },     // Connexion du jour
+  weekly_streak: { base: 50, dailyCap: 1 },  // Bonus série de semaine (déclenché par le cron)
 }
 
-// ─── Calcul du niveau depuis les XP totaux ────────────────────────────────────
-// Courbe exponentielle douce : level n requiert floor(50 * 1.18^(n-1)) XP
-// Level 1 = 0 XP, Level 2 = 50 XP, Level 50 ≈ 28 000 XP total
-export function getLevelFromXP(totalXP: number): { level: number; currentXP: number; xpToNext: number } {
-  let level = 1
-  let accumulated = 0
-
-  while (level < 50) {
-    const xpForNext = Math.floor(50 * Math.pow(1.18, level - 1))
-    if (accumulated + xpForNext > totalXP) {
-      return {
-        level,
-        currentXP: totalXP - accumulated,
-        xpToNext: xpForNext,
-      }
-    }
-    accumulated += xpForNext
-    level++
-  }
-
-  // Niveau max (50)
-  return { level: 50, currentXP: 0, xpToNext: 0 }
+// XP d'une connexion selon le nombre de connexions déjà acceptées (dégressif).
+// 1re = +30, 2 à 10 = +10 chacune, au-delà de 10 = 0.
+function connectionXP(previousAcceptedCount: number): number {
+  if (previousAcceptedCount <= 0) return 30
+  if (previousAcceptedCount < 10) return 10
+  return 0
 }
 
 export async function POST(req: NextRequest) {
   try {
     const { userId, action } = await req.json()
-
     if (!userId || !action) {
       return NextResponse.json({ error: 'userId et action requis' }, { status: 400 })
     }
@@ -64,65 +52,85 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createAdminClient()
+    const startOfDay = new Date()
+    startOfDay.setHours(0, 0, 0, 0)
 
-    // ─── Vérifier le cap journalier ───────────────────────────────────────────
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    // Marquer le jour comme actif (base des séries hebdo / flamme). Idempotent.
+    const todayStr = new Date().toISOString().slice(0, 10)
+    await supabase
+      .from('daily_activity')
+      .upsert({ user_id: userId, day: todayStr }, { onConflict: 'user_id,day' })
 
-    const { count: todayCount } = await supabase
-      .from('xp_logs')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('action', action)
-      .gte('created_at', today.toISOString())
-
-    if ((todayCount ?? 0) >= config.dailyCap) {
-      return NextResponse.json({
-        awarded: 0,
-        reason: 'cap_reached',
-        message: `Cap journalier atteint pour l'action ${action}`,
-      })
+    // ─── Gain unique : refuser si déjà obtenu une fois ────────────────────────
+    if (config.once) {
+      const { count: alreadyCount } = await supabase
+        .from('xp_logs')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('action', action)
+      if ((alreadyCount ?? 0) > 0) {
+        return NextResponse.json({ awarded: 0, reason: 'already_earned' })
+      }
     }
 
-    // ─── Vérifier le boost de démarrage (30 premiers jours) ──────────────────
+    // ─── Plafond journalier ───────────────────────────────────────────────────
+    if (config.dailyCap != null) {
+      const { count: todayCount } = await supabase
+        .from('xp_logs')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('action', action)
+        .gte('created_at', startOfDay.toISOString())
+      if ((todayCount ?? 0) >= config.dailyCap) {
+        return NextResponse.json({ awarded: 0, reason: 'cap_reached' })
+      }
+    }
+
+    // ─── Calcul de l'XP gagné ─────────────────────────────────────────────────
+    let xpEarned = config.base
+
+    if (action === 'connection_accepted') {
+      // Compter les connexions déjà créditées (via xp_logs) pour la dégressivité.
+      const { count: prevCount } = await supabase
+        .from('xp_logs')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('action', 'connection_accepted')
+      xpEarned = connectionXP(prevCount ?? 0)
+      if (xpEarned === 0) {
+        return NextResponse.json({ awarded: 0, reason: 'connection_cap' })
+      }
+    }
+
+    // ─── Récupérer le total actuel ────────────────────────────────────────────
     const { data: profile } = await supabase
       .from('profiles')
-      .select('xp, member_since')
+      .select('xp')
       .eq('id', userId)
       .single()
-
     if (!profile) {
       return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
     }
 
-    const memberSince = new Date(profile.member_since || Date.now())
-    const daysSinceJoin = Math.floor((Date.now() - memberSince.getTime()) / (1000 * 60 * 60 * 24))
-    const boostActive = daysSinceJoin <= 30
-    const xpEarned = boostActive ? config.base * 2 : config.base
-
-    // ─── Ajouter le log ───────────────────────────────────────────────────────
+    // ─── Logguer + mettre à jour le total ─────────────────────────────────────
     await supabase.from('xp_logs').insert({
       user_id: userId,
       action,
       xp_earned: xpEarned,
     })
 
-    // ─── Mettre à jour les XP du profil ───────────────────────────────────────
     const newTotalXP = (profile.xp ?? 0) + xpEarned
-    await supabase
-      .from('profiles')
-      .update({ xp: newTotalXP })
-      .eq('id', userId)
+    await supabase.from('profiles').update({ xp: newTotalXP }).eq('id', userId)
 
-    const levelInfo = getLevelFromXP(newTotalXP)
+    const prog = getProgression(newTotalXP)
 
     return NextResponse.json({
       awarded: xpEarned,
       totalXP: newTotalXP,
-      boost: boostActive,
-      level: levelInfo.level,
-      currentXP: levelInfo.currentXP,
-      xpToNext: levelInfo.xpToNext,
+      level: prog.level,
+      currentXP: prog.currentXP,
+      xpToNext: prog.xpToNext,
+      palier: prog.palier.name,
     })
   } catch (err) {
     console.error('[award-xp]', err)

@@ -7,29 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { GHOST_ID } from '@/lib/ghost'
 import { titleCase } from '@/lib/format'
-
-// ─── XP / Niveaux ─────────────────────────────────────────────────────────────
-function getLevelFromXP(totalXP: number): { level: number; currentXP: number; xpToNext: number } {
-  let level = 1
-  let accumulated = 0
-  while (level < 50) {
-    const xpForNext = Math.floor(50 * Math.pow(1.18, level - 1))
-    if (accumulated + xpForNext > totalXP) {
-      return { level, currentXP: totalXP - accumulated, xpToNext: xpForNext }
-    }
-    accumulated += xpForNext
-    level++
-  }
-  return { level: 50, currentXP: 0, xpToNext: 0 }
-}
-function getLevelColor(level: number): string {
-  if (level >= 50) return '#E8501A'
-  if (level >= 40) return '#FF9800'
-  if (level >= 30) return '#9C27B0'
-  if (level >= 20) return '#2196F3'
-  if (level >= 10) return '#4CAF50'
-  return '#9E9E9E'
-}
+import { getLevelFromXP, getLevelColor, getPalier } from '@/lib/gamification'
 
 const socialLinkStyle: React.CSSProperties = {
   display: 'inline-flex',
@@ -321,6 +299,9 @@ export default function MembrePublicPage() {
   const acceptConnection = async () => {
     const supabase = createClient()
     await supabase.from('connections').update({ status: 'accepted' }).eq('id', connectionId)
+    // XP : connexion acceptée → les DEUX participants (dégressif côté serveur)
+    if (currentUserId) awardXp(currentUserId, 'connection_accepted')
+    if (id) awardXp(id, 'connection_accepted')
     const { data: existing } = await supabase.from('conversations').select('id').or(`and(participant1_id.eq.${currentUserId},participant2_id.eq.${id}),and(participant1_id.eq.${id},participant2_id.eq.${currentUserId})`).single()
     if (!existing) await supabase.from('conversations').insert({ participant1_id: currentUserId, participant2_id: id })
     setConnectionStatus('accepted')
@@ -590,8 +571,9 @@ export default function MembrePublicPage() {
               const totalXP = profile.xp ?? 0
               if (totalXP === 0) return null
               const { level, currentXP, xpToNext } = getLevelFromXP(totalXP)
-              const color = getLevelColor(level)
-              const isMax = level === 50
+              const palier = getPalier(level)
+              const color = palier.color
+              const isMax = level >= 100
               const pct = isMax ? 100 : Math.round((currentXP / xpToNext) * 100)
               return (
                 <div style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', backgroundColor: '#F9F9F9', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)' }}>
@@ -600,7 +582,7 @@ export default function MembrePublicPage() {
                       {level}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#2D2D2D' }}>Niveau {level}</div>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#2D2D2D' }}>Niveau {level} · {palier.name}</div>
                       <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.45 }}>{totalXP} XP</div>
                     </div>
                   </div>
