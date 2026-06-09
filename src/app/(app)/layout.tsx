@@ -35,6 +35,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
       } catch {}
 
+      // Enregistrer le jour comme actif (base des séries / flamme), indépendamment des XP.
+      fetch('/api/mark-active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      }).catch(() => {})
+
       // XP : connexion du jour (plafonné 1/jour côté serveur)
       awardXp(user.id, 'daily_login')
     }
