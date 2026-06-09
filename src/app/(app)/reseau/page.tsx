@@ -57,8 +57,8 @@ export default function ReseauPage() {
       .from('connections')
       .select(`
         id, status, requester_id, receiver_id,
-        requester:profiles!connections_requester_id_fkey(id, first_name, last_name, activity, city, avatar_url),
-        receiver:profiles!connections_receiver_id_fkey(id, first_name, last_name, activity, city, avatar_url)
+        requester:profiles!connections_requester_id_fkey(id, first_name, last_name, activity, city, avatar_url, last_active),
+        receiver:profiles!connections_receiver_id_fkey(id, first_name, last_name, activity, city, avatar_url, last_active)
       `)
       .or(`requester_id.eq.${uid},receiver_id.eq.${uid}`)
 
@@ -66,7 +66,11 @@ export default function ReseauPage() {
       const mapped = data
         .filter((c: any) => {
           const otherId = c.requester_id === uid ? c.receiver_id : c.requester_id
-          return otherId !== GHOST_ID || uid === ADMIN_ID
+          if (otherId === GHOST_ID && uid !== ADMIN_ID) return false
+          // Masquer les relations avec un compte jamais connecté à l'app.
+          const ou = c.requester_id === uid ? c.receiver : c.requester
+          if (!ou?.last_active && uid !== ADMIN_ID) return false
+          return true
         })
         .map((c: any) => {
           const ou = c.requester_id === uid ? c.receiver : c.requester

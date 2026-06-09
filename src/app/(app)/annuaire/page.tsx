@@ -98,6 +98,9 @@ export default function AnnuairePage() {
 
       // Masquer le compte fantôme (sauf pour l'admin) + normaliser la casse
       const data = filterGhost(rawData || [], p => p.id, user?.id)
+        // Masquer les comptes jamais connectés à l'app (last_active vide),
+        // sauf soi-même. Dès leur 1re connexion, ils réapparaissent.
+        .filter(p => p.last_active || p.id === user?.id)
         .map(p => ({ ...p, first_name: titleCase(p.first_name), last_name: titleCase(p.last_name), city: titleCase(p.city) }))
 
       if (data) {
