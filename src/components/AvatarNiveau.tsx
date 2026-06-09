@@ -2,6 +2,7 @@
 'use client'
 
 import { getLevelFromXP, getPalier } from '@/lib/gamification'
+import EmblemeNiveau from '@/components/EmblemeNiveau'
 
 // Compte officiel "L'Équipe Meello" : pas de niveau affiché.
 const TEAM_ID = '00000000-0000-0000-0000-000000000001'
@@ -36,10 +37,8 @@ export default function AvatarNiveau({
   // Le compte officiel "L'Équipe Meello" n'a pas de niveau.
   const displayLevel = showLevel && userId !== TEAM_ID
 
-  // Taille du médaillon proportionnelle à l'avatar (≈ 42%, borné).
-  const badgeSize = Math.max(16, Math.min(30, Math.round(size * 0.42)))
-  const fontSize = Math.max(9, Math.round(badgeSize * 0.5))
-  const borderW = size >= 56 ? 2.5 : 2
+  // Taille de l'emblème proportionnelle à l'avatar (≈ 48%, borné).
+  const badgeSize = Math.max(18, Math.min(36, Math.round(size * 0.48)))
 
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
@@ -64,28 +63,12 @@ export default function AvatarNiveau({
       </div>
 
       {displayLevel && (
-        <span
+        <div
           title={`Niveau ${level} · ${palier.name}`}
-          style={{
-            position: 'absolute',
-            bottom: -2,
-            right: -2,
-            width: badgeSize,
-            height: badgeSize,
-            borderRadius: '50%',
-            backgroundColor: palier.color,
-            color: 'white',
-            border: `${borderW}px solid white`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 700,
-            fontSize,
-            lineHeight: 1,
-          }}
+          style={{ position: 'absolute', bottom: -4, right: -4, lineHeight: 0 }}
         >
-          {level}
-        </span>
+          <EmblemeNiveau xp={xp} size={badgeSize} />
+        </div>
       )}
     </div>
   )
