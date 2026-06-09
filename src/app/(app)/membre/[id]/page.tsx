@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { GHOST_ID } from '@/lib/ghost'
 import { titleCase } from '@/lib/format'
-import { getLevelFromXP, getLevelColor, getPalier } from '@/lib/gamification'
 import AvatarNiveau from '@/components/AvatarNiveau'
 
 const socialLinkStyle: React.CSSProperties = {
@@ -564,35 +563,6 @@ export default function MembrePublicPage() {
                 <span style={{ fontSize: '0.72rem', color: '#E8501A', fontWeight: 600 }}>(voir)</span>
               )}
             </div>
-
-            {/* Niveau XP */}
-            {(() => {
-              const totalXP = profile.xp ?? 0
-              if (totalXP === 0) return null
-              const { level, currentXP, xpToNext } = getLevelFromXP(totalXP)
-              const palier = getPalier(level)
-              const color = palier.color
-              const isMax = level >= 100
-              const pct = isMax ? 100 : Math.round((currentXP / xpToNext) * 100)
-              return (
-                <div style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', backgroundColor: '#F9F9F9', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: isMax ? 0 : '0.4rem' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: color, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem', flexShrink: 0 }}>
-                      {level}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#2D2D2D' }}>Niveau {level} · {palier.name}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.45 }}>{totalXP} XP</div>
-                    </div>
-                  </div>
-                  {!isMax && (
-                    <div style={{ height: '5px', backgroundColor: '#E8E8E8', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, backgroundColor: color, borderRadius: '3px' }} />
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
 
             {/* Bio */}
             {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: '0 0 0.75rem', whiteSpace: 'pre-wrap' }}>{profile.bio}</p>}
