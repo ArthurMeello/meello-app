@@ -39,6 +39,8 @@ export default function AvatarNiveau({
 
   // Taille de l'emblème proportionnelle à l'avatar (≈ 48%, borné).
   const badgeSize = Math.max(18, Math.min(36, Math.round(size * 0.48)))
+  // Épaisseur de l'anneau coloré, proportionnelle (borné 2-4px).
+  const ringW = Math.max(2, Math.min(4, Math.round(size * 0.06)))
 
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
@@ -47,6 +49,8 @@ export default function AvatarNiveau({
           width: size,
           height: size,
           borderRadius: '50%',
+          // Anneau coloré de la couleur du palier (sauf Équipe Meello).
+          border: displayLevel ? `${ringW}px solid ${palier.color}` : 'none',
           backgroundColor: '#E8501A',
           color: 'white',
           display: 'flex',
@@ -55,10 +59,11 @@ export default function AvatarNiveau({
           fontWeight: 700,
           fontSize: Math.round(size * 0.34),
           overflow: 'hidden',
+          boxSizing: 'border-box',
         }}
       >
         {avatarUrl
-          ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
           : initials}
       </div>
 
