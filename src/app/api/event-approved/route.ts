@@ -6,8 +6,8 @@ export async function POST(req: NextRequest) {
   const { event } = await req.json()
 
   const eventDate = new Date(event.event_date)
-  const dateStr = eventDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const timeStr = eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  const dateStr = eventDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' })
+  const timeStr = eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
   const durationStr = event.duration_minutes ? ` (${event.duration_minutes} min)` : ''
 
   await fetch('https://api.brevo.com/v3/smtp/email', {

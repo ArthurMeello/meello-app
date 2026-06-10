@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
     const profMap = Object.fromEntries((profiles || []).map((p: any) => [p.id, p]))
 
     const eventDate = new Date(event.event_date)
-    const dateStr = eventDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-    const timeStr = eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    const dateStr = eventDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' })
+    const timeStr = eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
 
     let sent = 0
     for (const uid of userIds) {
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       } else {
         const oldStr = oldDate ? (() => {
           const d = new Date(oldDate)
-          return `${d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+          return `${d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })}`
         })() : null
         subject = `Nouvel horaire : "${event.title}"`
         body = `L'organisateur a modifié l'horaire de l'événement <strong>${event.title}</strong> auquel tu es inscrit(e).<br><br>${oldStr ? `❌ Ancien : ${oldStr}<br>` : ''}✅ <strong>Nouveau : ${dateStr} à ${timeStr}</strong><br><br>Pense à mettre à jour ton agenda !`
