@@ -8,6 +8,73 @@ import { createClient } from '@/lib/supabase/client'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 
+// Enregistre la vue d'un sujet quand il apparaît à l'écran (tout membre, hors auteur),
+// et affiche pour l'admin l'icône œil + l'infobulle des membres ayant vu (si option activée).
+function TopicViewsBadge({ topicId, authorId, currentUserId }: { topicId: string; authorId: string; currentUserId: string | null }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const viewedRef = useRef(false)
+  const [data, setData] = useState<{ count: number; viewers: { id: string; name: string }[] } | null>(null)
+  const [hover, setHover] = useState(false)
+  const [enabled, setEnabled] = useState(true)
+  const isAdmin = currentUserId === ADMIN_ID
+
+  useEffect(() => {
+    const read = () => { try { setEnabled(localStorage.getItem('meello:admin-show-post-views') !== 'false') } catch {} }
+    read()
+    window.addEventListener('meello:admin-options-changed', read)
+    return () => window.removeEventListener('meello:admin-options-changed', read)
+  }, [])
+
+  // Tracking de la vue (tout membre sauf l'auteur).
+  useEffect(() => {
+    if (!currentUserId || !topicId || authorId === currentUserId) return
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting && !viewedRef.current) {
+          viewedRef.current = true
+          obs.disconnect()
+          const supabase = createClient()
+          supabase.from('topic_views').upsert({ topic_id: topicId, user_id: currentUserId }, { onConflict: 'topic_id,user_id', ignoreDuplicates: true }).then(() => {})
+        }
+      }
+    }, { threshold: 0.5 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [currentUserId, topicId, authorId])
+
+  // Données admin.
+  useEffect(() => {
+    if (!isAdmin || !enabled) return
+    let cancelled = false
+    fetch(`/api/topic-views?topicId=${topicId}&adminId=${currentUserId}`)
+      .then(r => r.json())
+      .then(d => { if (!cancelled) setData(d) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [isAdmin, enabled, topicId, currentUserId])
+
+  return (
+    <span ref={ref} style={{ display: 'inline-flex' }}>
+      {isAdmin && enabled && data && (
+        <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#2D2D2D', opacity: 0.5, fontSize: '0.78rem' }}
+          onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+          </svg>
+          {data.count}
+          {hover && data.count > 0 && (
+            <span style={{ position: 'absolute', top: '100%', right: 0, marginTop: '0.4rem', backgroundColor: '#2D2D2E', color: 'white', borderRadius: '8px', padding: '0.5rem 0.7rem', fontSize: '0.78rem', whiteSpace: 'nowrap', zIndex: 50, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 6px 20px rgba(0,0,0,0.25)' }}>
+              {data.viewers.map(v => <span key={v.id} style={{ display: 'block', padding: '0.1rem 0' }}>{v.name}</span>)}
+            </span>
+          )}
+        </span>
+      )}
+    </span>
+  )
+}
+
 function applyFormat(textarea: HTMLTextAreaElement, tag: 'strong' | 'em', value: string, setValue: (v: string) => void) {
   const start = textarea.selectionStart
   const end = textarea.selectionEnd
@@ -257,6 +324,7 @@ export default function ForumCategoryPage() {
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                       {topic.reply_count} réponse{topic.reply_count !== 1 ? 's' : ''}
                     </span>
+                    <TopicViewsBadge topicId={topic.id} authorId={topic.author_id} currentUserId={currentUserId} />
                   </div>
                 </div>
               </Link>
