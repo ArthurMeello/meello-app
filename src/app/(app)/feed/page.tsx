@@ -558,15 +558,23 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
 function PostViews({ postId, adminId }: { postId: string; adminId: string }) {
   const [data, setData] = useState<{ count: number; viewers: { id: string; name: string }[] } | null>(null)
   const [hover, setHover] = useState(false)
+  const [enabled, setEnabled] = useState(true)
   useEffect(() => {
+    const read = () => { try { setEnabled(localStorage.getItem('meello:admin-show-post-views') !== 'false') } catch {} }
+    read()
+    window.addEventListener('meello:admin-options-changed', read)
+    return () => window.removeEventListener('meello:admin-options-changed', read)
+  }, [])
+  useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     fetch(`/api/post-views?postId=${postId}&adminId=${adminId}`)
       .then(r => r.json())
       .then(d => { if (!cancelled) setData(d) })
       .catch(() => {})
     return () => { cancelled = true }
-  }, [postId, adminId])
-  if (!data) return null
+  }, [postId, adminId, enabled])
+  if (!enabled || !data) return null
   return (
     <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#2D2D2D', opacity: 0.5, fontSize: '0.78rem', cursor: 'default' }}
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>

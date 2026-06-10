@@ -55,7 +55,17 @@ function formatLastActive(d: string | null | undefined): string {
 }
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<'candidatures' | 'membres' | 'recommandations' | 'evenements' | 'activite'>('candidatures')
+  const [tab, setTab] = useState<'candidatures' | 'membres' | 'recommandations' | 'evenements' | 'activite' | 'options'>('candidatures')
+  // Options admin (réglages locaux au navigateur)
+  const [showPostViews, setShowPostViews] = useState(true)
+  useEffect(() => {
+    try { setShowPostViews(localStorage.getItem('meello:admin-show-post-views') !== 'false') } catch {}
+  }, [])
+  const togglePostViews = (val: boolean) => {
+    setShowPostViews(val)
+    try { localStorage.setItem('meello:admin-show-post-views', val ? 'true' : 'false') } catch {}
+    window.dispatchEvent(new Event('meello:admin-options-changed'))
+  }
   const [stats, setStats] = useState<any>(null)
   const [statsLoading, setStatsLoading] = useState(false)
   const [applications, setApplications] = useState<Application[]>([])
@@ -347,7 +357,7 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        {[{ key: 'candidatures', label: `Candidatures (${pending.length} en attente)` }, { key: 'membres', label: `Membres (${members.length})` }, { key: 'recommandations', label: `Recommandations (${pendingRecos.length} en attente)` }, { key: 'evenements', label: `Événements (${pendingEvents.length} en attente)` }, { key: 'activite', label: `Activité` }].map(t => (
+        {[{ key: 'candidatures', label: `Candidatures (${pending.length} en attente)` }, { key: 'membres', label: `Membres (${members.length})` }, { key: 'recommandations', label: `Recommandations (${pendingRecos.length} en attente)` }, { key: 'evenements', label: `Événements (${pendingEvents.length} en attente)` }, { key: 'activite', label: `Activité` }, { key: 'options', label: `Options` }].map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key as any)}
@@ -905,6 +915,35 @@ export default function AdminPage() {
               Actualiser
             </button>
           )}
+        </div>
+      )}
+
+      {/* ── OPTIONS ADMIN ── */}
+      {tab === 'options' && (
+        <div>
+          <p style={{ fontSize: '0.85rem', color: '#2D2D2D', opacity: 0.55, marginBottom: '1.25rem', lineHeight: 1.6 }}>
+            Réglages d'affichage réservés à l'administrateur. Enregistrés sur ce navigateur.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', backgroundColor: 'white', borderRadius: '14px', padding: '1.1rem 1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#2D2D2D' }}>Afficher les vues des posts</div>
+                <div style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.55, marginTop: '0.2rem' }}>
+                  Montre l'icône œil et la liste des membres ayant vu chaque post (visible par toi seul).
+                </div>
+              </div>
+              <button
+                onClick={() => togglePostViews(!showPostViews)}
+                aria-label="Activer/désactiver les vues des posts"
+                style={{
+                  width: '46px', height: '26px', borderRadius: '999px', border: 'none', cursor: 'pointer', flexShrink: 0,
+                  backgroundColor: showPostViews ? '#E8501A' : '#D3D1C7', position: 'relative', transition: 'background-color 0.2s',
+                }}
+              >
+                <span style={{ position: 'absolute', top: '3px', left: showPostViews ? '23px' : '3px', width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'white', transition: 'left 0.2s' }} />
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
