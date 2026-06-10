@@ -1,3 +1,14 @@
+// Normalise une URL externe pour un href : ajoute https:// si le schéma manque.
+// Évite que "www.linkedin.com/..." soit interprété comme un chemin relatif.
+export function externalUrl(url?: string | null): string {
+  if (!url) return '#'
+  const u = url.trim()
+  if (!u) return '#'
+  if (/^https?:\/\//i.test(u)) return u
+  if (/^mailto:|^tel:/i.test(u)) return u
+  return `https://${u.replace(/^\/+/, '')}`
+}
+
 // Normalisation de la casse pour l'affichage (prénom, nom, ville).
 // Gère les traits d'union, les apostrophes et les particules françaises.
 

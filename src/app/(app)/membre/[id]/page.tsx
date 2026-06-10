@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { GHOST_ID } from '@/lib/ghost'
-import { titleCase } from '@/lib/format'
+import { titleCase, externalUrl } from '@/lib/format'
 import AvatarNiveau from '@/components/AvatarNiveau'
 
 const socialLinkStyle: React.CSSProperties = {
@@ -655,14 +655,14 @@ export default function MembrePublicPage() {
                 <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#2D2D2D', opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Retrouvez-moi sur</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {profile.website && (
-                    <a href={profile.website} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#E8501A', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500, minWidth: 0 }}>
+                    <a href={externalUrl(profile.website)} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#E8501A', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 500, minWidth: 0 }}>
                       <img src="/icons/website.svg" alt="Site web" style={{ width: '16px', height: '16px', flexShrink: 0, filter: 'brightness(0) saturate(100%) invert(35%) sepia(90%) saturate(700%) hue-rotate(350deg)' }} />
                       <span style={{ wordBreak: 'break-all', minWidth: 0 }}>{profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
                     </a>
                   )}
                   <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
                     {SOCIAL_LINKS.map(s => profile[s.key] && (
-                      <a key={s.key} href={s.key === 'whatsapp' ? `https://wa.me/${profile[s.key].replace(/\D/g, '')}` : profile[s.key]} target="_blank" rel="noopener noreferrer" title={s.label} className="social-icon" style={socialLinkStyle}>
+                      <a key={s.key} href={s.key === 'whatsapp' ? `https://wa.me/${profile[s.key].replace(/\D/g, '')}` : externalUrl(profile[s.key])} target="_blank" rel="noopener noreferrer" title={s.label} className="social-icon" style={socialLinkStyle}>
                         <img src={s.svg} alt={s.label} style={{ width: '20px', height: '20px' }} />
                       </a>
                     ))}
@@ -752,7 +752,7 @@ export default function MembrePublicPage() {
                 <p style={{ fontSize: '0.92rem', color: '#2D2D2D', opacity: 0.8, lineHeight: 1.6, margin: '1rem 0', whiteSpace: 'pre-wrap' }}>{itemModal.item.description}</p>
               )}
               {itemModal.item.link && (
-                <a href={itemModal.item.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', backgroundColor: '#E8501A', color: 'white', fontWeight: 600, textDecoration: 'none', padding: '0.6rem 1.25rem', borderRadius: '10px', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                <a href={externalUrl(itemModal.item.link)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', backgroundColor: '#E8501A', color: 'white', fontWeight: 600, textDecoration: 'none', padding: '0.6rem 1.25rem', borderRadius: '10px', fontSize: '0.9rem', marginTop: '0.5rem' }}>
                   {itemModal.type === 'portfolio' ? 'Voir le projet →' : (itemModal.item.link_label || 'En savoir plus →')}
                 </a>
               )}

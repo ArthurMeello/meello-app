@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import ImageCropPosition from '@/components/ImageCropPosition'
-import { titleCase } from '@/lib/format'
+import { titleCase, externalUrl } from '@/lib/format'
 import { getLevelFromXP, getLevelColor, getPalier } from '@/lib/gamification'
 import { awardXp } from '@/lib/awardXp'
 import FlammeBadge from '@/components/FlammeBadge'
@@ -784,8 +784,8 @@ export default function ProfilPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             {profile.bio && <p style={{ color: '#2D2D2D', lineHeight: 1.65, margin: 0, whiteSpace: 'pre-wrap' }}>{profile.bio}</p>}
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-              {profile.website && <a href={profile.website} target="_blank" rel="noopener noreferrer" title="Site web" className="social-icon" style={socialLinkStyle}><img src="/icons/website.svg" alt="Site web" style={{ width: '20px', height: '20px' }} /></a>}
-              {profile.linkedin && <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" className="social-icon" style={socialLinkStyle}><img src="/icons/linkedin.svg" alt="LinkedIn" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.website && <a href={externalUrl(profile.website)} target="_blank" rel="noopener noreferrer" title="Site web" className="social-icon" style={socialLinkStyle}><img src="/icons/website.svg" alt="Site web" style={{ width: '20px', height: '20px' }} /></a>}
+              {profile.linkedin && <a href={externalUrl(profile.linkedin)} target="_blank" rel="noopener noreferrer" title="LinkedIn" className="social-icon" style={socialLinkStyle}><img src="/icons/linkedin.svg" alt="LinkedIn" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.instagram && <a href={profile.instagram} target="_blank" rel="noopener noreferrer" title="Instagram" className="social-icon" style={socialLinkStyle}><img src="/icons/instagram.svg" alt="Instagram" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.facebook && <a href={profile.facebook} target="_blank" rel="noopener noreferrer" title="Facebook" className="social-icon" style={socialLinkStyle}><img src="/icons/facebook.svg" alt="Facebook" style={{ width: '20px', height: '20px' }} /></a>}
               {profile.pinterest && <a href={profile.pinterest} target="_blank" rel="noopener noreferrer" title="Pinterest" className="social-icon" style={socialLinkStyle}><img src="/icons/pinterest.svg" alt="Pinterest" style={{ width: '20px', height: '20px' }} /></a>}
@@ -831,7 +831,7 @@ export default function ProfilPage() {
                 {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: 0, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem' }}>
                   {item.link
-                    ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: 'white', backgroundColor: '#E8501A', fontWeight: 600, textDecoration: 'none', padding: '0.3rem 0.7rem', borderRadius: '6px' }}>{item.link_label || 'En savoir plus'}</a>
+                    ? <a href={externalUrl(item.link)} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: 'white', backgroundColor: '#E8501A', fontWeight: 600, textDecoration: 'none', padding: '0.3rem 0.7rem', borderRadius: '6px' }}>{item.link_label || 'En savoir plus'}</a>
                     : <span />
                   }
                   <div style={{ display: 'flex', gap: '0.35rem' }}>
@@ -873,7 +873,7 @@ export default function ProfilPage() {
                 <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#2D2D2D', marginBottom: '0.25rem' }}>{item.title}</div>
                 {item.description && <p style={{ fontSize: '0.8rem', color: '#2D2D2D', opacity: 0.6, margin: '0 0 0.5rem', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  {item.link ? <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a> : <span />}
+                  {item.link ? <a href={externalUrl(item.link)} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#E8501A', fontWeight: 600, textDecoration: 'none' }}>Voir le projet →</a> : <span />}
                   <div style={{ display: 'flex', gap: '0.35rem' }}>
                     <button onClick={() => openPortfolioModal(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', opacity: 0.5 }} title="Modifier">
                       <img src="/icons/pen-edit.svg" alt="Modifier" style={{ width: '15px', height: '15px' }} />
