@@ -554,6 +554,35 @@ function PostModal({ userId, userProfile, onClose, onSuccess }: {
   )
 }
 
+// Vues d'un post (admin uniquement) : icône oeil + compteur + infobulle.
+function PostViews({ postId, adminId }: { postId: string; adminId: string }) {
+  const [data, setData] = useState<{ count: number; viewers: { id: string; name: string }[] } | null>(null)
+  const [hover, setHover] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/post-views?postId=${postId}&adminId=${adminId}`)
+      .then(r => r.json())
+      .then(d => { if (!cancelled) setData(d) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [postId, adminId])
+  if (!data) return null
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#2D2D2D', opacity: 0.5, fontSize: '0.78rem', cursor: 'default' }}
+      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+      </svg>
+      {data.count}
+      {hover && data.count > 0 && (
+        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '0.4rem', backgroundColor: '#2D2D2E', color: 'white', borderRadius: '8px', padding: '0.5rem 0.7rem', fontSize: '0.78rem', whiteSpace: 'nowrap', zIndex: 50, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 6px 20px rgba(0,0,0,0.25)' }}>
+          {data.viewers.map(v => <div key={v.id} style={{ padding: '0.1rem 0' }}>{v.name}</div>)}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: Post, currentUserId: string | null, onRefresh: () => void, allMembers?: { id: string; first_name: string; last_name: string }[] }) {
   const [comment, setComment] = useState('')
   const [comments, setComments] = useState<{ id: string; content: string; author_id: string; parent_id: string | null; profiles: { first_name: string; last_name: string; avatar_url: string | null; activity: string | null } }[]>([])
@@ -584,6 +613,30 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
   const profile = post.profiles
   const initials = profile ? `${(profile.first_name || '?')[0]}${(profile.last_name || '')[0] || ''}` : '?'
   const formattedDate = new Date(post.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+
+  // Enregistrer une vue quand le post apparaît à l'écran (une seule fois).
+  const cardRef = useRef<HTMLDivElement>(null)
+  const viewedRef = useRef(false)
+  useEffect(() => {
+    if (!currentUserId || !post.id) return
+    if (post.author_id === currentUserId) return // pas sa propre vue
+    const el = cardRef.current
+    if (!el) return
+    const obs = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting && !viewedRef.current) {
+          viewedRef.current = true
+          obs.disconnect()
+          const supabase = createClient()
+          supabase.from('post_views')
+            .upsert({ post_id: post.id, user_id: currentUserId }, { onConflict: 'post_id,user_id', ignoreDuplicates: true })
+            .then(() => {})
+        }
+      }
+    }, { threshold: 0.5 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [currentUserId, post.id, post.author_id])
   const isOwner = currentUserId === post.author_id
   const isCurrentUserAdmin = currentUserId === ADMIN_ID
   const isAdmin = post.author_id === ADMIN_ID || post.author_id === EQUIPE_ID
@@ -972,7 +1025,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
   const postBody = hasTitle ? lines.slice(1).join('\n') : post.content
 
   return (
-    <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', opacity: deleting ? 0.5 : 1 }} onClick={() => setReactionPopover(null)}>
+    <div ref={cardRef} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', opacity: deleting ? 0.5 : 1 }} onClick={() => setReactionPopover(null)}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
         <AvatarNiveau avatarUrl={profile?.avatar_url} xp={profile?.xp ?? 0} initials={initials} size={40} userId={post.author_id} />
@@ -1013,6 +1066,9 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
           })()}
         </div>
         <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+          {isCurrentUserAdmin && post.id && (
+            <PostViews postId={post.id} adminId={currentUserId!} />
+          )}
           {isCurrentUserAdmin && (
             <button
               onClick={togglePin}
