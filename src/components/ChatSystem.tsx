@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { titleCase } from '@/lib/format'
+import { uploadAttachment, ATTACHMENT_ACCEPT } from '@/lib/attachment'
+import AttachmentView from '@/components/AttachmentView'
 
 interface Conversation {
   id: string
@@ -39,6 +41,9 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   useEffect(() => { activeConvRef.current = activeConv }, [activeConv])
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
+  const [attachment, setAttachment] = useState<{ url: string; name: string; type: string } | null>(null)
+  const [uploadingAttachment, setUploadingAttachment] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [unreadConvIds, setUnreadConvIds] = useState<Set<string>>(new Set())
   const [otherIsTyping, setOtherIsTyping] = useState(false)
@@ -102,6 +107,9 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
             content: msg.content,
             sender_id: msg.sender_id,
             created_at: msg.created_at,
+            attachment_url: msg.attachment_url,
+            attachment_name: msg.attachment_name,
+            attachment_type: msg.attachment_type,
           }
 
           // Si on est sur la page /messages, ne rien faire ici
@@ -121,7 +129,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
             }
             const { data: history } = await supabase
               .from('meello_messages')
-              .select('id, content, sender_id, created_at')
+              .select('id, content, sender_id, created_at, attachment_url, attachment_name, attachment_type')
               .eq('conversation_id', conv.id)
               .order('created_at', { ascending: true })
             setMessages(history || [newMsg])
@@ -266,7 +274,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
     const supabase = createClient()
     const { data } = await supabase
       .from('meello_messages')
-      .select('id, content, sender_id, created_at, read_at')
+      .select('id, content, sender_id, created_at, read_at, attachment_url, attachment_name, attachment_type')
       .eq('conversation_id', conv.id)
       .order('created_at', { ascending: true })
     if (data) setMessages(data)
@@ -341,25 +349,40 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
     setTimeout(() => inputRef.current?.focus(), 100)
   }
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !userId) return
+    setUploadingAttachment(true)
+    const result = await uploadAttachment(file, userId)
+    if (result) setAttachment(result)
+    setUploadingAttachment(false)
+  }
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     // Verrou anti double-envoi (clic/Entrée rapides)
     if (sendingRef.current) return
-    if (!newMessage.trim() || !activeConv || !userId) return
+    if ((!newMessage.trim() && !attachment) || !activeConv || !userId) return
     sendingRef.current = true
 
     const supabase = createClient()
     const msgContent = newMessage.trim()
+    const msgAttachment = attachment
     // Vider le champ immédiatement pour éviter un 2e déclenchement
     setNewMessage('')
+    setAttachment(null)
 
     const { data: insertedMsg } = await supabase.from('meello_messages').insert({
       conversation_id: activeConv.id,
       sender_id: userId,
       content: msgContent,
-    }).select('id, content, sender_id, created_at, read_at').single()
+      attachment_url: msgAttachment?.url || null,
+      attachment_name: msgAttachment?.name || null,
+      attachment_type: msgAttachment?.type || null,
+    }).select('id, content, sender_id, created_at, read_at, attachment_url, attachment_name, attachment_type').single()
     await supabase.from('conversations').update({
-      last_message: msgContent,
+      last_message: msgContent || (msgAttachment ? '📎 Pièce jointe' : ''),
       last_message_at: new Date().toISOString(),
     }).eq('id', activeConv.id)
 
@@ -399,12 +422,15 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
       sender_id: userId,
       created_at: sentAt,
       read_at: null,
+      attachment_url: msgAttachment?.url || null,
+      attachment_name: msgAttachment?.name || null,
+      attachment_type: msgAttachment?.type || null,
     }])
     // Mise à jour optimiste de la liste : l'heure de TON message s'affiche
     // tout de suite, sans dépendre de la latence du re-fetch.
     setConversations(prev => {
       const updated = prev.map(c => c.id === activeConv.id
-        ? { ...c, last_message: `Vous : ${msgContent}`, last_message_at: sentAt }
+        ? { ...c, last_message: `Vous : ${msgContent || (msgAttachment ? '📎 Pièce jointe' : '')}`, last_message_at: sentAt }
         : c)
       return updated.sort((a, b) => (b.last_message_at || '').localeCompare(a.last_message_at || ''))
     })
@@ -452,7 +478,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
           localStorage.removeItem('meello:savedConv')
           const supabase = createClient()
           supabase.from('meello_messages')
-            .select('id, content, sender_id, created_at, read_at')
+            .select('id, content, sender_id, created_at, read_at, attachment_url, attachment_name, attachment_type')
             .eq('conversation_id', conv.id)
             .order('created_at', { ascending: true })
             .then(({ data }) => {
@@ -653,7 +679,10 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
                       wordBreak: 'break-word',
                       whiteSpace: 'pre-wrap',
                     }}>
-                      {renderMessageContent(msg.content, isMe)}
+                      {msg.content && renderMessageContent(msg.content, isMe)}
+                      {msg.attachment_url && (
+                        <AttachmentView url={msg.attachment_url} name={msg.attachment_name} type={msg.attachment_type} light={isMe} />
+                      )}
                     </div>
                     </div>
                     {isMe && msg.id === showLuId && (
@@ -683,8 +712,37 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
             <div ref={bottomRef} />
           </div>
 
+          {/* Aperçu pièce jointe à envoyer */}
+          {(attachment || uploadingAttachment) && (
+            <div style={{ padding: '0 0.75rem' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#FFF0ED', border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.35rem 0.55rem', marginBottom: '0.4rem', maxWidth: '100%' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E8501A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+                <span style={{ fontSize: '0.78rem', color: '#2D2D2D', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
+                  {uploadingAttachment ? 'Envoi en cours…' : attachment?.name}
+                </span>
+                {attachment && !uploadingAttachment && (
+                  <button type="button" onClick={() => setAttachment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2D2D2D', opacity: 0.5, fontSize: '1rem', lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Input */}
           <form onSubmit={sendMessage} style={{ padding: '0.65rem 0.75rem', borderTop: '1px solid #F5F0E8', display: 'flex', gap: '0.4rem', alignItems: 'flex-end' }}>
+            <input ref={fileInputRef} type="file" accept={ATTACHMENT_ACCEPT} hidden onChange={handleFileSelect} />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAttachment}
+              title="Joindre un fichier"
+              style={{ background: 'none', border: 'none', cursor: uploadingAttachment ? 'default' : 'pointer', color: '#E8501A', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, height: '36px', width: '28px' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </button>
             <textarea
               ref={inputRef}
               value={newMessage}
@@ -723,13 +781,13 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
             />
             <button
               type="submit"
-              disabled={!newMessage.trim()}
+              disabled={!newMessage.trim() && !attachment}
               style={{
-                backgroundColor: newMessage.trim() ? '#E8501A' : '#E8E3D9',
-                color: newMessage.trim() ? 'white' : '#999',
+                backgroundColor: (newMessage.trim() || attachment) ? '#E8501A' : '#E8E3D9',
+                color: (newMessage.trim() || attachment) ? 'white' : '#999',
                 border: 'none', borderRadius: '8px',
                 padding: '0.5rem 0.85rem',
-                fontWeight: 600, cursor: newMessage.trim() ? 'pointer' : 'default',
+                fontWeight: 600, cursor: (newMessage.trim() || attachment) ? 'pointer' : 'default',
                 fontSize: '0.85rem', flexShrink: 0,
                 transition: 'all 0.15s', height: '36px',
               }}

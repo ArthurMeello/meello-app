@@ -5,6 +5,8 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { notify } from '@/lib/notify'
 import { titleCase } from '@/lib/format'
+import { uploadAttachment, ATTACHMENT_ACCEPT } from '@/lib/attachment'
+import AttachmentView from '@/components/AttachmentView'
 
 interface Conversation {
   id: string
@@ -34,6 +36,9 @@ export default function MessagesPage() {
   const [activeConv, setActiveConv] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
+  const [attachment, setAttachment] = useState<{ url: string; name: string; type: string } | null>(null)
+  const [uploadingAttachment, setUploadingAttachment] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [otherIsTyping, setOtherIsTyping] = useState(false)
   const [otherIsOnline, setOtherIsOnline] = useState(false)
@@ -86,7 +91,7 @@ export default function MessagesPage() {
           if (msg.sender_id === userIdRef.current) return
 
           const currentConv = activeConvRef.current
-          const newMsg = { id: msg.id, content: msg.content, sender_id: msg.sender_id, created_at: msg.created_at }
+          const newMsg = { id: msg.id, content: msg.content, sender_id: msg.sender_id, created_at: msg.created_at, attachment_url: msg.attachment_url, attachment_name: msg.attachment_name, attachment_type: msg.attachment_type }
 
           if (currentConv?.id === msg.conversation_id) {
             // Conversation déjà ouverte — ajouter en live
@@ -183,7 +188,7 @@ export default function MessagesPage() {
 
     const { data } = await supabase
       .from('meello_messages')
-      .select('id, content, sender_id, created_at, read_at')
+      .select('id, content, sender_id, created_at, read_at, attachment_url, attachment_name, attachment_type')
       .eq('conversation_id', conv.id)
       .order('created_at', { ascending: true })
     if (data) setMessages(data)
@@ -261,22 +266,37 @@ export default function MessagesPage() {
     setTimeout(() => inputRef.current?.focus(), 100)
   }
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !userId) return
+    setUploadingAttachment(true)
+    const result = await uploadAttachment(file, userId)
+    if (result) setAttachment(result)
+    setUploadingAttachment(false)
+  }
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (sendingRef.current) return
-    if (!newMessage.trim() || !activeConv || !userId) return
+    if ((!newMessage.trim() && !attachment) || !activeConv || !userId) return
     sendingRef.current = true
     const supabase = createClient()
     const msgContent = newMessage.trim()
+    const msgAttachment = attachment
     setNewMessage('')
+    setAttachment(null)
 
     const { data: insertedMsg } = await supabase.from('meello_messages').insert({
       conversation_id: activeConv.id,
       sender_id: userId,
       content: msgContent,
-    }).select('id, content, sender_id, created_at, read_at').single()
+      attachment_url: msgAttachment?.url || null,
+      attachment_name: msgAttachment?.name || null,
+      attachment_type: msgAttachment?.type || null,
+    }).select('id, content, sender_id, created_at, read_at, attachment_url, attachment_name, attachment_type').single()
     await supabase.from('conversations').update({
-      last_message: msgContent,
+      last_message: msgContent || (msgAttachment ? '📎 Pièce jointe' : ''),
       last_message_at: new Date().toISOString(),
     }).eq('id', activeConv.id)
 
@@ -303,11 +323,12 @@ export default function MessagesPage() {
     setMessages(prev => [...prev, insertedMsg || {
       id: Date.now().toString(), content: msgContent,
       sender_id: userId, created_at: sentAt, read_at: null,
+      attachment_url: msgAttachment?.url || null, attachment_name: msgAttachment?.name || null, attachment_type: msgAttachment?.type || null,
     }])
     // Mise à jour optimiste : l'heure de TON message s'affiche immédiatement
     setConversations(prev => {
       const updated = prev.map(c => c.id === activeConv.id
-        ? { ...c, last_message: `Vous : ${msgContent}`, last_message_at: sentAt }
+        ? { ...c, last_message: `Vous : ${msgContent || (msgAttachment ? '📎 Pièce jointe' : '')}`, last_message_at: sentAt }
         : c)
       return [...updated].sort((a, b) => (b.last_message_at || '').localeCompare(a.last_message_at || ''))
     })
@@ -540,7 +561,10 @@ export default function MessagesPage() {
                             maxWidth: '75%', minWidth: '48px', fontSize: '0.9rem', lineHeight: 1.5,
                             wordBreak: 'break-word', whiteSpace: 'pre-wrap',
                           }}>
-                            {renderContent(msg.content, isMe)}
+                            {msg.content && renderContent(msg.content, isMe)}
+                            {msg.attachment_url && (
+                              <AttachmentView url={msg.attachment_url} name={msg.attachment_name} type={msg.attachment_type} light={isMe} />
+                            )}
                           </div>
                         </div>
                         {isMe && msg.id === showLuId && (
@@ -572,8 +596,37 @@ export default function MessagesPage() {
                 <div ref={bottomRef} />
               </div>
 
+              {/* Aperçu pièce jointe à envoyer */}
+              {(attachment || uploadingAttachment) && (
+                <div style={{ padding: '0 1rem', backgroundColor: 'white', flexShrink: 0 }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#FFF0ED', border: '1px solid #E8E3D9', borderRadius: '10px', padding: '0.4rem 0.6rem', marginBottom: '0.5rem', maxWidth: '100%' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8501A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                    <span style={{ fontSize: '0.82rem', color: '#2D2D2D', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                      {uploadingAttachment ? 'Envoi en cours…' : attachment?.name}
+                    </span>
+                    {attachment && !uploadingAttachment && (
+                      <button type="button" onClick={() => setAttachment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2D2D2D', opacity: 0.5, fontSize: '1.1rem', lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Input */}
               <form onSubmit={sendMessage} style={{ padding: '0.85rem 1rem', paddingBottom: 'calc(0.85rem + env(safe-area-inset-bottom))', borderTop: '1px solid #F5F0E8', display: 'flex', gap: '0.5rem', alignItems: 'flex-end', backgroundColor: 'white', flexShrink: 0 }}>
+                <input ref={fileInputRef} type="file" accept={ATTACHMENT_ACCEPT} hidden onChange={handleFileSelect} />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAttachment}
+                  title="Joindre un fichier"
+                  style={{ background: 'none', border: 'none', cursor: uploadingAttachment ? 'default' : 'pointer', color: '#E8501A', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, height: '42px', width: '32px' }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                  </svg>
+                </button>
                 <textarea
                   ref={inputRef}
                   value={newMessage}
@@ -610,13 +663,13 @@ export default function MessagesPage() {
                 />
                 <button
                   type="submit"
-                  disabled={!newMessage.trim()}
+                  disabled={!newMessage.trim() && !attachment}
                   style={{
-                    backgroundColor: newMessage.trim() ? '#E8501A' : '#E8E3D9',
-                    color: newMessage.trim() ? 'white' : '#999',
+                    backgroundColor: (newMessage.trim() || attachment) ? '#E8501A' : '#E8E3D9',
+                    color: (newMessage.trim() || attachment) ? 'white' : '#999',
                     border: 'none', borderRadius: '10px',
                     padding: '0.6rem 1.1rem', fontWeight: 600,
-                    cursor: newMessage.trim() ? 'pointer' : 'default',
+                    cursor: (newMessage.trim() || attachment) ? 'pointer' : 'default',
                     height: '42px', flexShrink: 0, transition: 'all 0.15s',
                   }}
                 >

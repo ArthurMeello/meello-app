@@ -10,6 +10,8 @@ import { awardXp } from '@/lib/awardXp'
 import AvatarNiveau from '@/components/AvatarNiveau'
 import SortableOptions from '@/components/SortableOptions'
 import { titleCase } from '@/lib/format'
+import { uploadAttachment, ATTACHMENT_ACCEPT } from '@/lib/attachment'
+import AttachmentView from '@/components/AttachmentView'
 
 const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 const PAGE_SIZE = 50
@@ -115,6 +117,9 @@ export default function QGPage() {
   const [messages, setMessages] = useState<QGMessage[]>([])
   const [onlineMembers, setOnlineMembers] = useState<OnlineMember[]>([])
   const [newMessage, setNewMessage] = useState('')
+  const [attachment, setAttachment] = useState<{ url: string; name: string; type: string } | null>(null)
+  const [uploadingAttachment, setUploadingAttachment] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<any>(null)
   const [sending, setSending] = useState(false)
@@ -216,7 +221,7 @@ export default function QGPage() {
   const loadMessages = async (supabase: any, before: string | null) => {
     let query = supabase
       .from('qg_messages')
-      .select('id, content, created_at, user_id, poll_id')
+      .select('id, content, created_at, user_id, poll_id, attachment_url, attachment_name, attachment_type')
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE)
 
@@ -319,12 +324,29 @@ export default function QGPage() {
     }
   }, [hasMore, loadingMore])
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !userId) return
+    setUploadingAttachment(true)
+    const result = await uploadAttachment(file, userId)
+    if (result) setAttachment(result)
+    setUploadingAttachment(false)
+  }
+
   const sendMessage = async () => {
-    if (!newMessage.trim() || !userId || sending) return
+    if ((!newMessage.trim() && !attachment) || !userId || sending) return
     setSending(true)
     const supabase = createClient()
-    await supabase.from('qg_messages').insert({ user_id: userId, content: newMessage.trim() })
+    await supabase.from('qg_messages').insert({
+      user_id: userId,
+      content: newMessage.trim(),
+      attachment_url: attachment?.url || null,
+      attachment_name: attachment?.name || null,
+      attachment_type: attachment?.type || null,
+    })
     setNewMessage('')
+    setAttachment(null)
     setSending(false)
     isAtBottom.current = true
   }
@@ -634,7 +656,10 @@ export default function QGPage() {
                         <PollCard poll={polls[msg.poll_id]} userId={userId} onVote={votePoll} onEdit={openEditPoll} canEdit={!!polls[msg.poll_id] && (polls[msg.poll_id].created_by === userId || userId === ADMIN_ID)} />
                       ) : (
                         <div style={{ fontSize: '0.9rem', color: '#2D2D2D', lineHeight: 1.6, wordBreak: 'break-word' }}>
-                          {renderContent(msg.content)}
+                          {msg.content && renderContent(msg.content)}
+                          {msg.attachment_url && (
+                            <AttachmentView url={msg.attachment_url} name={msg.attachment_name} type={msg.attachment_type} light={false} />
+                          )}
                         </div>
                       )}
                     </div>
@@ -671,7 +696,32 @@ export default function QGPage() {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             Créer un sondage
           </button>
+          {/* Aperçu pièce jointe à envoyer */}
+          {(attachment || uploadingAttachment) && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#FFF0ED', border: '1px solid #E8E3D9', borderRadius: '10px', padding: '0.4rem 0.6rem', marginBottom: '0.5rem', maxWidth: '100%' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8501A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+              <span style={{ fontSize: '0.82rem', color: '#2D2D2D', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                {uploadingAttachment ? 'Envoi en cours…' : attachment?.name}
+              </span>
+              {attachment && !uploadingAttachment && (
+                <button onClick={() => setAttachment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2D2D2D', opacity: 0.5, fontSize: '1.1rem', lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
+              )}
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', backgroundColor: '#F5F0E8', borderRadius: '12px', padding: '0.65rem 1rem' }}>
+            <input ref={fileInputRef} type="file" accept={ATTACHMENT_ACCEPT} hidden onChange={handleFileSelect} />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAttachment}
+              title="Joindre un fichier"
+              style={{ background: 'none', border: 'none', cursor: uploadingAttachment ? 'default' : 'pointer', color: '#E8501A', padding: 0, display: 'flex', alignItems: 'center', flexShrink: 0, height: '34px' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </button>
             <textarea
               value={newMessage}
               onChange={e => { setNewMessage(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px' }}
@@ -682,8 +732,8 @@ export default function QGPage() {
             />
             <button
               onClick={sendMessage}
-              disabled={!newMessage.trim() || sending}
-              style={{ backgroundColor: newMessage.trim() ? '#E8501A' : '#ccc', color: 'white', border: 'none', borderRadius: '8px', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: newMessage.trim() ? 'pointer' : 'default', flexShrink: 0, transition: 'background 0.15s' }}
+              disabled={(!newMessage.trim() && !attachment) || sending}
+              style={{ backgroundColor: (newMessage.trim() || attachment) ? '#E8501A' : '#ccc', color: 'white', border: 'none', borderRadius: '8px', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: (newMessage.trim() || attachment) ? 'pointer' : 'default', flexShrink: 0, transition: 'background 0.15s' }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
