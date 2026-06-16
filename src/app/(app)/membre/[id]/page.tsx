@@ -8,6 +8,7 @@ import { notify } from '@/lib/notify'
 import { GHOST_ID } from '@/lib/ghost'
 import { titleCase, externalUrl } from '@/lib/format'
 import AvatarNiveau from '@/components/AvatarNiveau'
+import FlammeBadge from '@/components/FlammeBadge'
 
 const socialLinkStyle: React.CSSProperties = {
   display: 'inline-flex',
@@ -461,7 +462,13 @@ export default function MembrePublicPage() {
         <div className="profil-col-left" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
           {/* Carte profil principale */}
-          <div className="profil-block-main" style={{ backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <div className="profil-block-main" style={{ position: 'relative', backgroundColor: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            {/* Flamme — série de semaines, en haut à droite */}
+            {(profile.streak_weeks || 0) >= 1 && (
+              <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem' }}>
+                <FlammeBadge weeks={profile.streak_weeks || 0} size="md" />
+              </div>
+            )}
             {/* Avatar + nom + actions */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.25rem' }}>
               <AvatarNiveau avatarUrl={profile.avatar_url} xp={profile.xp ?? 0} initials={initials} size={72} userId={profile.id} />
