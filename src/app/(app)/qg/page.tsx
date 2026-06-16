@@ -696,20 +696,6 @@ export default function QGPage() {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             Créer un sondage
           </button>
-          {/* Aperçu pièce jointe à envoyer */}
-          {(attachment || uploadingAttachment) && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#FFF0ED', border: '1px solid #E8E3D9', borderRadius: '10px', padding: '0.4rem 0.6rem', marginBottom: '0.5rem', maxWidth: '100%' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8501A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-              </svg>
-              <span style={{ fontSize: '0.82rem', color: '#2D2D2D', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
-                {uploadingAttachment ? 'Envoi en cours…' : attachment?.name}
-              </span>
-              {attachment && !uploadingAttachment && (
-                <button onClick={() => setAttachment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2D2D2D', opacity: 0.5, fontSize: '1.1rem', lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
-              )}
-            </div>
-          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: '#F5F0E8', borderRadius: '12px', padding: '0.65rem 1rem' }}>
             <input ref={fileInputRef} type="file" accept={ATTACHMENT_ACCEPT} hidden onChange={handleFileSelect} />
             <button
@@ -740,6 +726,20 @@ export default function QGPage() {
               </svg>
             </button>
           </div>
+          {/* Aperçu pièce jointe à envoyer — sous la barre de saisie */}
+          {(attachment || uploadingAttachment) && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#FFF0ED', border: '1px solid #E8E3D9', borderRadius: '10px', padding: '0.4rem 0.6rem', marginTop: '0.5rem', maxWidth: '100%' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8501A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+              <span style={{ fontSize: '0.82rem', color: '#2D2D2D', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                {uploadingAttachment ? 'Envoi en cours…' : attachment?.name}
+              </span>
+              {attachment && !uploadingAttachment && (
+                <button onClick={() => setAttachment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2D2D2D', opacity: 0.5, fontSize: '1.1rem', lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
+              )}
+            </div>
+          )}
           <div className="qg-input-hint" style={{ fontSize: '0.72rem', color: '#2D2D2D', opacity: 0.35, marginTop: '0.4rem', textAlign: 'right' }}>Entrée pour envoyer · Maj+Entrée pour sauter une ligne</div>
         </div>
       </div>
