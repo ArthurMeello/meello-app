@@ -1334,10 +1334,12 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
               <div style={{ padding: '0.5rem 0', borderBottom: '1px solid #F5F0E8', fontSize: '0.9rem', color: '#2D2D2D' }}>
                 {editingCommentId === c.id ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    <input
+                    <textarea
                       value={editCommentContent}
-                      onChange={e => setEditCommentContent(e.target.value)}
-                      style={{ border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 0.75rem', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit' }}
+                      onChange={e => { setEditCommentContent(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+                      ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
+                      rows={1}
+                      style={{ border: '1px solid #E8E3D9', borderRadius: '8px', padding: '0.4rem 0.75rem', fontSize: '0.9rem', outline: 'none', fontFamily: 'inherit', resize: 'none', overflow: 'hidden', lineHeight: 1.5, width: '100%', boxSizing: 'border-box' }}
                     />
                     <div style={{ display: 'flex', gap: '0.4rem' }}>
                       <button onClick={() => handleEditComment(c.id)} style={{ backgroundColor: '#E8501A', color: 'white', border: 'none', borderRadius: '6px', padding: '0.3rem 0.75rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>Enregistrer</button>
