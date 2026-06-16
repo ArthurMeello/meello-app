@@ -710,13 +710,13 @@ export default function QGPage() {
               )}
             </div>
           )}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', backgroundColor: '#F5F0E8', borderRadius: '12px', padding: '0.65rem 1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: '#F5F0E8', borderRadius: '12px', padding: '0.65rem 1rem' }}>
             <input ref={fileInputRef} type="file" accept={ATTACHMENT_ACCEPT} hidden onChange={handleFileSelect} />
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingAttachment}
               title="Joindre un fichier"
-              style={{ background: 'none', border: 'none', cursor: uploadingAttachment ? 'default' : 'pointer', color: '#E8501A', padding: 0, display: 'flex', alignItems: 'center', flexShrink: 0, height: '34px' }}
+              style={{ background: 'none', border: 'none', cursor: uploadingAttachment ? 'default' : 'pointer', color: '#E8501A', padding: 0, display: 'flex', alignItems: 'center', flexShrink: 0 }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
