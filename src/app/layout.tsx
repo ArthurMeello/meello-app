@@ -17,9 +17,16 @@ export const metadata: Metadata = {
     icon: "/favicon-meello.png",
     apple: "/favicon-meello.png",
   },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Meello",
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport: Viewport = {
+  themeColor: "#F5F0E8",
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

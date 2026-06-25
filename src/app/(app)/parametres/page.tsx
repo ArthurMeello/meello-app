@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import NotificationsActivation from '@/components/NotificationsActivation'
 
 // Types de notifications. Par défaut chaque ligne a un toggle App et E-mail.
 // appable: false  => pas de notif in-app (e-mail uniquement, ex: newsletter)
@@ -278,6 +279,15 @@ export default function ParametresPage() {
             {pwSaving ? 'Mise à jour…' : 'Changer mon mot de passe'}
           </button>
         </div>
+      </div>
+
+      {/* Notifications push (PWA) — activation sur l'appareil courant */}
+      <div style={sectionStyle}>
+        <h2 style={titleStyle}>Notifications sur cet appareil</h2>
+        <p style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.55, margin: '0 0 1rem', lineHeight: 1.6 }}>
+          Activez les notifications push pour être alerté même quand Meello est fermé.
+        </p>
+        <NotificationsActivation />
       </div>
 
       {/* Notifications */}
