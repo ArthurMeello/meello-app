@@ -16,6 +16,30 @@ const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null)
 
+  // Mise à jour automatique de la PWA : à chaque ouverture, on vérifie s'il
+  // existe une nouvelle version du service worker, et quand elle prend le
+  // contrôle on recharge la page une fois (évite de devoir réinstaller l'app).
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+    let refreshing = false
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return
+      refreshing = true
+      window.location.reload()
+    })
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      reg?.update().catch(() => {})
+    })
+    // Revérifie quand l'app repasse au premier plan (cas PWA mobile)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        navigator.serviceWorker.getRegistration().then((reg) => reg?.update().catch(() => {}))
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
+
   useEffect(() => {
     const checkFirstLogin = async () => {
       const supabase = createClient()

@@ -50,7 +50,10 @@ export default function NotificationsActivation() {
     setSupported(ok)
     if (!ok) return () => window.removeEventListener('resize', onResize)
     setPermission(Notification.permission)
-    navigator.serviceWorker.register('/sw.js').catch((e) => console.error('[sw]', e))
+    navigator.serviceWorker.register('/sw.js').then((reg) => {
+      // Vérifie tde suite s'il existe une nouvelle version du service worker
+      reg.update().catch(() => {})
+    }).catch((e) => console.error('[sw]', e))
     // Vérifie l'état réel de l'abonnement sur cet appareil
     navigator.serviceWorker.ready
       .then((reg) => reg.pushManager.getSubscription())

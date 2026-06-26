@@ -2,7 +2,7 @@
 // Volontairement minimal : pas de cache offline agressif (l'app dépend de
 // Supabase en temps réel), juste ce qu'il faut pour l'installation et le push.
 
-const VERSION = 'meello-sw-v1'
+const VERSION = 'meello-sw-2026-06-26T06-22-13-866Z'
 
 self.addEventListener('install', (event) => {
   // Active immédiatement le nouveau SW sans attendre la fermeture des onglets.
