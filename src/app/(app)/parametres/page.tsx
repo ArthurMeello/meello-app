@@ -288,6 +288,25 @@ export default function ParametresPage() {
       {/* Notifications push (PWA) — visible uniquement sur mobile, géré dans le composant */}
       <NotificationsActivation />
 
+      {/* Lien tutoriel installation iOS */}
+      <button
+        onClick={() => router.push('/aide/installer-ios')}
+        style={{
+          width: '100%', textAlign: 'left', background: '#FFFFFF',
+          border: '1px solid #E7E0D4', borderRadius: 14, padding: 16,
+          marginBottom: '2rem', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        }}
+      >
+        <div>
+          <span style={{ fontWeight: 600, color: '#2D2D2D' }}>📲 Installer l'app sur iPhone</span>
+          <p style={{ margin: '4px 0 0', fontSize: 14, color: '#2D2D2D', opacity: 0.7 }}>
+            Tutoriel pas à pas pour ajouter Meello à votre écran d'accueil.
+          </p>
+        </div>
+        <span style={{ color: '#E8501A', fontWeight: 700, flexShrink: 0 }}>→</span>
+      </button>
+
       {/* Notifications */}
       <div style={sectionStyle}>
         <h2 style={titleStyle}>Notifications</h2>
