@@ -39,6 +39,8 @@ export default function NotificationsActivation() {
   const [subscribed, setSubscribed] = useState(false)
   // isMobile = on n'affiche ce bloc que sur mobile / app
   const [isMobile, setIsMobile] = useState(false)
+  // userId récupéré une seule fois au montage (évite tout appel auth au clic)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
     setIsMobile(window.innerWidth <= 768)
@@ -54,25 +56,30 @@ export default function NotificationsActivation() {
       .then((reg) => reg.pushManager.getSubscription())
       .then((sub) => setSubscribed(!!sub))
       .catch(() => {})
+    // Récupère l'utilisateur une fois, sans bloquer (pas d'appel auth au clic)
+    createClient().auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null)).catch(() => {})
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
   async function desactiver() {
+    setSubscribed(false) // retour visuel immédiat
     setBusy(true)
     try {
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.getSubscription()
       if (sub) {
-        await fetch('/api/push/unsubscribe', {
+        await sub.unsubscribe()
+        // best-effort : on prévient le serveur, sans bloquer l'UI
+        fetch('/api/push/unsubscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ endpoint: sub.endpoint }),
-        })
-        await sub.unsubscribe()
+          keepalive: true,
+        }).catch(() => {})
       }
-      setSubscribed(false)
     } catch (e) {
       console.error('[notifications:off]', e)
+      setSubscribed(true) // échec : on rétablit l'état
     } finally {
       setBusy(false)
     }
@@ -90,9 +97,7 @@ export default function NotificationsActivation() {
       setPermission(perm)
       if (perm !== 'granted') return
 
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!userId) return
 
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.subscribe({
@@ -106,7 +111,7 @@ export default function NotificationsActivation() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
+          userId,
           subscription: sub.toJSON(),
           userAgent: navigator.userAgent,
         }),
@@ -140,7 +145,14 @@ export default function NotificationsActivation() {
 
         {/* Toggle activer / désactiver */}
         <button
-          onClick={subscribed ? desactiver : activer}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (busy) return
+            if (subscribed) desactiver()
+            else activer()
+          }}
           disabled={busy}
           aria-pressed={subscribed}
           aria-label={subscribed ? 'Désactiver les notifications' : 'Activer les notifications'}
