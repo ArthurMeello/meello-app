@@ -203,6 +203,21 @@ export default function AppNav() {
     }
   }, [userId])
 
+  // Filet de sécurité : le Realtime peut rater des événements sur mobile (socket
+  // suspendu, réseau instable). On recalcule les pastilles toutes les 15s tant
+  // que l'app est visible — garantit que le badge finit toujours par être juste.
+  useEffect(() => {
+    if (!userId) return
+    const tick = () => {
+      if (document.visibilityState === 'visible') {
+        refreshMessageBadge(userId)
+        refreshNotifBadge(userId)
+      }
+    }
+    const id = setInterval(tick, 15000)
+    return () => clearInterval(id)
+  }, [userId])
+
   // Recharge le compteur de messages non lus depuis la base (source de vérité).
   const refreshMessageBadge = async (uid: string) => {
     const supabase = createClient()
