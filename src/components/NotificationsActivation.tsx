@@ -68,14 +68,16 @@ export default function NotificationsActivation() {
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.getSubscription()
       if (sub) {
-        await sub.unsubscribe()
-        // best-effort : on prévient le serveur, sans bloquer l'UI
-        fetch('/api/push/unsubscribe', {
+        const endpoint = sub.endpoint
+        // 1) Supprimer en base AVANT de désabonner le navigateur, et on attend
+        //    la réponse → évite toute course avec une réactivation immédiate.
+        await fetch('/api/push/unsubscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ endpoint: sub.endpoint }),
-          keepalive: true,
+          body: JSON.stringify({ endpoint }),
         }).catch(() => {})
+        // 2) Désabonner côté navigateur
+        await sub.unsubscribe()
       }
     } catch (e) {
       console.error('[notifications:off]', e)
@@ -100,6 +102,12 @@ export default function NotificationsActivation() {
       if (!userId) return
 
       const reg = await navigator.serviceWorker.ready
+      // Repartir propre : si un abonnement résiduel existe, on le retire
+      // d'abord pour obtenir des clés de chiffrement fraîches (sinon, après
+      // un désactiver/réactiver, les push peuvent partir avec d'anciennes clés).
+      const existing = await reg.pushManager.getSubscription()
+      if (existing) await existing.unsubscribe().catch(() => {})
+
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
