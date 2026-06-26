@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import NotificationsActivation from '@/components/NotificationsActivation'
+import InstallAppButton from '@/components/InstallAppButton'
 
 // Types de notifications. Par défaut chaque ligne a un toggle App et E-mail.
 // appable: false  => pas de notif in-app (e-mail uniquement, ex: newsletter)
@@ -280,6 +281,9 @@ export default function ParametresPage() {
           </button>
         </div>
       </div>
+
+      {/* Installer l'app (Android uniquement, géré dans le composant) */}
+      <InstallAppButton />
 
       {/* Notifications push (PWA) — visible uniquement sur mobile, géré dans le composant */}
       <NotificationsActivation />
