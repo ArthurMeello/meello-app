@@ -34,6 +34,15 @@ const ADMIN_ID = '13cdb485-42e0-48df-b2f8-14dc77dd895a'
 export default function ChatSystem({ userId }: { userId: string | null }) {
   const pathname = usePathname()
   const isOnMessagesPage = pathname === '/messages'
+  // Sur mobile / app, la conversation ne s'ouvre jamais en modale flottante :
+  // tout se passe dans l'onglet Messages.
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
   const [showDropdown, setShowDropdown] = useState(false)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConv, setActiveConv] = useState<Conversation | null>(null)
@@ -119,8 +128,13 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
           if (currentConv?.id === conv.id) {
             // Conversation déjà ouverte — ajouter le message en live
             setMessages(msgs => [...msgs, newMsg])
+          } else if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+            // Sur mobile/app : ne pas ouvrir la modale. Tout se passe dans
+            // l'onglet Messages. La liste a déjà été rafraîchie plus haut
+            // (badge non lu) ; l'utilisateur ouvre la conversation lui-même.
+            return
           } else {
-            // Ouvrir automatiquement la conversation avec tout l'historique
+            // Desktop : ouvrir automatiquement la conversation avec tout l'historique
             const convObj = {
               id: conv.id,
               other_user: senderProfile ? { ...senderProfile, first_name: titleCase(senderProfile.first_name), last_name: titleCase(senderProfile.last_name) } : senderProfile,
@@ -257,8 +271,13 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   }
 
   const openConversation = async (conv: Conversation) => {
-    setActiveConv(conv)
     setShowDropdown(false)
+    // Sur mobile : pas de modale, on envoie vers l'onglet Messages.
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      if (pathname !== '/messages') window.location.href = '/messages'
+      return
+    }
+    setActiveConv(conv)
     // Vérifier si l'autre membre est en ligne (présence < 2 min)
     if (conv.other_user?.id) {
       const supabasePresence = createClient()
@@ -578,8 +597,8 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
         </div>
       )}
 
-      {/* Fenêtre de chat flottante */}
-      {activeConv && (
+      {/* Fenêtre de chat flottante — jamais sur mobile (tout passe par /messages) */}
+      {activeConv && !isMobile && (
         <div style={{
           position: 'fixed',
           bottom: 0,
