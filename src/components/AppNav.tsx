@@ -140,6 +140,30 @@ export default function AppNav() {
     loadProfile()
   }, [pathname])
 
+  // Abonnement temps réel : met à jour la pastille messages + notifs en direct,
+  // sur toutes les pages (sinon le badge ne bougeait qu'au changement de page).
+  useEffect(() => {
+    if (!userId) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`appnav-notifs:${userId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+      }, (payload: any) => {
+        if (payload.new?.type === 'message') {
+          if (!payload.new?.read) setUnreadMessages(prev => prev + 1)
+        } else if (!payload.new?.read) {
+          setNotifications(prev => prev + 1)
+          loadNotifs(userId)
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [userId])
+
   // Fermer le menu quand on change de page
   useEffect(() => { setMenuOpen(false); setNotifsOpen(false) }, [pathname])
 
