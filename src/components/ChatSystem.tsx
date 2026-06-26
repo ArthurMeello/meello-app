@@ -65,6 +65,27 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
   const activeConvRef = useRef<Conversation | null>(null)
   const readPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const sendingRef = useRef(false)
+  // Incrémenté au réveil de l'app pour reconnecter le Realtime (suspendu par iOS).
+  const [rtKey, setRtKey] = useState(0)
+
+  // Reconnexion au retour premier plan / réseau : recharge les conversations
+  // et recrée le channel (le WebSocket est souvent coupé après une veille).
+  useEffect(() => {
+    if (!userId) return
+    const resync = () => {
+      fetchConversations(userId)
+      setRtKey(k => k + 1)
+    }
+    const onVisible = () => { if (document.visibilityState === 'visible') resync() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', resync)
+    window.addEventListener('online', resync)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', resync)
+      window.removeEventListener('online', resync)
+    }
+  }, [userId])
 
   useEffect(() => {
     if (!userId) return
@@ -73,7 +94,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
     // Écouter les nouveaux messages en temps réel
     const supabase = createClient()
     const msgChannel = supabase
-      .channel(`new-messages:${userId}`)
+      .channel(`new-messages:${userId}:${rtKey}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'meello_messages' },
@@ -156,7 +177,7 @@ export default function ChatSystem({ userId }: { userId: string | null }) {
     return () => {
       msgChannel.unsubscribe()
     }
-  }, [userId])
+  }, [userId, rtKey])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })

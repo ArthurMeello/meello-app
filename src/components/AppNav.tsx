@@ -33,6 +33,8 @@ export default function AppNav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifsOpen, setNotifsOpen] = useState(false)
   const [notifsList, setNotifsList] = useState<any[]>([])
+  // Incrémenté pour forcer la recréation du channel Realtime (reconnexion).
+  const [reconnectKey, setReconnectKey] = useState(0)
 
   // Écouter les mises à jour du badge messages
   useEffect(() => {
@@ -147,7 +149,7 @@ export default function AppNav() {
     if (!userId) return
     const supabase = createClient()
     const channel = supabase
-      .channel(`appnav-live:${userId}`)
+      .channel(`appnav-live:${userId}:${reconnectKey}`)
       // Pastille messages : nouveau message reçu (pas de soi-même)
       .on('postgres_changes', {
         event: 'INSERT',
@@ -155,8 +157,7 @@ export default function AppNav() {
         table: 'meello_messages',
       }, (payload: any) => {
         if (payload.new?.sender_id && payload.new.sender_id !== userId) {
-          // On ne sait pas ici si le message m'est destiné : on recharge le
-          // compteur réel depuis la base (fiable, une seule requête légère).
+          // Recharge le compteur réel depuis la base (fiable, jamais de +1 aveugle).
           refreshMessageBadge(userId)
         }
       })
@@ -167,13 +168,36 @@ export default function AppNav() {
         table: 'notifications',
         filter: `user_id=eq.${userId}`,
       }, (payload: any) => {
-        if (payload.new?.type !== 'message' && !payload.new?.read) {
-          setNotifications(prev => prev + 1)
+        if (payload.new?.type !== 'message') {
+          // Recharge le compteur réel + la liste (source de vérité).
+          refreshNotifBadge(userId)
           loadNotifs(userId)
         }
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
+  }, [userId, reconnectKey])
+
+  // Au retour de l'app au premier plan ou de la connexion réseau, le WebSocket
+  // Realtime a souvent été suspendu par iOS : on recharge les compteurs depuis
+  // la base ET on force une reconnexion du channel.
+  useEffect(() => {
+    if (!userId) return
+    const resync = () => {
+      refreshMessageBadge(userId)
+      refreshNotifBadge(userId)
+      loadNotifs(userId)
+      setReconnectKey(k => k + 1) // recrée le channel
+    }
+    const onVisible = () => { if (document.visibilityState === 'visible') resync() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', resync)
+    window.addEventListener('online', resync)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', resync)
+      window.removeEventListener('online', resync)
+    }
   }, [userId])
 
   // Recharge le compteur de messages non lus depuis la base (source de vérité).
@@ -184,6 +208,16 @@ export default function AppNav() {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', uid).eq('type', 'message').eq('read', false)
     setUnreadMessages(count || 0)
+  }
+
+  // Recharge le compteur de la cloche (notifs hors messages) depuis la base.
+  const refreshNotifBadge = async (uid: string) => {
+    const supabase = createClient()
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', uid).eq('read', false).neq('type', 'message')
+    setNotifications(count || 0)
   }
 
   // Fermer le menu quand on change de page

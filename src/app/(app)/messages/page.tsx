@@ -69,6 +69,24 @@ export default function MessagesPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, otherIsTyping])
 
+  // Reconnexion Realtime au réveil de l'app (WebSocket suspendu par iOS).
+  const [rtKey, setRtKey] = useState(0)
+  useEffect(() => {
+    const resync = () => {
+      if (userIdRef.current) fetchConversations(userIdRef.current)
+      setRtKey(k => k + 1)
+    }
+    const onVisible = () => { if (document.visibilityState === 'visible') resync() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', resync)
+    window.addEventListener('online', resync)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', resync)
+      window.removeEventListener('online', resync)
+    }
+  }, [])
+
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
@@ -79,7 +97,7 @@ export default function MessagesPage() {
 
       // Écouter les nouveaux messages en temps réel
       const msgChannel = supabase
-        .channel(`messages-page:${uid}`)
+        .channel(`messages-page:${uid}:${rtKey}`)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'meello_messages' }, (payload: any) => {
           const updated = payload.new
           if (updated.read_at && updated.sender_id === uid) {
@@ -105,7 +123,7 @@ export default function MessagesPage() {
 
       return () => { msgChannel.unsubscribe() }
     })
-  }, [])
+  }, [rtKey])
 
   const fetchConversations = async (uid: string) => {
     const supabase = createClient()
