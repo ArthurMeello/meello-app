@@ -35,16 +35,48 @@ export default function NotificationsActivation() {
   const [permission, setPermission] = useState<NotificationPermission>('default')
   const [busy, setBusy] = useState(false)
   const [showIosGuide, setShowIosGuide] = useState(false)
-  const [done, setDone] = useState(false)
+  // subscribed = cet appareil a un abonnement push actif
+  const [subscribed, setSubscribed] = useState(false)
+  // isMobile = on n'affiche ce bloc que sur mobile / app
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
+    setIsMobile(window.innerWidth <= 768)
+    const onResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', onResize)
     const ok = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
     setSupported(ok)
-    if (ok) {
-      setPermission(Notification.permission)
-      navigator.serviceWorker.register('/sw.js').catch((e) => console.error('[sw]', e))
-    }
+    if (!ok) return () => window.removeEventListener('resize', onResize)
+    setPermission(Notification.permission)
+    navigator.serviceWorker.register('/sw.js').catch((e) => console.error('[sw]', e))
+    // Vérifie l'état réel de l'abonnement sur cet appareil
+    navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => setSubscribed(!!sub))
+      .catch(() => {})
+    return () => window.removeEventListener('resize', onResize)
   }, [])
+
+  async function desactiver() {
+    setBusy(true)
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) {
+        await fetch('/api/push/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        })
+        await sub.unsubscribe()
+      }
+      setSubscribed(false)
+    } catch (e) {
+      console.error('[notifications:off]', e)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function activer() {
     // iPhone pas encore installé : on ne peut pas demander la permission → guide.
@@ -79,7 +111,7 @@ export default function NotificationsActivation() {
           userAgent: navigator.userAgent,
         }),
       })
-      setDone(true)
+      setSubscribed(true)
     } catch (e) {
       console.error('[notifications]', e)
     } finally {
@@ -87,29 +119,62 @@ export default function NotificationsActivation() {
     }
   }
 
-  if (!supported) return null
-
-  // État final : déjà activé.
-  if (done || permission === 'granted') {
-    return (
-      <div style={boxStyle}>
-        <span style={{ fontWeight: 600 }}>🔔 Notifications activées</span>
-        <p style={{ margin: '4px 0 0', fontSize: 14, opacity: 0.75 }}>
-          Vous recevrez les alertes Meello sur cet appareil.
-        </p>
-      </div>
-    )
-  }
+  // N'afficher que sur mobile / app (et si le navigateur supporte le push)
+  if (!supported || !isMobile) return null
 
   return (
+    <div style={{ marginBottom: '2rem' }}>
+    <h2 style={{ fontSize: '1.05rem', fontWeight: 600, color: '#2D2D2D', margin: '0 0 0.75rem' }}>
+      Notifications sur cet appareil
+    </h2>
     <div style={boxStyle}>
-      <span style={{ fontWeight: 600 }}>Recevoir les notifications</span>
-      <p style={{ margin: '4px 0 12px', fontSize: 14, opacity: 0.75 }}>
-        Soyez alerté des nouveaux messages, événements et réponses.
-      </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <span style={{ fontWeight: 600 }}>Notifications sur cet appareil</span>
+          <p style={{ margin: '4px 0 0', fontSize: 14, opacity: 0.75 }}>
+            {subscribed
+              ? 'Activées. Vous recevez les alertes Meello sur cet appareil.'
+              : 'Soyez alerté des nouveaux messages, événements et réponses.'}
+          </p>
+        </div>
 
-      {showIosGuide ? (
-        <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+        {/* Toggle activer / désactiver */}
+        <button
+          onClick={subscribed ? desactiver : activer}
+          disabled={busy}
+          aria-pressed={subscribed}
+          aria-label={subscribed ? 'Désactiver les notifications' : 'Activer les notifications'}
+          style={{
+            position: 'relative',
+            width: 52,
+            height: 30,
+            borderRadius: 999,
+            border: 'none',
+            cursor: busy ? 'default' : 'pointer',
+            background: subscribed ? '#E8501A' : '#CBC4B8',
+            transition: 'background 0.2s',
+            flexShrink: 0,
+            opacity: busy ? 0.6 : 1,
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute',
+              top: 3,
+              left: subscribed ? 25 : 3,
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              background: '#fff',
+              transition: 'left 0.2s',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+            }}
+          />
+        </button>
+      </div>
+
+      {showIosGuide && !subscribed && (
+        <div style={{ fontSize: 14, lineHeight: 1.5, marginTop: 12 }}>
           <strong>Sur iPhone, ajoutez d'abord Meello à votre écran d'accueil :</strong>
           <ol style={{ margin: '8px 0 0', paddingLeft: 18 }}>
             <li>Touchez le bouton <strong>Partager</strong> ⬆️ dans Safari.</li>
@@ -117,17 +182,14 @@ export default function NotificationsActivation() {
             <li>Ouvrez Meello depuis la nouvelle icône, puis réactivez les notifications.</li>
           </ol>
         </div>
-      ) : (
-        <button onClick={activer} disabled={busy} style={btnStyle}>
-          {busy ? 'Activation…' : 'Activer les notifications'}
-        </button>
       )}
 
-      {permission === 'denied' && (
+      {permission === 'denied' && !subscribed && (
         <p style={{ margin: '10px 0 0', fontSize: 13, color: '#b45309' }}>
           Notifications bloquées. Réautorisez-les dans les réglages de votre navigateur.
         </p>
       )}
+    </div>
     </div>
   )
 }

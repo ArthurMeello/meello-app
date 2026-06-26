@@ -281,14 +281,8 @@ export default function ParametresPage() {
         </div>
       </div>
 
-      {/* Notifications push (PWA) — activation sur l'appareil courant */}
-      <div style={sectionStyle}>
-        <h2 style={titleStyle}>Notifications sur cet appareil</h2>
-        <p style={{ fontSize: '0.82rem', color: '#2D2D2D', opacity: 0.55, margin: '0 0 1rem', lineHeight: 1.6 }}>
-          Activez les notifications push pour être alerté même quand Meello est fermé.
-        </p>
-        <NotificationsActivation />
-      </div>
+      {/* Notifications push (PWA) — visible uniquement sur mobile, géré dans le composant */}
+      <NotificationsActivation />
 
       {/* Notifications */}
       <div style={sectionStyle}>
