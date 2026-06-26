@@ -140,22 +140,34 @@ export default function AppNav() {
     loadProfile()
   }, [pathname])
 
-  // Abonnement temps réel : met à jour la pastille messages + notifs en direct,
-  // sur toutes les pages (sinon le badge ne bougeait qu'au changement de page).
+  // Abonnement temps réel : met à jour les pastilles en direct, sur toutes les
+  // pages. On écoute meello_messages (Realtime déjà fonctionnel pour le chat)
+  // pour la pastille messages, et notifications pour la cloche.
   useEffect(() => {
     if (!userId) return
     const supabase = createClient()
     const channel = supabase
-      .channel(`appnav-notifs:${userId}`)
+      .channel(`appnav-live:${userId}`)
+      // Pastille messages : nouveau message reçu (pas de soi-même)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'meello_messages',
+      }, (payload: any) => {
+        if (payload.new?.sender_id && payload.new.sender_id !== userId) {
+          // On ne sait pas ici si le message m'est destiné : on recharge le
+          // compteur réel depuis la base (fiable, une seule requête légère).
+          refreshMessageBadge(userId)
+        }
+      })
+      // Cloche : nouvelle notification (réactions, événements…)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'notifications',
         filter: `user_id=eq.${userId}`,
       }, (payload: any) => {
-        if (payload.new?.type === 'message') {
-          if (!payload.new?.read) setUnreadMessages(prev => prev + 1)
-        } else if (!payload.new?.read) {
+        if (payload.new?.type !== 'message' && !payload.new?.read) {
           setNotifications(prev => prev + 1)
           loadNotifs(userId)
         }
@@ -163,6 +175,16 @@ export default function AppNav() {
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [userId])
+
+  // Recharge le compteur de messages non lus depuis la base (source de vérité).
+  const refreshMessageBadge = async (uid: string) => {
+    const supabase = createClient()
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', uid).eq('type', 'message').eq('read', false)
+    setUnreadMessages(count || 0)
+  }
 
   // Fermer le menu quand on change de page
   useEffect(() => { setMenuOpen(false); setNotifsOpen(false) }, [pathname])
