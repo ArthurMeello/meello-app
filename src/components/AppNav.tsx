@@ -150,26 +150,29 @@ export default function AppNav() {
     const supabase = createClient()
     const channel = supabase
       .channel(`appnav-live:${userId}:${reconnectKey}`)
-      // Pastille messages : nouveau message reçu (pas de soi-même)
+      // Pastille messages : déclenchée sur l'INSERT du message ET, surtout, sur
+      // l'INSERT/UPDATE de la notification (qui arrive juste après) — sinon le
+      // compteur se recalculait avant que la notif soit écrite (retard d'un cran).
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'meello_messages',
       }, (payload: any) => {
         if (payload.new?.sender_id && payload.new.sender_id !== userId) {
-          // Recharge le compteur réel depuis la base (fiable, jamais de +1 aveugle).
-          refreshMessageBadge(userId)
+          // léger délai : laisse le temps à /api/notify d'écrire la notif
+          setTimeout(() => refreshMessageBadge(userId), 400)
         }
       })
-      // Cloche : nouvelle notification (réactions, événements…)
+      // Toute écriture sur notifications (INSERT/UPDATE) → recalcule les pastilles.
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'notifications',
         filter: `user_id=eq.${userId}`,
       }, (payload: any) => {
-        if (payload.new?.type !== 'message') {
-          // Recharge le compteur réel + la liste (source de vérité).
+        if (payload.new?.type === 'message') {
+          refreshMessageBadge(userId)
+        } else {
           refreshNotifBadge(userId)
           loadNotifs(userId)
         }
