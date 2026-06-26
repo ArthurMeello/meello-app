@@ -2,6 +2,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { emailTemplate } from '@/lib/emailTemplate'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendPushToUser } from '@/lib/push'
+
+// Construit le titre de la notif push selon le type d'activité.
+function pushTitleFor(type: string): string {
+  switch (type) {
+    case 'message': return 'Nouveau message'
+    case 'connection': return 'Nouvelle demande de connexion'
+    case 'recommendation': return 'Nouvelle recommandation'
+    case 'qg': return 'Activité dans le QG'
+    case 'community': return 'Activité sur Meello'
+    default: return 'Meello'
+  }
+}
 
 // Map du type fonctionnel -> préfixe de colonne dans notification_preferences
 // + sujet d'e-mail. Les types absents d'ici ne sont pas filtrables.
@@ -24,6 +37,20 @@ export async function POST(req: NextRequest) {
     const config = TYPE_CONFIG[type]
     const supabase = createAdminClient()
 
+    // Construit le corps de la notif push (nom de l'expéditeur + contenu).
+    async function buildPushBody(): Promise<string> {
+      let fromName = ''
+      if (fromUserId) {
+        const { data: fp } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', fromUserId)
+          .single()
+        if (fp) fromName = `${fp.first_name} ${fp.last_name}`.trim()
+      }
+      return fromName ? `${fromName} ${content}` : (content || '')
+    }
+
     // Types non réglables (events, mentions admin…) : on insère sans filtrer
     if (!config) {
       await supabase.from('notifications').insert({
@@ -33,6 +60,15 @@ export async function POST(req: NextRequest) {
         link,
         from_user_id: fromUserId,
       })
+      // Push (best-effort, n'échoue jamais la requête)
+      try {
+        await sendPushToUser(userId, {
+          title: pushTitleFor(type),
+          body: await buildPushBody(),
+          url: link || '/',
+          tag: dbType || type,
+        })
+      } catch (e) { console.error('[notify/push]', e) }
       return NextResponse.json({ ok: true, filtered: false })
     }
 
@@ -55,6 +91,15 @@ export async function POST(req: NextRequest) {
         link,
         from_user_id: fromUserId,
       })
+      // Push : même condition que l'in-app (respecte la préférence _app)
+      try {
+        await sendPushToUser(userId, {
+          title: pushTitleFor(type),
+          body: await buildPushBody(),
+          url: link || '/',
+          tag: dbType || type,
+        })
+      } catch (e) { console.error('[notify/push]', e) }
     }
 
     // 2) E-mail (seulement pour les types emailable + préférence active)
