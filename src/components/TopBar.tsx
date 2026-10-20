@@ -164,13 +164,11 @@ export default function TopBar() {
       position: 'fixed', top: '1rem', right: '1.5rem', zIndex: 200,
       display: 'flex', alignItems: 'center',
     }} ref={ref}>
-      {/* Pill */}
-      <div style={{
+      {/* Pill — verre (glassmorphism refonte) */}
+      <div className="glass-pill" style={{
         display: 'flex', alignItems: 'center', gap: '0.15rem',
-        backgroundColor: 'white',
-        borderRadius: '50px',
         padding: '0.4rem 0.5rem',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
+        boxShadow: '0 8px 24px rgba(26,26,46,0.12)',
       }}>
         {/* Notifications */}
         <button
