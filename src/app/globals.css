@@ -17,11 +17,56 @@
 }
 
 :root {
+  /* — Couleurs de marque (existant, conservé) — */
   --color-orange: #E8501A;
   --color-creme: #F5F0E8;
   --color-sauge: #7A9E7E;
   --color-midnight: #1A1A2E;
   --color-anthracite: #2D2D2D;
+
+  /* — Design system refonte (handoff) — */
+  /* Orange + variantes de chip */
+  --meello-orange: #E8501A;
+  --meello-orange-chip: #FFF0ED;
+  --meello-orange-chip-08: rgba(232, 80, 26, 0.08);
+  --meello-orange-chip-12: rgba(232, 80, 26, 0.12);
+  --meello-orange-chip-14: rgba(232, 80, 26, 0.14);
+  /* Bleu nuit (sidebar, nav mobile, menu site) */
+  --meello-midnight: #1A1A2E;
+  /* Texte */
+  --meello-text: #2D2D2D;
+  /* Crèmes (fonds) */
+  --meello-creme: #F5F0E8;
+  --meello-creme-2: #FBF6EF;
+  --meello-creme-3: #FBF8F3;
+  /* Bordures claires */
+  --meello-border: #E8E3D9;
+  --meello-border-soft: rgba(45, 45, 45, 0.08);
+  /* Ambre (badges, top classement) */
+  --meello-amber: #F5A623;
+  /* Vert en ligne / validé */
+  --meello-green: #22C55E;
+  --meello-green-deep: #0F6E56;
+  /* Rouge signalement */
+  --meello-red: #C62828;
+
+  /* Couleurs des 5 niveaux de gamification */
+  --level-nouveau: #D85A30;
+  --level-actif: #0F6E56;
+  --level-contributeur: #185FA5;
+  --level-expert: #3C3489;
+  --level-pilier: #BA7517;
+
+  /* Rayons */
+  --radius-nav: 12px;
+  --radius-field: 16px;
+  --radius-card: 22px;
+  --radius-modal: 28px;
+  --radius-pill: 50px;
+
+  /* Ombres */
+  --shadow-glass: 0 12px 32px rgba(26, 26, 46, 0.08), 0 2px 8px rgba(26, 26, 46, 0.05), inset 0 1px 0 #fff;
+  --shadow-modal: 0 30px 80px rgba(26, 26, 46, 0.35);
 }
 
 * {
@@ -59,6 +104,44 @@ body {
   .msg-conv {
     height: 100dvh !important;
   }
+}
+
+/* ———————————————————————————————————————————————
+   Design system refonte — fond de l'app & effet verre
+   ——————————————————————————————————————————————— */
+
+/* Fond du cadre principal de l'app (dégradés + base crème) */
+.app-bg {
+  background:
+    radial-gradient(60% 50% at 85% 0%, rgba(232, 80, 26, 0.16) 0%, rgba(232, 80, 26, 0) 70%),
+    radial-gradient(55% 45% at 10% 100%, rgba(60, 52, 137, 0.10) 0%, rgba(60, 52, 137, 0) 70%),
+    radial-gradient(40% 35% at 40% 55%, rgba(245, 166, 35, 0.08) 0%, rgba(245, 166, 35, 0) 70%),
+    linear-gradient(160deg, #FBF6EF 0%, #F5EEE4 55%, #F1EAE6 100%);
+}
+
+/* Carte / barre en verre (glassmorphism) */
+.glass {
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.72) 100%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow-glass);
+  border-radius: var(--radius-card);
+}
+
+/* Pastille en verre (notifications / messages, top-right desktop) */
+.glass-pill {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.22));
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-pill);
+}
+
+/* Repli si le navigateur ne gère pas backdrop-filter */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background: rgba(255, 255, 255, 0.96); }
+  .glass-pill { background: rgba(255, 255, 255, 0.85); }
 }
 
 /* Reset dark mode — Meello est light only */

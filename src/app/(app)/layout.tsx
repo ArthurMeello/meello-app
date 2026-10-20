@@ -77,7 +77,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <div style={{ display: 'flex', minHeight: '100dvh', backgroundColor: '#F5F0E8' }}>
+    <div className="app-bg" style={{ display: 'flex', minHeight: '100dvh' }}>
       <AppNav />
       <TopBar />
       <ChatSystem userId={userId} />
