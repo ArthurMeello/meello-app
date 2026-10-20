@@ -144,6 +144,22 @@ body {
   .glass-pill { background: rgba(255, 255, 255, 0.85); }
 }
 
+/* ———————————————————————————————————————————————
+   Écran de chargement (splash) — variante fondu flou
+   ——————————————————————————————————————————————— */
+@keyframes splash-blur {
+  0%   { opacity: 0; filter: blur(14px); transform: scale(1.15); }
+  100% { opacity: 1; filter: blur(0);    transform: scale(1); }
+}
+@keyframes splash-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes splash-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
 /* Reset dark mode — Meello est light only */
 @media (prefers-color-scheme: dark) {
   body {

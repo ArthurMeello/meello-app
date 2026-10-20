@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import SplashScreen from "@/components/SplashScreen";
 
 const clashDisplay = localFont({
   src: "../../public/fonts/ClashDisplay-Variable.woff2",
@@ -44,6 +45,7 @@ export default function RootLayout({
   return (
     <html lang="fr" className={clashDisplay.variable}>
       <body style={{ margin: 0, fontFamily: "'General Sans', system-ui, sans-serif", WebkitFontSmoothing: 'antialiased' }}>
+        <SplashScreen />
         {children}
       </body>
     </html>
