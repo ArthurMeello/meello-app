@@ -13,7 +13,7 @@ import { titleCase } from '@/lib/format'
 import imageCompression from 'browser-image-compression'
 import type { Post } from '@/types'
 
-const EMOJIS = ['👍', '🔥', '❤️']
+const EMOJIS = ['👍', '❤️']
 
 export default function FeedPage() {
   return (
@@ -92,12 +92,13 @@ function FeedPageInner() {
         Fil d'actualité
       </h1>
 
-      {/* Barre "Créer une publication" */}
+      {/* Barre "Créer une publication" — en verre, sans bouton "+" (handoff) */}
       <div
+        className="glass"
         onClick={() => setShowModal(true)}
         style={{
-          backgroundColor: 'white', borderRadius: '50px', padding: '0.75rem 1rem',
-          marginBottom: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+          borderRadius: '50px', padding: '0.75rem 1rem',
+          marginBottom: '1.5rem',
           display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer',
         }}
       >
@@ -112,11 +113,6 @@ function FeedPageInner() {
             : initials}
         </div>
         <span style={{ flex: 1, color: '#2D2D2D', opacity: 0.4, fontSize: '0.95rem' }}>Créer une publication</span>
-        <div style={{
-          width: '32px', height: '32px', borderRadius: '50%',
-          backgroundColor: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1.2rem', color: '#2D2D2D', fontWeight: 300,
-        }}>+</div>
       </div>
 
       {/* Modale */}
@@ -1033,7 +1029,7 @@ function PostCard({ post, currentUserId, onRefresh, allMembers = [] }: { post: P
   const postBody = hasTitle ? lines.slice(1).join('\n') : post.content
 
   return (
-    <div ref={cardRef} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', opacity: deleting ? 0.5 : 1 }} onClick={() => setReactionPopover(null)}>
+    <div ref={cardRef} className="glass" style={{ padding: '1.25rem', opacity: deleting ? 0.5 : 1 }} onClick={() => setReactionPopover(null)}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
         <AvatarNiveau avatarUrl={profile?.avatar_url} xp={profile?.xp ?? 0} initials={initials} size={40} userId={post.author_id} />
